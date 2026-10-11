@@ -244,3 +244,7 @@ report/main.pdf
 
 # Local deployment bundles and large execution artifacts
 artifacts/
+
+# Checkpointed execution outputs are delivered separately from source.
+notebooks/*.status.json
+notebooks/executed/

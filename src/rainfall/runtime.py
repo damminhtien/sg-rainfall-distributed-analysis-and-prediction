@@ -63,7 +63,12 @@ def spark_action(spark, run_id, action):
                 "Review the **Jobs summary and every job detail** in Spark Web UI, then capture original screenshots."
             )
         )
-        spark.sparkContext.clearJobGroup()
+        for property_name in (
+            "spark.jobGroup.id",
+            "spark.job.description",
+            "spark.job.interruptOnCancel",
+        ):
+            spark.sparkContext.setLocalProperty(property_name, None)
 
 
 def environment(spark):
