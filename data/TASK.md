@@ -80,12 +80,37 @@ Notebook điều phối/trình bày; hàm reuse nằm trong `src/`; batch script
 
 ## 4. Phase 1 — Cloud preflight và budget
 
-Education credit **$50** là mục tiêu ngân sách dự kiến; xác nhận số dư, currency, expiry và eligible services trong Billing Console trước chạy. Không coi số dư đã được kiểm chứng.
+### 4.1. Credit và billing duy nhất được phép sử dụng
+
+**Ràng buộc của người dùng: chỉ dùng khoản education credit dưới đây và đúng billing account chứa khoản credit đó. Tuyệt đối không dùng billing account khác, credit khác hoặc chi tiền ngoài khoản credit này.** Ràng buộc áp dụng cho toàn bộ project: compute, Dataproc, GCS, disk, network, logging và các tài nguyên phụ.
+
+Thông tin người dùng cung cấp ngày 11/10/2026; đây là snapshot do người dùng gửi, chưa phải truy vấn live từ máy:
+
+| Thuộc tính | Giá trị được cung cấp |
+|---|---|
+| Credit name | Scalable distributed computing for data science aug26 |
+| Credit ID | `3LU63BPGY77JFDQQ` |
+| Status / remaining | Available / 100% |
+| Remaining / original value | $50.00 / $50.00 |
+| Type | One-time |
+| Usage scope | Any service on this billing account |
+| Start / end date | 17/08/2026 / 14/08/2027 |
+| Credit application type | Net pricing |
+
+**Credit ID không phải Billing Account ID.** Billing Account ID chưa được cung cấp; phải lấy từ chính account có credit khớp bảng trên và ghi vào `BILLING_ACCOUNT_ID` trong config local. Không suy ra account từ tên hiển thị hoặc tự chọn account đầu tiên đang active. Currency của ký hiệu `$` cũng phải đối chiếu trong Console; không tự gán USD/SGD.
+
+Google áp dụng promotional credits tự động vào eligible costs; gcloud không phải cơ chế chọn một Credit ID cho từng job. Kiểm tra Credits và cost details của đúng account để xác minh khoản nào được áp dụng ([education credits](https://docs.cloud.google.com/billing/docs/how-to/edu-grants), [cost details](https://docs.cloud.google.com/billing/docs/how-to/cost-table)). Nếu có nhiều promotional credits cùng scope và chưa xác minh được chỉ khoản chỉ định sẽ chi trả, dừng bước có phí để làm rõ. Không redeem thêm credit, đổi account, thêm phương thức thanh toán hoặc chuyển sang trả tiền để tiếp tục.
+
+Trước mỗi session và trước thao tác có phí, phải xác nhận account linkage, credit còn Available/chưa hết hạn, actual remaining balance, usage scope và pending costs. Credit áp dụng cả billing account nên phải kiểm tra mức tiêu thụ của project khác dùng cùng account. Khi thiếu quyền đọc billing/credit, account không khớp, balance chưa rõ hoặc không bảo đảm chi phí được credit này chi trả, **dừng thao tác có phí**. Cleanup tài nguyên của project đã tạo vẫn phải thực hiện để ngừng chi phí tiếp tục.
+
+### 4.2. Cấu hình và preflight
 
 `config/cloud.env` là file local ignored; commit `cloud.env.example` với placeholders:
 
 ```bash
 export PROJECT_ID="replace-with-project-id"
+export BILLING_ACCOUNT_ID="UNVERIFIED"
+export ALLOWED_CREDIT_ID="3LU63BPGY77JFDQQ"
 export REGION="asia-southeast1"
 export CLUSTER="dsa5208-rainfall"
 export BUCKET="replace-with-globally-unique-bucket"
@@ -96,7 +121,7 @@ export VM_SERVICE_ACCOUNT="replace-with-service-account-email"
 export RUN_ID="replace-with-unique-run-id"
 ```
 
-Project ID phải hợp lệ; bucket name duy nhất toàn cục. Không thực thi placeholders. Ưu tiên project đã gắn education billing; nếu cần project mới, chạy `gcloud projects create "$PROJECT_ID"` sau login và trước bước `config set project`. Dùng gcloud configuration riêng; tạo một lần, sau đó activate khi cần:
+Project ID phải hợp lệ; bucket name duy nhất toàn cục. Không thực thi placeholders. Chỉ dùng project gắn đúng billing account đã xác minh ở §4.1; project mới cũng phải gắn chính account này. Nếu cần project mới, chạy `gcloud projects create "$PROJECT_ID"` sau login và trước bước `config set project`. Dùng gcloud configuration riêng; tạo một lần, sau đó activate khi cần:
 
 ```bash
 source config/cloud.env
@@ -108,7 +133,17 @@ gcloud auth list
 gcloud config list
 ```
 
-Nếu configuration đã có, dùng `gcloud config configurations activate dsa5208-rainfall`. Trong Billing Console, chọn đúng project và link education billing account được cấp; account đang active chưa đủ để xác nhận credit đúng. Sau đó kiểm tra/bật APIs:
+Nếu configuration đã có, dùng `gcloud config configurations activate dsa5208-rainfall`. Trong Billing Console, đối chiếu Credit ID, lấy Billing Account ID và link project với chính account đó. Account đang active chưa đủ để xác nhận credit đúng. `scripts/cloud_preflight.sh` khi triển khai phải kiểm tra linkage theo logic sau và dừng khi chưa khóa account:
+
+```bash
+test -n "${BILLING_ACCOUNT_ID:-}" || exit 1
+test "$BILLING_ACCOUNT_ID" != "UNVERIFIED" || exit 1
+linked_account="$(gcloud billing projects describe "$PROJECT_ID" \
+  --format='value(billingAccountName)')" || exit 1
+test "$linked_account" = "billingAccounts/${BILLING_ACCOUNT_ID}" || exit 1
+```
+
+Guard trên chỉ xác minh account linkage; còn phải kiểm tra `billingEnabled`, credit/balance/scope và dự toán ở §4.1. Không coi output của `gcloud billing projects describe` là bằng chứng remaining credit. Sau preflight, kiểm tra/bật APIs:
 
 ```bash
 gcloud billing projects describe "$PROJECT_ID"
@@ -117,11 +152,15 @@ gcloud services enable dataproc.googleapis.com compute.googleapis.com storage.go
 
 Preflight: billing enabled; CPU/disk quota theo region; subnet/firewall cho VM trao đổi nội bộ; user có quyền tạo cluster và `iam.serviceAccounts.actAs`. VM service account cần `roles/dataproc.worker` và quyền đọc/ghi data, staging/temp buckets phù hợp. User login trên Mac không tự trở thành identity của workers. Dùng service account gắn VM, không đưa JSON keys vào notebook. Nguồn: [Dataproc service accounts](https://docs.cloud.google.com/dataproc/docs/concepts/configuring-clusters/service-accounts).
 
-Tạo project-scoped alerts-only budget, ví dụ mốc 20%, 50%, 80%, 96% của $50 sau khi xác minh currency. **Alerts-only budget không tự chặn chi tiêu** ([Billing budgets](https://docs.cloud.google.com/billing/docs/how-to/budgets)). Dự toán mỗi session gồm VM, Dataproc fee, disk, GCS storage/operations, network và tài nguyên phụ; lấy giá theo region tại ngày chạy từ [pricing](https://cloud.google.com/dataproc/pricing), giữ dự phòng. Chỉ chạy session tiếp nếu số dư đủ dự toán + reserve.
+### 4.3. Giới hạn vận hành trong credit
+
+Mục tiêu chi tiêu dự toán tối đa **$40**, giữ ít nhất **$10** dự phòng cho pending usage, storage, export/download và cleanup, cùng currency với credit. Đây là ngưỡng vận hành bảo thủ, không phải spending cap do Google bảo đảm. Khi remaining credit ≤ $10 hoặc dự toán session + pending/retention costs vượt phần cho phép, không bắt đầu job/session mới; persist/download outputs và ngừng tài nguyên có phí của project.
+
+Tạo project-scoped alerts-only budget trên đúng account, theo dõi usage costs và credit application riêng; không để net cost sau credit bằng 0 che lượng credit đã tiêu. **Alerts-only budget không tự chặn chi tiêu** ([Billing budgets](https://docs.cloud.google.com/billing/docs/how-to/budgets)). Dự toán gồm VM, Dataproc fee, disk, GCS operations/storage/network và tài nguyên phụ; lấy giá theo region tại ngày chạy từ [pricing](https://cloud.google.com/dataproc/pricing). Ghi credit snapshot đầu/cuối session và usage chưa phản ánh trên Console; billing có thể cập nhật trễ ([cost details](https://docs.cloud.google.com/billing/docs/how-to/cost-table)).
 
 Cluster có idle timeout **và** maximum lifetime, vẫn xóa thủ công khi xong. Xóa cluster không làm hết phí GCS/tài nguyên phụ. Không tạo cluster trước khi preflight và dự toán đạt.
 
-**Acceptance:** account/project/billing/quota/IAM/network đúng; có dự toán session và shutdown plan.
+**Acceptance:** `BILLING_ACCOUNT_ID` đã khóa với credit `3LU63BPGY77JFDQQ`; không account/credit khác; linkage và balance/scope được đối chiếu; budget đủ cả pending/storage/cleanup; quota/IAM/network đúng. Chưa đạt thì không thao tác có phí.
 
 ## 5. Phase 2 — GCS, Dataproc và Jupyter
 
@@ -214,7 +253,7 @@ Ghi validated Parquet partition theo year, thêm month nếu profiling cần; tr
 
 ## 7. Phase 4 — Task 1: weather patterns
 
-Mỗi analysis ghi question, cohort/denominator, statistic, observation, interpretation và limitation. Không cộng mọi trạm thành “tổng mưa Singapore”.
+Mỗi analysis ghi mục đích, cohort/denominator, statistic, observation, interpretation và limitation. Không cần dựng bộ câu hỏi nghiên cứu riêng; bám trực tiếp Task 1. Không cộng mọi trạm thành “tổng mưa Singapore”.
 
 | Analysis | Output/phương pháp |
 |---|---|
@@ -351,11 +390,100 @@ Model package gồm PipelineModel, calibrator, climatology lookup/fallback, feat
 
 Load trong fresh session cùng runtime, inference từ public station/time/threshold contract, compare saved fixtures trong frozen tolerance. Fixtures phải chứa một history/metadata sample nhỏ đủ chạy offline; dữ liệu thật lấy từ input path do người chạy cấu hình, không bắt buộc bucket của nhóm. Save thành công chưa chứng minh model reproduce được.
 
-Report dùng **LaTeX và mẫu Project 1** sau khi tìm source template. Đã thấy Project 1 PDF/package, chưa xác nhận `.tex`; PDF không thay source template. Plot dùng **SciencePlots** (import `scienceplots`) + Matplotlib, vector PDF khi phù hợp; kiểm tra TeX dependency của style. Khi viết report đọc skill **academic-writing**; nếu thiếu tìm ở đường dẫn cung cấp hoặc báo trước bước viết. Tránh AI-slop, citation placeholders và claims vượt evidence.
+### 13.1. Trọng tâm và hình thức báo cáo
 
-8–12 trang là mục tiêu biên tập, không phải page limit chính thức. Nội dung: dataset/environment; quality/coverage; Task 1; target/inference/availability; features; split/tuning/calibration; model/threshold results; ablation/errors; limitations; AI declaration. Có attrition, environment thực tế/runtime/cost. Limitations bám evidence về rainfall-only inputs, missing/revisions, threshold domain/monotonicity, unseen stations và short record.
+**Bám trực tiếp hai tasks trong đề Project 2.** Không bắt buộc đặt research questions, hypotheses hay xây dựng khung nghiên cứu riêng. Báo cáo giải thích dữ liệu đã được xử lý thế nào, Task 1 tìm thấy patterns gì và Task 2 dự đoán xác suất tốt đến đâu. Mẫu Project 1 chỉ dùng để tham khảo hình thức LaTeX và cách trình bày bằng chứng; không chuyển nội dung nghiên cứu MongoDB sang bài này.
+
+Viết báo cáo bằng tiếng Anh rõ ràng, câu ngắn, thuật ngữ nhất quán. Dùng **LaTeX và mẫu Project 1** sau khi tìm source template. Đã kiểm tra thư mục Project 1 và submission ZIP: có PDF nhưng chưa tìm thấy `.tex/.cls/.sty`. Nếu source chưa được cung cấp, dựng bố cục dựa trên PDF và ghi rõ đây là bản tái dựng. Giữ A4, một cột, font serif dễ đọc, section numbering, captions và cross-references. Không cần sao chép toàn bộ front matter của Project 1; chỉ thêm mục lục/list of figures khi giúp đọc bài. Xác nhận lại tên và student IDs của nhóm Project 2.
+
+Plot dùng **SciencePlots** (import `scienceplots`) + Matplotlib, vector PDF khi phù hợp; kiểm tra TeX dependency của style. Khi viết bản báo cáo thực tế phải đọc skill **academic-writing**. Skill này chưa tìm thấy trong các thư mục skills đã kiểm tra; yêu cầu còn chưa được giải quyết trước bước soạn manuscript, không ngăn việc hoàn thiện TASK này.
+
+Chưa có rubric chấm điểm chi tiết ngoài yêu cầu trong `project_description.txt`; không tự gán trọng số điểm. Gợi ý **10–12 trang nội dung chính**, không phải page limit chính thức; references, AI declaration và appendix tính riêng. Điều chỉnh theo kết quả thực tế, không thêm hình/bảng chỉ để đủ trang.
+
+| Phần | Nội dung phải trả lời | Dung lượng gợi ý |
+|---|---|---|
+| Introduction | Bài toán, dữ liệu 2017–2024, hai nhiệm vụ và phạm vi | 0.5 trang |
+| Dataset and preprocessing | Nguồn, schema, thời gian, cleaning và dữ liệu còn lại | 1–1.5 trang |
+| Computing environment | Cấu hình thực chạy và cách dùng Spark/MLlib | 0.5 trang |
+| **Task 1: Rainfall patterns** | Within-year và across-year patterns, hình và diễn giải | **2.5–3 trang** |
+| **Task 2: Probability prediction** | Target, features, split, models, đánh giá xác suất và lỗi | **3–4 trang** |
+| Discussion and limitations | Ý nghĩa kết quả, giới hạn của dữ liệu và mô hình | 0.5–1 trang |
+| Reproducibility and conclusion | Cách chạy lại, artifacts và kết luận hai tasks | 0.5 trang |
+
+Abstract khoảng 150–200 từ, viết cuối: mục tiêu, dữ liệu/phương pháp, một kết quả Task 1 và một kết quả Task 2 có số liệu thật, giới hạn chính. Không điền số liệu minh họa vào bản nộp.
+
+### 13.2. Dataset, cleaning và môi trường chạy
+
+Đủ ngắn để người đọc hiểu nguồn gốc các kết quả, nhưng phải nêu các quyết định ảnh hưởng đến kết luận:
+
+- Nguồn dữ liệu, giai đoạn sử dụng, đơn vị rainfall, station identity và timezone. Giải thích observation timestamp khác update timestamp; ghi bằng chứng hoặc giả định về interval/availability.
+- Bảng theo năm: raw rows, rows sau cleaning, số stations, valid station-days/coverage và số observations bị loại theo lý do. Phân biệt missing, invalid, exact duplicate và conflicting records; đếm loại bỏ theo thứ tự để tránh cộng trùng.
+- Giải thích vì sao không thay missing bằng 0, cách xử lý gaps/revisions và station metadata. Nêu ảnh hưởng đến Task 1 và số samples có đủ history/future cho Task 2.
+- Cấu hình **thực chạy**: region, master/workers, machine type, vCPU/RAM, disks, Dataproc image, Spark/Python/Java versions, executor settings quan trọng. Có thời gian xử lý/training và evidence Spark jobs chạy trên workers; không dùng cấu hình dự kiến làm kết quả.
+- Mô tả flow raw CSV → cleaned Parquet → aggregates/features → MLlib → metrics/artifacts. Log dài, Spark plans và toàn bộ config đưa appendix hoặc repo.
+
+### 13.3. Task 1 — Viết kỹ patterns và cách diễn giải
+
+Phần này phải đáp ứng riêng cả **within-year** và **across-year**, theo Phase 4. Trình bày theo thứ tự:
+
+1. **Coverage context:** hình heatmap station/year hoặc year/month và bảng quality. Cho biết tập stations/ngày hợp lệ dùng trong các hình tiếp theo; coverage thấp có thể làm tổng rainfall thấp giả tạo.
+2. **Monthly patterns:** mức rainfall và wet frequency theo tháng với denominator/coverage rõ. Chọn aggregation phù hợp ở Phase 4; không cộng rainfall của nhiều stations rồi gọi là tổng rainfall của Singapore. Nêu tháng/giai đoạn cao thấp bằng số liệu, độ nhất quán giữa năm và ảnh hưởng missingness.
+3. **Hourly patterns:** rainfall/wet frequency theo giờ SGT trên observations hợp lệ. Nêu giờ có mưa thường xuyên hoặc lượng mưa lớn hơn và độ khác biệt thực tế; tránh suy luận nguyên nhân chỉ từ hình.
+4. **Across-year patterns:** so sánh 2017–2024 bằng tập stations có coverage tương đương/common cohort. Nêu năm cao thấp và kiểm tra kết luận có đổi khi đổi coverage policy/cohort; không khẳng định xu hướng khí hậu dài hạn từ tám năm.
+5. **Spatial differences nếu hữu ích:** map hoặc station summary có units/support; phân biệt vị trí với thay đổi mạng lưới stations. Đưa appendix nếu không bổ sung insight cho yêu cầu chính.
+
+Mỗi đoạn kết quả gồm: **quan sát có số liệu → cách tính/cohort → diễn giải → giới hạn liên quan**. Dùng tên hình/bảng để dẫn chứng; không chỉ mô tả màu hoặc lặp caption. Nếu đối chiếu mùa mưa/monsoon, dẫn nguồn khí tượng chính thức và tách thông tin nền khỏi kết quả được tính từ dataset. Không gán causal explanations chưa có dữ liệu chứng minh.
+
+### 13.4. Task 2 — Viết kỹ từ target đến kết quả xác suất
+
+**Problem and target.** Nêu input station/time/threshold, output xác suất tích lũy rainfall trong 30 phút kế tiếp **lớn hơn** threshold. Có công thức `P(R30 > tau | available history)` và một timeline ngắn giải thích sáu intervals tương lai. Nêu đơn vị, boundary convention, điều kiện đủ label/history, threshold domain và xử lý missing/unseen/out-of-domain. Khai báo giả định availability nếu chỉ làm retrospective prediction.
+
+**Features and split.** Bảng features chỉ liệt kê features thực dùng: nhóm thời gian/station/threshold, rainfall history, missingness; mỗi nhóm có cửa sổ, ý nghĩa và lý do chọn. Giải thích ngắn cách tránh nhìn tương lai. Bảng split ghi train 2017–2022, selection Jan–Jun 2023, calibration Jul–Dec 2023 và final test 2024, kèm base samples, threshold-expanded samples, positives/prevalence và purge policy. Không dùng test để chọn model/features/calibration.
+
+**Models and training.** Giải thích climatology baseline, MLlib LR và GBT bằng vài câu cho mỗi model; nêu preprocessing, tuning budget, actual selected hyperparameters, selection criterion và calibration recipe. Config đầy đủ ở appendix/repo. Phân biệt rainfall threshold `tau` với probability cutoff dùng precision/recall. Nêu cách xuất probability của class 1 và lưu đầy đủ pipeline.
+
+**Main results.** So sánh ba models trên cùng final-test cohort. Bảng chính có PR-AUC, ROC-AUC và Brier; log loss/cutoff metrics bổ sung khi giúp diễn giải. Bảng per-threshold có sample count, positives, prevalence và metrics của baseline/model đã chọn. Nêu rõ macro/pooled aggregation, AUC N/A với single-class nhóm và support nhỏ. Nếu bảng nhiều thresholds quá dài, giữ primary thresholds trong thân bài và đưa bảng đầy đủ appendix.
+
+**Probability quality.** Có reliability diagram với predicted probability, observed frequency và counts mỗi bin; so sánh raw/calibrated khi correction đã thực hiện. Giải thích ranking và calibration bằng kết quả thực tế: model phân biệt mưa tốt không tự đồng nghĩa xác suất đáng tin. PR curves dùng vài primary thresholds đã khóa trước test, có prevalence/support và model labels rõ.
+
+**Features and errors.** Tóm tắt A/B ablation để cho thấy history/missingness đóng góp thế nào. Phân tích ngắn các lỗi chính theo threshold, station/month, onset/continuation và unseen khi có samples; chọn vài kết quả có ý nghĩa thay vì đưa mọi strata vào thân bài. Báo cáo monotonicity violation và giới hạn khi suy diễn xác suất cho threshold chưa học. Uncertainty tính theo Phase 9; không gọi khác biệt nhỏ là statistically significant nếu chưa có bằng chứng phù hợp.
+
+**Kết luận Task 2.** Trả lời trực tiếp model nào được chọn trên validation, final test đạt gì, probability có đáng tin ở điều kiện nào và thất bại ở đâu. Nếu ML không hơn climatology hoặc calibration không cải thiện, báo cáo đúng kết quả và giải thích trong giới hạn evidence; không sửa scope/cohort để làm model thắng.
+
+### 13.5. Figures, tables và bằng chứng cho báo cáo
+
+Kế hoạch dưới đây hướng dẫn chọn outputs; không phải quota bắt buộc:
+
+| Artifact | Nội dung và nguồn dữ liệu |
+|---|---|
+| `quality_by_year.csv` / Table: data quality | Spark cleaning audit, attrition và coverage theo năm |
+| `coverage_heatmap.pdf` | Aggregated valid coverage; làm context cho Task 1 |
+| `monthly_hourly_patterns.pdf` | Hai panels monthly/hourly; units, valid denominators và cohort |
+| `annual_patterns.pdf` | So sánh năm trên common cohort; sensitivity nếu cần |
+| Table: environment / features | Actual run metadata và frozen feature config |
+| Table: model comparison / threshold results | Frozen 2024 metrics, same cohort, support và uncertainty có sẵn |
+| `pr_curves.pdf` / `calibration.pdf` | Spark score aggregates; primary thresholds, bin counts và split |
+| Table: ablation / error summary | A/B same samples và vài failure strata; bảng dài ở appendix |
+
+Mọi caption phải tự hiểu được: thời gian/split, cohort, units, statistic, missingness/coverage rule và model nếu liên quan. Axis có units/labels, legend đọc được khi in A4; tránh quá nhiều đường trên một panel. Dẫn hình/bảng trong phần văn bản trước hoặc gần vị trí xuất hiện.
+
+Spark export **aggregate CSV/JSON nhỏ** cho tables/curves; không kéo toàn bộ raw/features vào Python để vẽ. Mỗi output lưu `RUN_ID`, split/cohort/config và nguồn artifact. Tạo table/numeric macros LaTeX từ outputs đã freeze để tránh chép tay sai; dùng manifest đơn giản nối figure/table với output và commit. Một metric xuất hiện ở abstract, bảng và conclusion phải khớp giá trị, rounding và cohort.
+
+### 13.6. Discussion, reproducibility và quy trình hoàn thiện
+
+Discussion tổng hợp hai tasks: patterns giúp hiểu rainfall và lựa chọn features ra sao; model tận dụng history tốt tới đâu; kết quả giới hạn bởi rainfall-only inputs, missing/revisions, short record, rare heavy rainfall, availability assumptions, threshold domain và unseen stations thế nào. Chỉ đưa limitations thật sự áp dụng. Không dùng các từ “best”, “robust”, “real-time” hoặc “significant” vượt phạm vi đã kiểm chứng.
+
+Reproducibility dẫn README, exact runtime/config/commit, manifest, model package và lệnh load/predict. Conclusion tóm tắt một hoặc hai findings chính của mỗi task và giới hạn sử dụng; không đưa kết quả mới. References gồm nguồn dữ liệu và tài liệu/phương pháp đã dùng; citation nào cũng phải có nguồn thật, không placeholders.
 
 AI declaration ghi đúng công cụ/model và công việc được hỗ trợ (planning/code/debugging/analysis/drafting/editing), trách nhiệm nhóm theo mẫu đề; không claim mọi kết quả verified khi chưa kiểm tra. PDF có names/student IDs/references/captions.
+
+Quy trình viết:
+
+1. Viết dataset/cleaning/environment/target/split ngay khi đã xác nhận, song song với xử lý dữ liệu; chưa có kết quả thì để draft rõ, không đoán số.
+2. Hoàn thiện Task 1 từ aggregates, Task 2 từ frozen evaluation outputs; viết diễn giải sau mỗi hình/bảng.
+3. Viết discussion/conclusion/abstract cuối; bỏ đoạn lặp và phần lý thuyết không phục vụ đề.
+4. Compile LaTeX, sửa references/overflow; render và đọc toàn bộ pages ở kích thước A4. Kiểm tra figures, font, captions, table widths và ngắt trang.
+5. Đối chiếu từng yêu cầu đề với section/page: cleaning, within/across-year patterns, features, model, environment/VM config, performance, limitations/insights và AI declaration. Kiểm tra số liệu với outputs, không còn TODO/placeholder/broken references trong bản nộp.
 
 README: prerequisites/config mẫu, data nguồn/manifest/upload, notebook order, batch commands, versions/lifecycle/artifact locations và load/predict. Package tự chứa source và model cần chấm; không phụ thuộc bucket cá nhân còn truy cập được.
 
@@ -387,10 +515,12 @@ gcloud dataproc clusters delete "$CLUSTER" \
 gcloud dataproc clusters list --project="$PROJECT_ID" --region="$REGION"
 ```
 
-Xác nhận cluster biến mất, kiểm tra remaining VM/disk/tài nguyên phụ/billing. GCS còn storage charges; temp lifecycle/retention theo nhu cầu, không xóa model/results cần nộp. Không thấy notebook chưa chứng minh compute đã xóa.
+Xác nhận cluster biến mất, kiểm tra remaining VM/disk/tài nguyên phụ/billing. GCS còn storage charges: download và đối chiếu model/results/submission về local trước khi xóa bản cloud không còn cần; đặt retention trong credit budget và trước expiry, không giữ bucket vô thời hạn. Không thấy notebook chưa chứng minh compute đã xóa.
 
 Final checklist:
 
+- [ ] Billing account ID thực đã xác minh chứa credit `3LU63BPGY77JFDQQ`; project chỉ link account này, không dùng credit/billing khác.
+- [ ] Credit ledger, pending costs và remaining balance đã kiểm tra; không có paid fallback khi credit không đủ/hết hạn.
 - [ ] Manifest chỉ 2017–2024, hashes và paths reproducible.
 - [ ] Schema/interval semantics/availability/quality policy có evidence.
 - [ ] Không missing=zero; duplicate/conflicts/gaps deterministic và audit được.
@@ -411,8 +541,8 @@ Final checklist:
 | Ngày (SGT) | Output mục tiêu |
 |---|---|
 | 11/10 | Review; manifest/schema/time semantics; cloud preflight |
-| 12/10 | Cloud smoke; quality Parquet/environment evidence |
-| 13/10 | Task 1 training-year analysis; labels/features/leakage fixtures |
+| 12/10 | Cloud smoke; quality Parquet/environment evidence; draft data/cleaning/environment |
+| 13/10 | Task 1 training-year analysis; labels/features/leakage fixtures; draft Task 1/target/split |
 | 14/10 | Three-model pilot, temporal selection/cost evidence |
 | 15/10 | Full finalists; A/B ablation; calibration holdout fit |
 | 16/10 | Freeze; final 2024 evaluation; Task 1 full-period results |
