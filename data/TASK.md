@@ -45,7 +45,11 @@ Các citation placeholder cũ (`Lec6`, `Project-2-Singapore-Rainfall-An…`) đ�
 - Dataset root `/Users/macbook/Data/sg historical rainfall`, CSV ở `raw/`.
 - Course `/Users/macbook/Desktop/NUS/DSA5208`, Project 1 ở `project1/`.
 
-Kiểm tra sơ bộ 11/10/2026: raw có 9 CSV, gồm 2016, khoảng 7.5 GiB theo `du -h`. Đã đọc header/vài dòng đầu của 2017 và 2024; chưa full-data audit. Mẫu 2017 có observation `08:04:59` và update `08:13:31`; mẫu 2024 có observation `00:00:00` và update `00:05:26`. Đây là evidence cần audit alignment/availability, không phải kết luận về toàn bộ dataset.
+Full scan cục bộ 11/10/2026: thư mục `raw/` hiện có đúng tám CSV cần dùng, 2017–2024; chưa thấy file 2016 tại đường dẫn này. Ghi chú inventory cũ từng ghi chín file gồm 2016 nên không còn đúng với inventory hiện tại. NEA collection metadata công bố chín annual datasets từ 2016 đến 2024; assignment chỉ yêu cầu 2017–2024 ([collection](https://api-production.data.gov.sg/v2/public/api/collections/2279/metadata)).
+
+`scripts/build_manifest.py` đã đọc đủ 8,047,044,701 bytes / 48,538,713 data rows, tính SHA-256 mỗi file, xác nhận các file có cùng 12-column header, không có row sai field-count và không có timestamp thiếu/parse lỗi. Kết quả theo file, dataset IDs và timestamp min/max nằm trong `manifests/input_manifest.json`. Tất cả record timestamps dùng `+08:00` trong dữ liệu đã quét. Các khoảng quan sát lần lượt bắt đầu 2017 `08:04:59`, các năm 2018–2024 lúc `00:00:00` và kết thúc `23:55:00` mỗi năm. Đây mới là inventory/schema/timestamp parse scan; **chưa** kiểm tra value range, duplicates/conflicts, station coverage, gaps, timestamp alignment theo trạm hay interval semantics. Không dùng min/max làm bằng chứng dataset đầy đủ.
+
+Header/sample ban đầu cho thấy update delay (2017 observation `08:04:59`, update `08:13:31`; 2024 observation `00:00:00`, update `00:05:26`). Đây là lý do tiếp tục audit availability/alignment, không chứng minh `timestamp` là interval end.
 
 Giữ raw ngoài repo và bất biến. Chỉ chọn tám file `HistoricalRainfallacrossSingapore{2017..2024}.csv`. Không dùng 2016 ngầm làm warm-up. Code nhận `DATA_ROOT` từ config; không hard-code đường dẫn cá nhân. Manifest phải có dataset ID/source URL, năm, filename, bytes, SHA-256, retrieval time, schema và actual time range. Đối chiếu manifest local/GCS; object listing chưa chứng minh upload đúng.
 
@@ -522,6 +526,7 @@ Final checklist:
 - [ ] Billing account ID thực đã xác minh chứa credit `3LU63BPGY77JFDQQ`; project chỉ link account này, không dùng credit/billing khác.
 - [ ] Credit ledger, pending costs và remaining balance đã kiểm tra; không có paid fallback khi credit không đủ/hết hạn.
 - [ ] Manifest chỉ 2017–2024, hashes và paths reproducible.
+- [ ] Manifest bytes/rows/schema/timestamp đã đối chiếu; retrieval time gốc còn unknown được khai báo rõ.
 - [ ] Schema/interval semantics/availability/quality policy có evidence.
 - [ ] Không missing=zero; duplicate/conflicts/gaps deterministic và audit được.
 - [ ] Label đúng 30 phút/strict greater-than, không vượt split/fold.
