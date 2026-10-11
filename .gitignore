@@ -216,7 +216,17 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-data/
+# Keep the project plan; ignore other local data and context files.
+data/*
+!data/TASK.md
+
+# Local tooling and cloud configuration.
+skills/
+.codex/
+.vscode/
+AGENTS.md
+graphify-out/
+config/cloud.env
 
 # Streamlit
 .streamlit/secrets.toml
