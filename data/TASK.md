@@ -16,7 +16,7 @@ Nguồn đề bài: `data/project_description.txt`. Nguồn data: [Historical Ra
 | Bàn giao | Source + README; trained model; PDF ghi tên và student ID của tất cả thành viên |
 | Nhóm/deadline | Tối đa 3 người; 18/10/2026, 23:59 theo mô tả Canvas; kiểm tra timezone/upload limit trên Canvas |
 
-**Lựa chọn của nhóm:** Mac + gcloud → GCS → Dataproc + Jupyter + Spark/MLlib → GCS outputs → source/model/PDF. Không dựng cluster local. Đề cho phép local/GCP/Databricks; Google Cloud là lựa chọn triển khai, không phải yêu cầu bắt buộc của đề.
+**Triển khai cá nhân (1 người):** Mac + gcloud → GCS → Dataproc + Jupyter + Spark/MLlib → GCS outputs → source/model/PDF. Không dựng cluster local. Đề cho phép local/GCP/Databricks; Google Cloud là lựa chọn triển khai, không phải yêu cầu bắt buộc của đề.
 
 Các citation placeholder cũ (`Lec6`, `Project-2-Singapore-Rainfall-An…`) đã được bỏ. Khi dùng lecture trong report, đọc source và ghi tên slide/số trang chính xác.
 
@@ -36,7 +36,7 @@ Các citation placeholder cũ (`Lec6`, `Project-2-Singapore-Rainfall-An…`) đ�
 | Cloud thiếu IAM/network/runtime/cost guardrails | Preflight, worker identity, pinned image, max-age và persist artifacts |
 | Model save chưa chứng minh reproduce được | Lưu toàn bộ pipeline/config; reload và infer từ submission package |
 
-**Các gate còn cần evidence:** timestamp là đầu hay cuối interval; nghĩa của update fields; quy tắc timestamp alignment; billing/project/IAM; image/runtime tương thích; source LaTeX Project 1; skill academic-writing. Không tự coi các gate này đã đạt.
+**Các gate còn cần evidence:** timestamp là đầu hay cuối interval; nghĩa của update fields; quy tắc timestamp alignment; billing/project/IAM; image/runtime tương thích; source LaTeX Project 1. Skill academic-writing đã có tại `data/academic-writing-SKILL.md` và đã đọc khi lập khung báo cáo. Không tự coi các gate này đã đạt.
 
 ## 3. Phase 0 — Repository và provenance
 
@@ -388,15 +388,15 @@ Observations chồng horizon và storms phụ thuộc theo thời gian. Confiden
 
 Model package gồm PipelineModel, calibrator, climatology lookup/fallback, feature schema/config, threshold domain, availability assumptions, training manifest, versions/Git commit và prediction entry point. Download cả Spark model directory tree, không coi là một pickle. Có sample queries/expected probabilities/status cho unseen/missing/out-of-domain.
 
-Load trong fresh session cùng runtime, inference từ public station/time/threshold contract, compare saved fixtures trong frozen tolerance. Fixtures phải chứa một history/metadata sample nhỏ đủ chạy offline; dữ liệu thật lấy từ input path do người chạy cấu hình, không bắt buộc bucket của nhóm. Save thành công chưa chứng minh model reproduce được.
+Load trong fresh session cùng runtime, inference từ public station/time/threshold contract, compare saved fixtures trong frozen tolerance. Fixtures phải chứa một history/metadata sample nhỏ đủ chạy offline; dữ liệu thật lấy từ input path do người chạy cấu hình, không bắt buộc bucket cá nhân còn tồn tại. Save thành công chưa chứng minh model reproduce được.
 
 ### 13.1. Trọng tâm và hình thức báo cáo
 
 **Bám trực tiếp hai tasks trong đề Project 2.** Không bắt buộc đặt research questions, hypotheses hay xây dựng khung nghiên cứu riêng. Báo cáo giải thích dữ liệu đã được xử lý thế nào, Task 1 tìm thấy patterns gì và Task 2 dự đoán xác suất tốt đến đâu. Mẫu Project 1 chỉ dùng để tham khảo hình thức LaTeX và cách trình bày bằng chứng; không chuyển nội dung nghiên cứu MongoDB sang bài này.
 
-Viết báo cáo bằng tiếng Anh rõ ràng, câu ngắn, thuật ngữ nhất quán. Dùng **LaTeX và mẫu Project 1** sau khi tìm source template. Đã kiểm tra thư mục Project 1 và submission ZIP: có PDF nhưng chưa tìm thấy `.tex/.cls/.sty`. Nếu source chưa được cung cấp, dựng bố cục dựa trên PDF và ghi rõ đây là bản tái dựng. Giữ A4, một cột, font serif dễ đọc, section numbering, captions và cross-references. Không cần sao chép toàn bộ front matter của Project 1; chỉ thêm mục lục/list of figures khi giúp đọc bài. Xác nhận lại tên và student IDs của nhóm Project 2.
+Viết báo cáo bằng tiếng Anh rõ ràng, câu ngắn, thuật ngữ nhất quán. Dùng **LaTeX và mẫu Project 1** sau khi tìm source template. Đã kiểm tra thư mục Project 1 và submission ZIP: có PDF nhưng chưa tìm thấy `.tex/.cls/.sty`. Nếu source chưa được cung cấp, dựng bố cục dựa trên PDF và ghi rõ đây là bản tái dựng. Giữ A4, một cột, font serif dễ đọc, section numbering, captions và cross-references. Không cần sao chép toàn bộ front matter của Project 1; chỉ thêm mục lục/list of figures khi giúp đọc bài. Project 2 làm cá nhân: trang bìa và submission chỉ ghi một tên và một student ID; không sao chép danh sách thành viên Project 1.
 
-Plot dùng **SciencePlots** (import `scienceplots`) + Matplotlib, vector PDF khi phù hợp; kiểm tra TeX dependency của style. Khi viết bản báo cáo thực tế phải đọc skill **academic-writing**. Skill này chưa tìm thấy trong các thư mục skills đã kiểm tra; yêu cầu còn chưa được giải quyết trước bước soạn manuscript, không ngăn việc hoàn thiện TASK này.
+Plot dùng **SciencePlots** (import `scienceplots`) + Matplotlib, vector PDF khi phù hợp; kiểm tra TeX dependency của style. Khi viết bản báo cáo thực tế phải đọc skill **academic-writing**. Skill đã được người dùng cung cấp tại `data/academic-writing-SKILL.md` và đã đọc ngày 11/10/2026. Áp dụng cách viết theo bằng chứng, không tự tạo kết quả hoặc novelty claim. Khung hiện có ở `report/main.tex`, hướng dẫn điền ở `report/OUTLINE.md`.
 
 Chưa có rubric chấm điểm chi tiết ngoài yêu cầu trong `project_description.txt`; không tự gán trọng số điểm. Gợi ý **10–12 trang nội dung chính**, không phải page limit chính thức; references, AI declaration và appendix tính riêng. Điều chỉnh theo kết quả thực tế, không thêm hình/bảng chỉ để đủ trang.
 
@@ -475,7 +475,7 @@ Discussion tổng hợp hai tasks: patterns giúp hiểu rainfall và lựa ch�
 
 Reproducibility dẫn README, exact runtime/config/commit, manifest, model package và lệnh load/predict. Conclusion tóm tắt một hoặc hai findings chính của mỗi task và giới hạn sử dụng; không đưa kết quả mới. References gồm nguồn dữ liệu và tài liệu/phương pháp đã dùng; citation nào cũng phải có nguồn thật, không placeholders.
 
-AI declaration ghi đúng công cụ/model và công việc được hỗ trợ (planning/code/debugging/analysis/drafting/editing), trách nhiệm nhóm theo mẫu đề; không claim mọi kết quả verified khi chưa kiểm tra. PDF có names/student IDs/references/captions.
+AI declaration ghi đúng công cụ/model và công việc được hỗ trợ (planning/code/debugging/analysis/drafting/editing), trách nhiệm cá nhân theo mẫu đề; không claim mọi kết quả verified khi chưa kiểm tra. PDF có names/student IDs/references/captions.
 
 Quy trình viết:
 
@@ -488,7 +488,7 @@ Quy trình viết:
 README: prerequisites/config mẫu, data nguồn/manifest/upload, notebook order, batch commands, versions/lifecycle/artifact locations và load/predict. Package tự chứa source và model cần chấm; không phụ thuộc bucket cá nhân còn truy cập được.
 
 ```text
-DSA5208_Project2_GroupXX/
+DSA5208_Project2_StudentID/
 ├── README.md
 ├── requirements-local.txt
 ├── requirements-cluster.txt

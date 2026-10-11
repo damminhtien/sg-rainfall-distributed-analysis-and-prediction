@@ -1,0 +1,303 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[margin=25mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath}
+\usepackage{booktabs,tabularx,array}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+% Individual submission. Replace these two fields before submission.
+\newcommand{\studentname}{[Your full name]}
+\newcommand{\studentid}{[Your student ID]}
+
+% Draft instructions are intentionally visible. Replace each box with measured
+% results or final prose; no draft instruction should remain in the submitted PDF.
+\newcommand{\draftnote}[1]{\par\begingroup\small\color{blue!55!black}
+  \noindent\textbf{Draft instruction:} #1\par\endgroup}
+\newcommand{\figureplaceholder}[2]{%
+  \begin{figure}[htbp]\centering
+  \fbox{\parbox[c][30mm][c]{0.9\linewidth}{\centering\small #1}}
+  \caption{#2}\end{figure}}
+
+\begin{document}
+\begin{titlepage}
+  \centering
+  \vspace*{20mm}
+  {\Large National University of Singapore\par}
+  \vspace{8mm}
+  {\large DSA5208\par}
+  \vspace{18mm}
+  {\LARGE\bfseries Project 2\par}
+  \vspace{5mm}
+  {\LARGE Singapore Rainfall Analysis and Prediction\par}
+  \vspace{20mm}
+  {\large \studentname\par}
+  \vspace{3mm}
+  {\large Student ID: \studentid\par}
+  \vspace{5mm}
+  {\large Individual submission\par}
+  \vfill
+  {\large 18 October 2026\par}
+\end{titlepage}
+
+\pagenumbering{roman}
+\section*{Abstract}
+\draftnote{Write 150--200 words after completing the results. State the two
+assignment tasks, the 2017--2024 rainfall data, the actual Spark/MLlib approach,
+one quantified Task 1 finding, the selected model's final-test performance, and
+one material limitation. Do not report planned experiments as completed work.}
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+\section{Introduction}
+\label{sec:introduction}
+This project analyses rainfall measurements from Singapore monitoring stations
+for 2017--2024~\cite{dataset}. Task 1 examines rainfall patterns within a year and across these
+years. Task 2 estimates the probability that a station will accumulate more
+than a specified rainfall threshold in the next 30 minutes. The assignment
+requires structured data processing with Apache Spark and model development
+and evaluation with Spark MLlib.
+\draftnote{Add a short paragraph describing the actual completed approach and
+scope. Keep this section to about half a page. Separate assignment requirements
+from implementation choices; no separate research questions or novelty claims
+are needed.}
+
+\section{Dataset and Preprocessing}
+\label{sec:data}
+\subsection{Data source and record structure}
+\draftnote{Identify the NEA annual datasets for 2017--2024, retrieval date,
+files, units, stations and Singapore timezone. Describe the fields used.
+Explain observation time, update time and the verified meaning of a five-minute
+reading. State any unresolved interpretation as an assumption. Cite the dataset
+entry and any documentation actually used.}
+
+\subsection{Cleaning and quality assessment}
+\draftnote{Explain exact duplicates, conflicting revisions, invalid values,
+missing readings, gaps and station metadata. Missing rainfall must remain
+distinct from zero rainfall. State the cleaning order and exclusion counts so
+that overlapping problems are not counted twice.}
+\begin{table}[htbp]\centering\small
+\caption{Annual data quality after applying the stated cleaning rules.
+Replace draft cells with actual counts and define the coverage denominator.}
+\label{tab:quality}
+\begin{tabularx}{\linewidth}{lYYYYY}\toprule
+Year & Raw rows & Retained rows & Stations & Coverage & Excluded rows\\\midrule
+2017--2024 & \multicolumn{5}{l}{[Insert one row per year from the Spark audit]}\\
+\bottomrule\end{tabularx}
+\end{table}
+
+\subsection{Analysis cohorts and processed outputs}
+\draftnote{Define valid station-days and the comparable station cohort for
+annual analysis. Report attrition from cleaned observations to usable history,
+complete future windows and prediction samples. Explain the CSV-to-Parquet
+workflow and which cleaned outputs are reused by both tasks.}
+
+\section{Computing Environment}
+\label{sec:environment}
+\draftnote{Describe the environment actually used. Summarise Spark processing,
+worker execution, storage and MLlib training. State measured processing/training
+times and relevant constraints. Use about half a page; put long configs/logs in
+the appendix. Cloud resources remain conditional on the approved billing and
+credit checks; a proposed cluster is not an observed run.}
+\begin{table}[htbp]\centering\small
+\caption{Actual computing environment for the reported run.}
+\label{tab:environment}
+\begin{tabularx}{\linewidth}{lY}\toprule
+Item & Actual value\\\midrule
+Platform and region & [To be recorded]\\
+Master and workers & [VM types, number, vCPU and RAM]\\
+Storage & [Disk configuration and input/output storage]\\
+Runtime & [Dataproc image; Spark, Python and Java versions]\\
+Execution settings & [Relevant executor/partition settings]\\
+Run identifier & [Run ID and code commit]\\
+\bottomrule\end{tabularx}\end{table}
+
+\section{Task 1: Rainfall Patterns}
+\label{sec:task1}
+\subsection{Coverage and aggregation choices}
+\draftnote{Explain what each statistic measures, its units and valid-data
+denominator. Define wet readings and coverage eligibility. Do not sum rainfall
+over all stations and label it Singapore's total rainfall. Use the coverage
+figure to explain which comparisons are reliable.}
+\figureplaceholder{Coverage heatmap: station/year or year/month.}
+{[Draft] Valid observation coverage for the stated cohort and period.
+Define the expected and observed reading counts in the final caption.}
+
+\subsection{Patterns within a year}
+\draftnote{Present monthly rainfall and wet frequency, followed by hourly
+patterns in Singapore time. Report quantified high/low periods, consistency
+across years and any material coverage effects. Each result paragraph should
+give the observation, calculation/cohort, interpretation and relevant limit.
+If discussing monsoons, cite a verified meteorological source and distinguish
+background knowledge from findings measured here.}
+\figureplaceholder{Two panels: monthly patterns and hourly patterns.}
+{[Draft] Within-year rainfall patterns. Specify aggregation, units, period,
+station cohort, wet-reading definition and missing-data rule.}
+
+\subsection{Changes across 2017--2024}
+\draftnote{Compare annual statistics on a common or comparably covered station
+cohort. Quantify differences and show whether coverage sensitivity changes the
+conclusion. Eight years alone do not establish a long-term climate trend.}
+\figureplaceholder{Annual comparison, with coverage sensitivity if useful.}
+{[Draft] Annual rainfall statistics for 2017--2024 on the defined comparison
+cohort. Identify units, coverage policy and any uncertainty shown.}
+
+\subsection{Summary of Task 1 findings}
+\draftnote{State two or three actual findings answering the within-year and
+across-year tasks. Add a station map only if it contributes a useful finding;
+otherwise omit it or place it in the appendix. Explain which findings motivate
+the time and rainfall-history features used in Task 2.}
+
+\section{Task 2: Rainfall Probability Prediction}
+\label{sec:task2}
+\subsection{Prediction target and input contract}
+For station $s$, prediction time $t$ and rainfall threshold $\tau$ in mm, the
+requested output is
+\begin{equation}
+  p(s,t,\tau)=\Pr\!\left(R_{30}(s,t)>\tau\mid\mathcal{H}_{s,t}\right),
+\end{equation}
+where $\mathcal{H}_{s,t}$ denotes the information available at prediction time.
+\draftnote{Once interval semantics are verified, define $R_{30}$ explicitly as
+the sum of the six aligned future five-minute intervals. Explain the strict
+greater-than comparison, interval boundaries, label completeness and feature
+availability. State threshold domain and behaviour for gaps, unseen stations
+and unsupported queries. Identify retrospective availability assumptions.}
+
+\subsection{Feature selection}
+\draftnote{Describe only features actually used. Explain why each group is
+useful, how history is calculated and how future observations/revisions are
+excluded. Connect time/history features to Task 1 findings when supported.}
+\begin{table}[htbp]\centering\small
+\caption{Feature groups in the final model. Replace candidate descriptions
+with the exact implemented features and windows.}
+\label{tab:features}
+\begin{tabularx}{\linewidth}{lYY}\toprule
+Group & Features and window & Reason and availability\\\midrule
+Station and time & [Encoding; calendar fields] & [Location/season/time patterns]\\
+Threshold & [Requested rainfall threshold] & [Defines the exceedance event]\\
+Rainfall history & [Actual past windows] & [Recent rainfall information]\\
+Missingness & [Actual validity indicators] & [Incomplete observation history]\\
+\bottomrule\end{tabularx}\end{table}
+
+\subsection{Temporal split and training procedure}
+\draftnote{The table below is the planned split; update it if the documented
+protocol changes before final testing. Report actual sample counts and
+prevalence. Explain the 30-minute boundary purge and train-only preprocessing.
+Keep model selection, calibration fitting and final-test evaluation separate.}
+\begin{table}[htbp]\centering\small
+\caption{Temporal evaluation split. Counts are measured after cleaning,
+history/label eligibility checks and boundary purging.}
+\label{tab:split}
+\begin{tabularx}{\linewidth}{lYYY}\toprule
+Subset & Period & Purpose & Actual support\\\midrule
+Training & 2017--2022 & Fit preprocessing and models & [Base/expanded counts]\\
+Selection & Jan--Jun 2023 & Select model/settings & [Counts and prevalence]\\
+Calibration & Jul--Dec 2023 & Fit calibration mapping & [Counts and prevalence]\\
+Final test & 2024 & Frozen final evaluation & [Counts and prevalence]\\
+\bottomrule\end{tabularx}\end{table}
+
+\subsection{Baseline and Spark MLlib models}
+\draftnote{Describe the empirical climatology baseline, Logistic Regression
+and Gradient-Boosted Trees. State the actual preprocessing, limited tuning
+search, selected settings and validation criterion. Explain probability output
+and calibration when applied. Full hyperparameters belong in the appendix.
+Do not select the final model by its 2024 score.}
+
+\subsection{Predictive performance}
+\draftnote{Compare models on the same final-test cohort and frozen threshold
+grid. Define PR-AUC, ROC-AUC and Brier briefly and explain their roles. Distinguish
+Spark areaUnderPR from Average Precision. Define macro aggregation and metric
+settings. Report support and N/A where a group contains only one class.}
+\begin{table}[htbp]\centering\small
+\caption{Final-test model comparison on the same cohort. Specify the
+threshold aggregation, support and calibration status in the final caption.}
+\label{tab:models}
+\begin{tabularx}{\linewidth}{Yccc}\toprule
+Model & PR-AUC & ROC-AUC & Brier\\\midrule
+Climatology & [Result] & [Result] & [Result]\\
+Logistic Regression & [Result] & [Result] & [Result]\\
+Gradient-Boosted Trees & [Result] & [Result] & [Result]\\
+\bottomrule\end{tabularx}\end{table}
+
+\begin{table}[htbp]\centering\small
+\caption{Per-threshold final-test performance. Include baseline comparison
+and the selected model's metrics, with the same support for both.}
+\label{tab:thresholds}
+\begin{tabularx}{\linewidth}{YYYYYY}\toprule
+$\tau$ (mm) & Samples & Positives & Prevalence & PR-AUC & Brier\\\midrule
+[Grid] & [Count] & [Count] & [Fraction] & [Result] & [Result]\\
+\bottomrule\end{tabularx}\end{table}
+\figureplaceholder{PR curves at representative thresholds fixed before testing.}
+{[Draft] Precision--recall curves on the final-test cohort. Identify thresholds,
+models, positive prevalence, support and evaluator settings.}
+\draftnote{Explain the comparison that matters: which validation-selected
+model performs well on the test, where it exceeds or falls below climatology,
+and how rare events change interpretation. Do not restate every table cell.}
+
+\subsection{Calibration and probability consistency}
+\figureplaceholder{Reliability diagram with counts per bin; raw/calibrated if fitted.}
+{[Draft] Predicted probabilities and observed exceedance frequencies on the
+final test. State threshold, binning, support and calibration fit period.}
+\draftnote{Discuss whether probabilities match observed frequencies and whether
+calibration improved measured probability quality. Report monotonicity across
+thresholds for the same station/time/history. State limitations for unseen
+thresholds and any correction actually included in inference.}
+
+\subsection{Feature contribution and error analysis}
+\draftnote{Summarise the A/B comparison: station/time/threshold versus adding
+history/missingness, using the same samples. Explain a few supported failure
+patterns such as onset versus continuation, heavy-rain thresholds or sparse
+stations. Give support and uncertainty where available. Keep extensive strata
+tables in the appendix.}
+
+\section{Discussion and Limitations}
+\label{sec:discussion}
+\draftnote{Connect Task 1 patterns with Task 2 behaviour. Discuss only material
+limits demonstrated or applicable to this run: rainfall-only information,
+missingness/revisions, availability assumptions, rare events, eight-year scope,
+unseen stations and supported threshold range. Explain how each affects the
+conclusions. Report disappointing results accurately; additional work is optional.}
+
+\section{Reproducibility and Conclusion}
+\label{sec:conclusion}
+\subsection{Reproducing the submitted work}
+\draftnote{Identify the submitted code, README, manifest, exact runtime/config,
+model package and entry point. State the actual fresh-session reload/prediction
+check and its result once performed. The package should not depend on access to
+a personal cloud bucket.}
+\subsection{Conclusion}
+\draftnote{Summarise one or two quantified findings from each task and the
+conditions under which the selected model's probabilities are useful. Introduce
+no new experiment, metric or claim.}
+
+\section*{AI Usage Declaration}
+\addcontentsline{toc}{section}{AI Usage Declaration}
+\draftnote{Use first-person singular for this individual project. Complete the
+course's declaration with the actual tool/model names and uses across planning,
+coding, debugging, analysis and report preparation. Revise it as the work evolves.}
+I used [AI tool and model] to [specific uses]. I am responsible for the content
+and quality of the submitted work.
+
+\begin{thebibliography}{9}
+\bibitem{dataset}
+National Environment Agency. \emph{Historical Rainfall across Singapore}.
+\url{https://data.gov.sg/collections/2279/view}.
+\end{thebibliography}
+\draftnote{Add verified references for the Spark version, methods and any
+meteorological interpretation actually cited. Record dataset retrieval date.
+Do not include sources that were not used.}
+
+\appendix
+\section{Additional Results and Run Details}
+\draftnote{Include only useful supplementary material: complete threshold
+tables, coverage sensitivity, full model settings, selected runtime evidence
+and representative inference queries. Main text must remain understandable
+without this appendix. Omit empty appendix subsections from the final report.}
+\end{document}

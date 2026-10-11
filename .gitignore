@@ -228,5 +228,16 @@ AGENTS.md
 graphify-out/
 config/cloud.env
 
+# LaTeX build outputs; keep the report source and figures.
+report/*.aux
+report/*.out
+report/*.toc
+report/*.lof
+report/*.lot
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+report/main.pdf
+
 # Streamlit
 .streamlit/secrets.toml
