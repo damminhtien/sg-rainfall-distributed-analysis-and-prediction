@@ -105,7 +105,16 @@ workflow and which cleaned outputs are reused by both tasks.}
 worker execution, storage and MLlib training. State measured processing/training
 times and relevant constraints. Use about half a page; put long configs/logs in
 the appendix. Cloud resources remain conditional on the approved billing and
-credit checks; a proposed cluster is not an observed run.}
+credit checks; a proposed cluster is not an observed run. For every submitted
+Spark command or notebook action, review its Spark Web UI after the generated job(s)
+reach a final state. Use the live application UI if a notebook/application is
+still open, or Spark History Server if the application has ended. Review the
+Jobs summary and the detail page for each Spark Job ID. Capture
+and retain screenshots showing the matching application/job IDs, final status,
+duration and available stages/tasks; list and embed every screenshot in the
+appendix. Confirm event logging is enabled before runs so completed applications
+can be reopened. Do not use the Dataproc Jobs page as a substitute for Spark UI
+evidence~\cite{sparkui,dataprocui}.}
 \begin{table}[htbp]\centering\small
 \caption{Actual computing environment for the reported run.}
 \label{tab:environment}
@@ -230,9 +239,9 @@ Gradient-Boosted Trees & [Result] & [Result] & [Result]\\
 \caption{Per-threshold final-test performance. Include baseline comparison
 and the selected model's metrics, with the same support for both.}
 \label{tab:thresholds}
-\begin{tabularx}{\linewidth}{YYYYYY}\toprule
+\begin{tabularx}{\linewidth}{lYYYYY}\toprule
 $\tau$ (mm) & Samples & Positives & Prevalence & PR-AUC & Brier\\\midrule
-[Grid] & [Count] & [Count] & [Fraction] & [Result] & [Result]\\
+Grid: [values] & [Count] & [Count] & [Fraction] & [Result] & [Result]\\
 \bottomrule\end{tabularx}\end{table}
 \figureplaceholder{PR curves at representative thresholds fixed before testing.}
 {[Draft] Precision--recall curves on the final-test cohort. Identify thresholds,
@@ -289,6 +298,12 @@ and quality of the submitted work.
 \bibitem{dataset}
 National Environment Agency. \emph{Historical Rainfall across Singapore}.
 \url{https://data.gov.sg/collections/2279/view}.
+\bibitem{sparkui}
+Apache Spark. \emph{Web UI}.
+\url{https://spark.apache.org/docs/latest/web-ui.html}.
+\bibitem{dataprocui}
+Google Cloud. \emph{Managed Service for Apache Spark Component Gateway}.
+\url{https://docs.cloud.google.com/managed-spark/docs/concepts/accessing/gateways}.
 \end{thebibliography}
 \draftnote{Add verified references for the Spark version, methods and any
 meteorological interpretation actually cited. Record dataset retrieval date.
@@ -300,4 +315,33 @@ Do not include sources that were not used.}
 tables, coverage sensitivity, full model settings, selected runtime evidence
 and representative inference queries. Main text must remain understandable
 without this appendix. Omit empty appendix subsections from the final report.}
+
+\subsection{Spark Web UI evidence for completed jobs}
+\label{app:spark-ui-evidence}
+\draftnote{For each Spark command or notebook action, open its completed
+application in the live Spark Web UI if it remains open, or in Spark History
+Server after it ends, and review the Jobs tab. The summary shows job status and
+duration; each job detail page provides its stages, tasks and DAG as
+available~\cite{sparkui}. Include the original screenshot of the application
+Jobs summary and a detail screenshot for every Spark Job ID. Preserve visible
+Application ID, Job ID and final status; do not use Dataproc Jobs or YARN pages
+as substitutes. Store screenshots under
+\path{report/evidence/spark-ui/<RUN_ID>/} and maintain
+\path{report/evidence/spark-ui/index.csv}, with one record per submitted Spark
+command/notebook action, its application and Spark Job ID(s), final status, duration and all
+screenshot paths. Record failed or cancelled jobs accurately. If an application
+created no Spark Job ID, retain its summary screenshot and state this explicitly.
+If no job has run, do not invent screenshots or results.}
+\begin{table}[htbp]\centering\scriptsize
+\caption{Spark Web UI evidence for each submitted Spark command or notebook action.}
+\label{tab:spark-ui-evidence}
+\begin{tabularx}{\linewidth}{p{1.7cm}YYYYY}\toprule
+Run/command & Application ID & Spark Job ID(s) & Final status & Duration & Screenshot paths\\\midrule
+Row: [one per command/action] & [Application ID] & [All Job IDs] & [Actual state(s)] & [Actual time] & [Summary PNG; every job-detail PNG]\\
+\bottomrule\end{tabularx}
+\end{table}
+\draftnote{Embed each indexed original screenshot in this appendix and keep
+text readable at page size. The index must account for every submitted Spark
+command/action and all of its Spark Job IDs; screenshots are evidence of review, not
+substitutes for logs, outputs or measured results.}
 \end{document}

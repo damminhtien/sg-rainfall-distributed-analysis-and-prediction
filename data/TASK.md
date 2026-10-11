@@ -221,6 +221,28 @@ Mở Console → cluster → Web Interfaces → Jupyter/JupyterLab qua Component
 
 **Acceptance:** worker identity đọc/ghi GCS; Spark distributed; notebook persist; environment/lifecycle được ghi.
 
+**Bằng chứng Spark Web UI cho từng lần chạy:** mọi lệnh/batch/notebook action
+đã tạo Spark application/job phải được theo dõi đến trạng thái cuối (thành công,
+thất bại hoặc bị hủy). Sau khi lệnh/action kết thúc, mở đúng application bằng
+Application ID: dùng Spark Web UI đang hoạt động nếu notebook/application còn mở,
+hoặc **Spark History Server** qua Web Interfaces/Component Gateway nếu application
+đã kết thúc. Kiểm tra tab Jobs. Chụp ảnh trang tổng quan Jobs và trang chi tiết
+của từng Spark Job ID; ảnh phải cho thấy Application ID/Job ID, trạng thái,
+thời lượng và thông tin
+stages/tasks hiện có. Nếu job còn chạy sau khi lệnh trả về, chờ trạng thái cuối
+rồi chụp lại. Không dùng trang Dataproc Jobs hoặc
+YARN thay cho ảnh Spark UI. Bật/kiểm tra Spark event logging và History Server
+trước batch runs để các ứng dụng đã hoàn tất còn xem được. Lưu ảnh vào
+`report/evidence/spark-ui/<RUN_ID>/` với tên có Application ID, Job ID và trạng
+thái; ghi mỗi lệnh hoặc notebook action cùng đường dẫn ảnh vào
+`report/evidence/spark-ui/index.csv` (một dòng cho mỗi lệnh/action; lặp
+Application ID nếu cùng app có nhiều action, ghi tất cả Job ID và ảnh detail do
+action đó tạo). Chụp cả lỗi/hủy và ghi
+đúng trạng thái;
+không trình bày chúng như thành công. Lệnh local không tạo Spark application
+không thuộc yêu cầu này. Tham khảo [Spark Web UI](https://spark.apache.org/docs/latest/web-ui.html)
+và [Dataproc Component Gateway](https://docs.cloud.google.com/managed-spark/docs/concepts/accessing/gateways).
+
 ## 6. Phase 3 — Data contract và cleaning
 
 NEA xác nhận timestamps là SGT, data có thể thiếu records và chưa qua climate quality control; không coi raw là climate-quality data ([NEA collection](https://data.gov.sg/collections/2279/view)). Xác nhận schema từng file; header mẫu:
@@ -437,6 +459,7 @@ Abstract khoảng 150–200 từ, viết cuối: mục tiêu, dữ liệu/phươ
 - Bảng theo năm: raw rows, rows sau cleaning, số stations, valid station-days/coverage và số observations bị loại theo lý do. Phân biệt missing, invalid, exact duplicate và conflicting records; đếm loại bỏ theo thứ tự để tránh cộng trùng.
 - Giải thích vì sao không thay missing bằng 0, cách xử lý gaps/revisions và station metadata. Nêu ảnh hưởng đến Task 1 và số samples có đủ history/future cho Task 2.
 - Cấu hình **thực chạy**: region, master/workers, machine type, vCPU/RAM, disks, Dataproc image, Spark/Python/Java versions, executor settings quan trọng. Có thời gian xử lý/training và evidence Spark jobs chạy trên workers; không dùng cấu hình dự kiến làm kết quả.
+- Với **mỗi lệnh hoặc notebook action chạy Spark**, đối chiếu application trên Spark Web UI sau khi các job kết thúc; dùng live UI nếu application còn mở, History Server nếu đã kết thúc. Lưu ảnh Jobs summary và từng Job detail, mã Application ID/Job ID, trạng thái cuối, thời lượng và stages/tasks vào chỉ mục evidence. Ghi rõ nếu ứng dụng/job thất bại hoặc không có event log để khôi phục UI.
 - Mô tả flow raw CSV → cleaned Parquet → aggregates/features → MLlib → metrics/artifacts. Log dài, Spark plans và toàn bộ config đưa appendix hoặc repo.
 
 ### 13.3. Task 1 — Viết kỹ patterns và cách diễn giải
@@ -481,10 +504,22 @@ Kế hoạch dưới đây hướng dẫn chọn outputs; không phải quota b�
 | Table: model comparison / threshold results | Frozen 2024 metrics, same cohort, support và uncertainty có sẵn |
 | `pr_curves.pdf` / `calibration.pdf` | Spark score aggregates; primary thresholds, bin counts và split |
 | Table: ablation / error summary | A/B same samples và vài failure strata; bảng dài ở appendix |
+| `report/evidence/spark-ui/` + `index.csv` | Ảnh Spark History Server sau từng lệnh/application Spark: Jobs summary và chi tiết mọi Job ID do lệnh tạo; Application ID, Job ID(s), trạng thái cuối, thời lượng, stages/tasks và đường dẫn ảnh |
 
 Mọi caption phải tự hiểu được: thời gian/split, cohort, units, statistic, missingness/coverage rule và model nếu liên quan. Axis có units/labels, legend đọc được khi in A4; tránh quá nhiều đường trên một panel. Dẫn hình/bảng trong phần văn bản trước hoặc gần vị trí xuất hiện.
 
 Spark export **aggregate CSV/JSON nhỏ** cho tables/curves; không kéo toàn bộ raw/features vào Python để vẽ. Mỗi output lưu `RUN_ID`, split/cohort/config và nguồn artifact. Tạo table/numeric macros LaTeX từ outputs đã freeze để tránh chép tay sai; dùng manifest đơn giản nối figure/table với output và commit. Một metric xuất hiện ở abstract, bảng và conclusion phải khớp giá trị, rounding và cohort.
+
+Mỗi lệnh hoặc notebook action tạo Spark job được ghi thành một dòng trong
+evidence index. Sau khi các job của action kết thúc, mở **Spark Web UI** (live
+UI nếu application còn mở, Spark History Server nếu application đã kết thúc;
+không dùng Dataproc Jobs/YARN page), kiểm tra Jobs summary và trang chi tiết của
+mọi Spark Job ID do action tạo rồi chụp ảnh màn hình. Lưu ảnh gốc dưới
+`report/evidence/spark-ui/<RUN_ID>/`; appendix liệt kê Application ID, Job ID(s),
+command/action, trạng thái cuối, thời lượng và đường dẫn ảnh, đồng thời chèn ảnh
+tương ứng để người đọc xem lại.
+Nếu một application không tạo Spark Job ID, ghi rõ và giữ ảnh summary. Nếu chưa
+có kết quả chạy, để rõ chưa thực hiện; không tạo ảnh minh họa thay bằng chứng thật.
 
 ### 13.6. Discussion, reproducibility và quy trình hoàn thiện
 
@@ -501,6 +536,7 @@ Quy trình viết:
 3. Viết discussion/conclusion/abstract cuối; bỏ đoạn lặp và phần lý thuyết không phục vụ đề.
 4. Compile LaTeX, sửa references/overflow; render và đọc toàn bộ pages ở kích thước A4. Kiểm tra figures, font, captions, table widths và ngắt trang.
 5. Đối chiếu từng yêu cầu đề với section/page: cleaning, within/across-year patterns, features, model, environment/VM config, performance, limitations/insights và AI declaration. Kiểm tra số liệu với outputs, không còn TODO/placeholder/broken references trong bản nộp.
+6. Đối chiếu từng lệnh/notebook action Spark với live Spark Web UI hoặc History Server và evidence index: mỗi action có ảnh Jobs summary; mỗi Job ID có ảnh detail, ID/trạng thái khớp log và output; không thiếu lần chạy thất bại/bị hủy.
 
 README: prerequisites/config mẫu, data nguồn/manifest/upload, notebook order, batch commands, versions/lifecycle/artifact locations và load/predict. Package tự chứa source và model cần chấm; không phụ thuộc bucket cá nhân còn truy cập được.
 
@@ -550,6 +586,7 @@ Final checklist:
 - [ ] Monotonicity, A/B ablation, onset/continuation/unseen analysis có evidence.
 - [ ] Frozen manifest trước 2024; post-test exploration được khai báo.
 - [ ] Spark processing/MLlib và distributed/runtime evidence có lưu.
+- [ ] Mỗi lệnh/notebook action Spark đã có ảnh Spark Web UI sau trạng thái cuối: Jobs summary và từng Job detail; Application ID/Job ID, trạng thái, thời lượng, stages/tasks khớp evidence index, log và output.
 - [ ] Notebook restart-and-run-all/batch dùng cùng code/config.
 - [ ] Reload/inference thành công từ submission package trong fresh session.
 - [ ] PDF có names/IDs/captions/limitations/sources/AI declaration chính xác.
