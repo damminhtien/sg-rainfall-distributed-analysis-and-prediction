@@ -255,6 +255,19 @@ Ghi validated Parquet partition theo year, thêm month nếu profiling cần; tr
 
 **Acceptance:** tám năm; schema/unit/time/key đạt; rejected rows có lý do; coverage có mẫu số; interval semantics có evidence.
 
+**Implementation started:** `scripts/run_quality_audit.py` đọc đúng các path trong manifest, dùng schema CSV tường minh và giữ raw bất biến. Audit dự kiến xuất `quality_by_year`, `csv_parser_corrupt_candidates`, phân bố `reading_type`/`reading_unit`, duplicate-key groups (có cờ conflict, min/max và số giá trị đọc khác nhau), metadata variations theo station, spacing deviations so với 300 giây và `audit_metadata`. Duplicate/timestamp và spacing hiện chỉ là candidates để điều tra; job không tự deduplicate, quarantine hay gán timestamp thành cuối interval. `update_timestamp` và `reading_update_timestamp` chỉ được kiểm tra parseability/thứ tự, chưa được coi là thời điểm publication đã xác minh. Output bị chặn nếu đặt trong `raw/`.
+
+Lệnh chạy sau khi preflight đạt (manifest phải đọc được trên Spark driver; `--source-root` là local dataset root hoặc bucket URI):
+
+```bash
+spark-submit scripts/run_quality_audit.py \
+  --manifest manifests/input_manifest.json \
+  --source-root "$DATA_ROOT" \
+  --output "$OUTPUT_ROOT/quality-audit-$RUN_ID"
+```
+
+**Trạng thái thực thi:** mã đã được viết và kiểm tra cú pháp/CLI, nhưng audit chưa chạy: máy hiện không có `spark-submit`/PySpark hoặc Java runtime phù hợp. Chưa submit Cloud job hay tạo tài nguyên có phí vì chưa xác minh được Credit ID `3LU63BPGY77JFDQQ` gắn với billing account nào. Trước khi chạy Cloud, cần đối chiếu SHA-256 từng object với manifest. Cờ corrupt-record của Spark chỉ bao phủ lỗi parser; Spark không xem dòng có số token thừa/thiếu là corrupt. Manifest scan hiện ghi nhận 0 dòng sai số field, nhưng cần giữ điều kiện hash-match trước khi dùng bản sao trên GCS.
+
 ## 7. Phase 4 — Task 1: weather patterns
 
 Mỗi analysis ghi mục đích, cohort/denominator, statistic, observation, interpretation và limitation. Không cần dựng bộ câu hỏi nghiên cứu riêng; bám trực tiếp Task 1. Không cộng mọi trạm thành “tổng mưa Singapore”.
