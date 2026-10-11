@@ -12,9 +12,9 @@
 \setlength{\parskip}{6pt}
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 
-% Individual submission. Replace these two fields before submission.
-\newcommand{\studentname}{[Your full name]}
-\newcommand{\studentid}{[Your student ID]}
+% Individual submission. Author details confirmed by the student.
+\newcommand{\studentname}{DAM MINH TIEN}
+\newcommand{\studentid}{A0355091E}
 
 % Draft instructions are intentionally visible. Replace each box with measured
 % results or final prose; no draft instruction should remain in the submitted PDF.
@@ -24,6 +24,17 @@
   \begin{figure}[htbp]\centering
   \fbox{\parbox[c][30mm][c]{0.9\linewidth}{\centering\small #1}}
   \caption{#2}\end{figure}}
+
+% EDA figures appear only when the actual exported artifacts are present.
+\newcommand{\edaplot}[2]{%
+  \begin{figure}[htbp]\centering
+  \IfFileExists{figures/#1.pdf}{%
+    \includegraphics[width=0.94\linewidth]{figures/#1.pdf}%
+  }{%
+    \fbox{\parbox[c][20mm][c]{0.9\linewidth}{\centering\small
+      Awaiting measured EDA output: \texttt{\detokenize{#1}}}}%
+  }%
+  \caption{#2}\label{fig:#1}\end{figure}}
 
 \begin{document}
 \begin{titlepage}
@@ -135,39 +146,177 @@ Run identifier & [Run ID and code commit]\\
 
 \section{Task 1: Rainfall Patterns}
 \label{sec:task1}
-\subsection{Coverage and aggregation choices}
-\draftnote{Explain what each statistic measures, its units and valid-data
-denominator. Define wet readings and coverage eligibility. Do not sum rainfall
-over all stations and label it Singapore's total rainfall. Use the coverage
-figure to explain which comparisons are reliable.}
-\figureplaceholder{Coverage heatmap: station/year or year/month.}
-{[Draft] Valid observation coverage for the stated cohort and period.
-Define the expected and observed reading counts in the final caption.}
+\subsection{Scope and definitions}
+The exploratory data analysis (EDA) addresses the assignment's two descriptive
+requirements: rainfall patterns within a year and variation across 2017--2024.
+The implementation first analyses 2017--2023. The full eight-year analysis is
+reserved for execution after the Task 2 configuration and model are frozen.
+This order prevents findings from the test year from influencing feature or
+model selection. The figures and numerical findings in this section remain
+pending execution of the distributed EDA notebook.
+
+A valid reading is a retained, unique station--timestamp measurement on the
+exact five-minute grid. A \emph{wet} reading has rainfall strictly greater than
+0 mm; a valid zero denotes a dry interval. Missing and rejected records are
+excluded from rainfall statistics and retained in the coverage denominator.
+Following the accepted project assumption, timestamps identify the ends of
+five-minute intervals; this convention has not been confirmed by NEA. Month,
+date and hour groups refer to the interval-end timestamps in Singapore time
+(UTC+8). Consequently, calendar-labelled totals describe readings ending in
+that period, including the interval ending at midnight, rather than an
+independently verified meteorological daily-total convention.
+
+\subsection{Coverage and comparable station cohorts}
+For station $s$ and a calendar period $P$, let $N_{s,P}$ be the number of valid
+readings and $E_P=288D_P$ the expected count for $D_P$ calendar days. Coverage is
+\begin{equation}
+ C_{s,P}=\frac{N_{s,P}}{288D_P}.
+\end{equation}
+Leap days are included. The fixed reference network is the set of station IDs
+in the cleaned archive. Its zero-observation station-periods remain visible;
+commissioning and retirement dates are unavailable, so low fixed-calendar
+coverage cannot be interpreted directly as instrument downtime. The coverage
+heatmap, excluded-row audit and gap summaries provide the context for the
+rainfall comparisons.
+
+The primary monthly summaries require station-month coverage of at least
+95\%. Hourly summaries additionally require at least 95\% of the expected
+readings for that hour within the station-month: $12D_P$ readings, since each
+hour contains twelve five-minute intervals. Group counts and valid-observation
+counts accompany each summary. These checks reduce comparisons based on sparse
+records but do not establish that missing observations are unrelated to rain.
+
+Annual comparisons use the same stations throughout the analysed years. The
+implementation reports the number of common stations at fixed coverage cutoffs
+of 90\%, 95\% and 99\%, including a count of zero when a cohort is empty. A
+cutoff is not relaxed in response to a test-year finding. An all-observed-station
+view is exported separately to reveal how changing network composition affects
+the descriptive totals; it cannot replace a common-cohort comparison without
+stating that limitation.
+\edaplot{coverage_heatmap}{Valid five-minute readings divided by full-calendar
+expected readings, by station and year. Zero-observation years remain in the
+reference network. Coverage describes data availability, not verified station
+operating time.}
+
+\subsection{Rainfall distribution and large readings}
+The distribution summary separates the frequency of rain from its intensity.
+For a stated group of valid readings $\mathcal V$, the wet frequency and
+conditional wet intensity are
+\begin{equation}
+ f_{\mathrm{wet}}=
+ \frac{\sum_{i\in\mathcal V}\mathbf{1}(r_i>0)}{|\mathcal V|},
+ \qquad
+ \mu_{\mathrm{wet}}=
+ \frac{\sum_{i\in\mathcal V}r_i\mathbf{1}(r_i>0)}
+ {\sum_{i\in\mathcal V}\mathbf{1}(r_i>0)}.
+\end{equation}
+Conditional intensity is undefined for a group with no wet readings. The
+notebook exports valid, dry and wet counts; mean rainfall per valid interval;
+wet-reading median, P90, P95 and P99; and the maximum observed reading for each
+year. Quantiles are approximate Spark aggregates with accuracy parameter
+10,000. The annual distribution summaries pool valid readings and therefore
+give greater weight to stations with more observations. This weighting differs
+from the equal-station summaries used for the primary seasonal comparisons.
+
+A fixed-bin histogram shows wet rainfall in mm per five-minute interval;
+a logarithmic vertical scale makes the sparse upper tail visible. Dry records
+are shown as a separate proportion and excluded from the wet histogram's
+normalisation. The reference for unusually large readings is the wet-reading
+P99 computed using 2017--2022 only. Exceedance frequencies use this unchanged
+reference in every year. It is a descriptive threshold, not an official warning
+level. Large valid readings are retained; the maximum alone cannot establish
+that an event is an error or a meteorological extreme.
+\edaplot{rainfall_distribution}{Annual wet-record percentages and the
+conditional distribution of positive five-minute rainfall. Denominators are
+valid readings and wet readings, respectively; both panels pool observations.
+The wet-bin proportions are displayed on a logarithmic scale.}
 
 \subsection{Patterns within a year}
-\draftnote{Present monthly rainfall and wet frequency, followed by hourly
-patterns in Singapore time. Report quantified high/low periods, consistency
-across years and any material coverage effects. Each result paragraph should
-give the observation, calculation/cohort, interpretation and relevant limit.
-If discussing monsoons, cite a verified meteorological source and distinguish
-background knowledge from findings measured here.}
-\figureplaceholder{Two panels: monthly patterns and hourly patterns.}
-{[Draft] Within-year rainfall patterns. Specify aggregation, units, period,
-station cohort, wet-reading definition and missing-data rule.}
+For an eligible station-month, observed rainfall is
+$T_{s,P}=\sum_{i\in\mathcal V_{s,P}}r_i$ in mm. Monthly rainfall is the arithmetic
+mean of these station totals; wet frequency and conditional wet intensity are
+also averaged across eligible stations. This averaging assigns each station
+one weight within a month. The eligible station set may vary between months,
+so the support panel must be read alongside a seasonal peak or trough.
+Observed totals are not divided by coverage to reconstruct missing rainfall,
+and rainfall from different stations is not summed into a Singapore-wide total.
+Even a qualifying month with 95\% coverage may omit part of its rainfall.
+
+The monthly analysis compares amount, frequency and conditional intensity.
+These quantities distinguish a month with more wet intervals from one with
+larger readings when rain occurs. A complementary daily analysis retains only
+station-dates with all 288 unique grid readings, computes their observed totals,
+and averages daily rainfall within each station-month before averaging across
+stations. The corresponding support table reports complete station-days relative
+to both observed and full-calendar station-days. Complete-day filtering can
+exclude periods with missing observations during rain; it is a sensitivity
+view, not a correction for missingness.
+
+The month--hour heatmap averages wet frequencies equally across eligible
+station--year--month--hour groups. Separate yearly hourly curves average eligible
+station-month groups within a year. Thus neither plot allows a station with more
+valid observations to dominate by its record count. Support is recorded by hour,
+and the time axis labels the end of the five-minute interval in Singapore time.
+\edaplot{monthly_hourly_patterns}{Mean observed station-month rainfall (mm)
+and equal-group wet frequency by month and interval-end hour (SGT). Monthly
+coverage and, for hourly comparisons, hour coverage must each be at least 95\%.
+Missing observations contribute no rainfall value. Eligible station/group
+counts are exported with the plotted statistics.}
+\draftnote{Use the generated monthly and hourly extrema with their support
+counts to state the highest and lowest represented periods, the rainfall
+difference in mm or wet-frequency difference in percentage points, and whether
+the pattern recurs across years. A missing month/hour is unavailable evidence,
+not a zero. Discuss any changing station support before interpreting the peak.
+Place the frequency/intensity, complete-day and yearly-hourly panels in the
+appendix when they clarify the main pattern.}
 
 \subsection{Changes across 2017--2024}
-\draftnote{Compare annual statistics on a common or comparably covered station
-cohort. Quantify differences and show whether coverage sensitivity changes the
-conclusion. Eight years alone do not establish a long-term climate trend.}
-\figureplaceholder{Annual comparison, with coverage sensitivity if useful.}
-{[Draft] Annual rainfall statistics for 2017--2024 on the defined comparison
-cohort. Identify units, coverage policy and any uncertainty shown.}
+Annual observed rainfall and wet frequency are compared within the common
+station cohort. Each station receives equal weight. Coverage sensitivity
+reports the station count and the highest--lowest year difference in observed
+rainfall at all three fixed cutoffs. Consistent comparisons across these cohorts
+provide stronger descriptive evidence than an unadjusted network-wide sum.
+If a cutoff yields no common stations, that comparison is unavailable. The
+changing-cohort view remains descriptive and is labelled accordingly. No trend
+line or causal attribution is inferred solely from these eight annual values.
+\edaplot{annual_patterns}{Equal-station mean observed annual rainfall (mm)
+within stations meeting the stated coverage cutoff in every analysed year.
+Curves use 90\%, 95\% and 99\% cutoffs, with common-station counts. Empty cohorts
+are reported explicitly. Totals remain observed values, not imputed full-year
+rainfall.}
+\draftnote{Insert the measured annual differences and common-station counts.
+Compare year rankings across cutoffs and with the all-observed-station view.
+Explain any disagreement through the measured coverage/cohort changes; do not
+claim a long-term climate trend.}
+
+\subsection{Station differences and observed wet spells}
+The station-coordinate plots describe wet frequency and exceedance of the fixed
+training P99. Only stations whose recorded coordinates remain unchanged across
+the analysed period are mapped. Annual summaries require the primary coverage
+cutoff and are averaged equally over each station's eligible years. The number
+of eligible years and valid readings accompanies each point; different stations
+may represent different years. The plots show observed station measurements
+without spatial interpolation, so they do not estimate rainfall over an
+unmonitored area or establish that location causes a difference.
+
+An observed wet spell is a maximal sequence of positive readings at exactly
+300-second spacing for one station. Its observed duration is five minutes times
+the number of readings. A gap terminates the observed sequence; it does not
+prove that rain stopped. Spells adjoining a gap or an analysis boundary are
+flagged as censored and summarised separately from spells bounded by valid dry
+readings. The notebook reports counts, duration median/P90/P99 and maximum
+observed duration by the year of spell start. These are station-level observed
+sequences, not identified meteorological storms. Spatial, tail and spell figures
+are supplementary evidence and belong in the appendix when discussed.
 
 \subsection{Summary of Task 1 findings}
-\draftnote{State two or three actual findings answering the within-year and
-across-year tasks. Add a station map only if it contributes a useful finding;
-otherwise omit it or place it in the appendix. Explain which findings motivate
-the time and rainfall-history features used in Task 2.}
+\draftnote{After the Spark run, replace this note with two or three quantified
+findings supported by the exported CSV tables and figures: one within-year
+pattern, one comparison across years, and a material coverage or distribution
+result. Give units, cohort/support and the relevant limitation. Connect measured
+time patterns to time features and observed short-term persistence to rainfall
+history features in Task 2; retain the pre-test feature design. Every numerical
+statement must match the notebook's computed outputs.}
 
 \section{Task 2: Rainfall Probability Prediction}
 \label{sec:task2}

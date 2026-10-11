@@ -229,6 +229,32 @@ Task 1 mô tả cả 2017–2024. Freeze thiết kế Task 2 trước descriptiv
 
 **Acceptance:** within-year/across-year findings; cohort/denominator/unit/caption/method/limitations rõ; bias sensitivity có evidence.
 
+### 7.1. EDA chi tiết và artifacts bắt buộc
+
+EDA hỗ trợ trực tiếp Task 1; không đặt thêm research questions. Thân báo cáo ưu tiên coverage, distribution, monthly/hourly và annual comparison. Tail, complete-day, station-coordinate và wet-spell panels dùng làm sensitivity/supplementary evidence; đưa appendix khi hữu ích, không kéo dài thân bài bằng các biểu đồ lặp.
+
+| Nội dung | Cách tính và support | Artifact |
+|---|---|---|
+| Distribution | Theo năm: valid/dry/wet counts, wet fraction, mean valid rainfall, conditional wet mean, wet median/P90/P95/P99, max. Ghi rõ pooled-observation weighting. | `distribution_by_year`, `rainfall_histogram`; `rainfall_distribution.pdf` |
+| Tail | Fixed bins cho wet readings; log y để xem tail. Reference = wet P99 của **2017–2022**, giữ nguyên qua các năm. Exceedance denominator = valid readings, strict `>`. Không gọi training P99 là official warning threshold. | `rainfall_tail.pdf` |
+| Coverage | Calendar 288 slots/ngày, leap days; zero-observation periods phải có trong denominator. Reference network có thể bao gồm station chưa hoạt động; thiếu operating dates thì không gọi coverage thấp là downtime. | `coverage_summary`, `coverage_heatmap.pdf` |
+| Daily sensitivity | Chỉ ngày có đủ 288 unique exact-grid readings. Average daily rainfall theo station-month rồi equal-station average; báo complete/observed và complete/full-calendar station-days. | `daily_completeness`, `complete_daily_patterns.pdf` |
+| Month | Equal eligible-station mean của observed total, wet frequency, conditional wet intensity; primary station-month coverage ≥95%. Support stations và mean coverage đi cùng số liệu. | `monthly`, `monthly_frequency_intensity.pdf` |
+| Hour | SGT **interval-end hour**; coverage tháng **và nhóm giờ** mỗi station-month ≥95%. Expected slots cho mỗi giờ = 12×days. Audit bao gồm giờ không có observation; không thay missing rainfall bằng 0. Equal station-year-month-hour weighting trong heatmap; yearly curves equal station-month weighting. | `hourly_coverage`, `hourly_by_year`, `monthly_hourly_patterns.pdf`, `hourly_by_year.pdf` |
+| Annual comparison | Cùng station IDs trong mọi năm; fixed cutoffs 90/95/99%. Xuất số stations kể cả cohort rỗng, observed total và wet frequency. Full observed changing-cohort view riêng. | `annual_cohort_support`, `annual_common_cohort`, `annual_descriptive`, `annual_patterns.pdf` |
+| Stations | Chỉ plot station có coordinates không đổi trong toàn period; annual coverage ≥95%; equal eligible-year average. Ghi eligible years/valid slots; không nội suy diện tích hoặc suy luận nhân quả. | `station_spatial_summary`, `station_map`, `station_spatial_patterns.pdf` |
+| Wet spells | Positive readings liên tiếp đúng 300 giây cùng station. Duration = 5×records phút; gap/boundary-censored tách riêng. Count và duration median/P90/P99/max theo năm bắt đầu. Không coi gaps là dry hay sequences là meteorological storms. | `wet_spell_summary`, `wet_spell_patterns.pdf` |
+
+**Quy ước thời gian đã được người dùng chấp nhận:** timestamp là cuối interval 5 phút; đây là giả định của project, chưa phải xác nhận từ NEA. Calendar month/day/hour ở EDA nhóm theo timestamp cuối interval. Tổng được gắn nhãn calendar period của timestamp, không tự nhận là meteorological daily total đã xác minh.
+
+**Trình tự và output Jupyter:** `02_task1_weather_patterns.ipynb` thực hiện EDA 2017–2023; `05_final_evaluation.ipynb` thực hiện EDA đủ 2017–2024 sau freeze Task 2. Spark materialise aggregates một lần, sau đó plot/export từ các bảng nhỏ; driver collect tối đa 20,000 rows mỗi bảng, không collect raw records. Notebook hiển thị tables/figures/findings; JSON trên GCS và CSV + PDF/PNG giữ full evidence kể cả khi `.show(20)` rút gọn display. Figures dùng SciencePlots, không đòi cài TeX trên worker.
+
+`findings.json` phải chứa actual peak/trough, units, support và common-cohort availability, tính từ aggregates; chưa chạy thì không điền finding minh họa. Sau mỗi action phải review **Spark Web UI / History Server Jobs summary và từng Job detail**, chụp ảnh thật có application/job IDs, status, duration, stages/tasks. Event metadata chỉ là index hỗ trợ đối chiếu, không thay screenshots.
+
+**Acceptance EDA:** ít nhất một within-year finding, một annual comparison có sensitivity (hoặc lý do không có common cohort), và một coverage/distribution finding, tất cả có số liệu thật. Nêu peak–trough theo mm hoặc percentage points, mẫu so sánh, support và giới hạn; không kết luận chỉ từ màu biểu đồ. Nếu thiếu tháng/giờ, ghi represented months/hours, không coi là zero hoặc tuyên bố đã so sánh đầy đủ.
+
+**Trạng thái:** đã bổ sung implementation và notebook/report methods; chưa có Spark EDA run, aggregate results, final figures hoặc Spark UI screenshots để đánh dấu hoàn thành kết quả.
+
 ## 8. Phase 5 — Target và inference contract
 
 Sau khi xác minh semantics, `r(s,u)` là tổng mưa interval `(u−5min,u]`; `t` là decision time trên grid 5 phút SGT:
@@ -390,6 +416,8 @@ Phần này phải đáp ứng riêng cả **within-year** và **across-year**, 
 3. **Hourly patterns:** rainfall/wet frequency theo giờ SGT trên observations hợp lệ. Nêu giờ có mưa thường xuyên hoặc lượng mưa lớn hơn và độ khác biệt thực tế; tránh suy luận nguyên nhân chỉ từ hình.
 4. **Across-year patterns:** so sánh 2017–2024 bằng tập stations có coverage tương đương/common cohort. Nêu năm cao thấp và kiểm tra kết luận có đổi khi đổi coverage policy/cohort; không khẳng định xu hướng khí hậu dài hạn từ tám năm.
 5. **Spatial differences nếu hữu ích:** map hoặc station summary có units/support; phân biệt vị trí với thay đổi mạng lưới stations. Đưa appendix nếu không bổ sung insight cho yêu cầu chính.
+
+Bổ sung một đoạn **distribution** trước monthly patterns: tách valid dry/wet proportions và conditional wet intensity/quantiles, ghi pooled weighting. Dùng complete-day và wet-spell outputs để giải thích sensitivity hoặc short-term persistence khi có evidence; giữ spatial/tail detail ở appendix nếu không cần cho finding chính. Chi tiết thống kê và artifacts theo mục 7.1.
 
 Mỗi đoạn kết quả gồm: **quan sát có số liệu → cách tính/cohort → diễn giải → giới hạn liên quan**. Dùng tên hình/bảng để dẫn chứng; không chỉ mô tả màu hoặc lặp caption. Nếu đối chiếu mùa mưa/monsoon, dẫn nguồn khí tượng chính thức và tách thông tin nền khỏi kết quả được tính từ dataset. Không gán causal explanations chưa có dữ liệu chứng minh.
 

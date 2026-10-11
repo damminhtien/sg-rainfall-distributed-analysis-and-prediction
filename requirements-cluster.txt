@@ -1,0 +1,4 @@
+# Use Dataproc 2.2.87-debian12's installed Python 3.11 / Spark 3.5.3.
+# Do not pip-install or upgrade PySpark on Dataproc.
+SciencePlots==2.2.2
+# Matplotlib, pandas, NumPy, google-cloud-storage, Jupyter are supplied by the image.
