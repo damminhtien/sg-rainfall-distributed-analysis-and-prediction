@@ -101,12 +101,17 @@ workflow and which cleaned outputs are reused by both tasks.}
 
 \section{Computing Environment}
 \label{sec:environment}
+Project code is executed from Jupyter notebooks, which retain the configuration,
+outputs and Spark application/job identifiers. Reusable Python functions are
+imported into the notebook cells. The local environment preflight has run;
+distributed processing remains pending the billing linkage described in
+Appendix~\ref{app:preflight}.
 \draftnote{Describe the environment actually used. Summarise Spark processing,
 worker execution, storage and MLlib training. State measured processing/training
 times and relevant constraints. Use about half a page; put long configs/logs in
 the appendix. Cloud resources remain conditional on the approved billing and
 credit checks; a proposed cluster is not an observed run. For every submitted
-Spark command or notebook action, review its Spark Web UI after the generated job(s)
+notebook action, review its Spark Web UI after the generated job(s)
 reach a final state. Use the live application UI if a notebook/application is
 still open, or Spark History Server if the application has ended. Review the
 Jobs summary and the detail page for each Spark Job ID. Capture
@@ -316,9 +321,26 @@ tables, coverage sensitivity, full model settings, selected runtime evidence
 and representative inference queries. Main text must remain understandable
 without this appendix. Omit empty appendix subsections from the final report.}
 
+\subsection{Notebook execution and billing preflight}
+\label{app:preflight}
+The sole authorised credit is \texttt{3LU63BPGY77JFDQQ}, with a user-provided
+original and remaining value of USD~50. The authorised billing account is
+Billing Account for Education, ID \texttt{01DAD8-AE5F1A-E3910A}.
+The credit ID and billing account ID identify separate objects. Their live
+association and remaining credit must be checked before paid execution.
+The local \path{notebooks/00_environment.ipynb} preflight on 11 October 2026
+found project \texttt{new-cloud-256902} billing-disabled. Linking it to Education
+was denied because the active identity lacked project billing-assignment
+permissions. No cloud bucket, cluster or Spark job was created by this run.
+\draftnote{Replace this preflight status with the actual resolved environment
+and dated billing evidence when available. Retain executed notebooks with
+visible, sanitised outputs. Run the audit through
+\path{notebooks/01_data_quality.ipynb}, and record the notebook/cell, input
+manifest hash, configuration, application ID and every Spark Job ID.}
+
 \subsection{Spark Web UI evidence for completed jobs}
 \label{app:spark-ui-evidence}
-\draftnote{For each Spark command or notebook action, open its completed
+\draftnote{For each notebook action, open its completed
 application in the live Spark Web UI if it remains open, or in Spark History
 Server after it ends, and review the Jobs tab. The summary shows job status and
 duration; each job detail page provides its stages, tasks and DAG as
@@ -328,20 +350,20 @@ Application ID, Job ID and final status; do not use Dataproc Jobs or YARN pages
 as substitutes. Store screenshots under
 \path{report/evidence/spark-ui/<RUN_ID>/} and maintain
 \path{report/evidence/spark-ui/index.csv}, with one record per submitted Spark
-command/notebook action, its application and Spark Job ID(s), final status, duration and all
+notebook action, its application and Spark Job ID(s), final status, duration and all
 screenshot paths. Record failed or cancelled jobs accurately. If an application
 created no Spark Job ID, retain its summary screenshot and state this explicitly.
 If no job has run, do not invent screenshots or results.}
 \begin{table}[htbp]\centering\scriptsize
-\caption{Spark Web UI evidence for each submitted Spark command or notebook action.}
+\caption{Spark Web UI evidence for each submitted notebook action.}
 \label{tab:spark-ui-evidence}
 \begin{tabularx}{\linewidth}{p{1.7cm}YYYYY}\toprule
-Run/command & Application ID & Spark Job ID(s) & Final status & Duration & Screenshot paths\\\midrule
-Row: [one per command/action] & [Application ID] & [All Job IDs] & [Actual state(s)] & [Actual time] & [Summary PNG; every job-detail PNG]\\
+Notebook action/cell & Application ID & Spark Job ID(s) & Final status & Duration & Screenshot paths\\\midrule
+Row: [one per notebook action] & [Application ID] & [All Job IDs] & [Actual state(s)] & [Actual time] & [Summary PNG; every job-detail PNG]\\
 \bottomrule\end{tabularx}
 \end{table}
 \draftnote{Embed each indexed original screenshot in this appendix and keep
 text readable at page size. The index must account for every submitted Spark
-command/action and all of its Spark Job IDs; screenshots are evidence of review, not
+notebook action and all of its Spark Job IDs; screenshots are evidence of review, not
 substitutes for logs, outputs or measured results.}
 \end{document}

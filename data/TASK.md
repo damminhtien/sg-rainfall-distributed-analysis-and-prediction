@@ -78,7 +78,7 @@ sg-rainfall-distributed-analysis-and-prediction/
 └── report/                  # main.tex, references.bib
 ```
 
-Notebook điều phối/trình bày; hàm reuse nằm trong `src/`; batch scripts dùng cùng hàm. Mỗi run có `RUN_ID`, Git commit, input manifest hash và config hash; ghi output dưới run prefix riêng, không overwrite final results. Không commit `skills/`, `.codex/`, `.vscode/`, `AGENTS.md`, `config/cloud.env`, credential hoặc raw/cache lớn. Plan/config mẫu và bảng kết quả nhỏ có thể commit.
+**Jupyter Notebook là entry point duy nhất để chạy code của project và xem output.** Các hàm tái sử dụng nằm trong `scripts/` hoặc `src/`, được import và gọi từ notebook; không chạy phân tích bằng terminal, `spark-submit` hay batch script. Lệnh Cloud SDK cần thiết cũng được gọi trong cell Python bằng `subprocess`, có in trạng thái/kết quả vào output. Notebook được lưu cùng output cần thiết; credential và nội dung nhạy cảm không được ghi vào notebook. Mỗi run có `RUN_ID`, Git commit, input manifest hash và config hash; ghi output dưới run prefix riêng, không overwrite final results. Không commit `skills/`, `.codex/`, `.vscode/`, `AGENTS.md`, `config/cloud.env`, credential hoặc raw/cache lớn. Plan/config mẫu và bảng kết quả nhỏ có thể commit.
 
 **Acceptance:** manifest đủ tám năm; portable paths; entry point và execution order rõ; repo không chứa credential/raw.
 
@@ -88,7 +88,7 @@ Notebook điều phối/trình bày; hàm reuse nằm trong `src/`; batch script
 
 **Ràng buộc của người dùng: chỉ dùng khoản education credit dưới đây và đúng billing account chứa khoản credit đó. Tuyệt đối không dùng billing account khác, credit khác hoặc chi tiền ngoài khoản credit này.** Ràng buộc áp dụng cho toàn bộ project: compute, Dataproc, GCS, disk, network, logging và các tài nguyên phụ.
 
-Thông tin người dùng cung cấp ngày 11/10/2026; đây là snapshot do người dùng gửi, chưa phải truy vấn live từ máy:
+Credit ID `3LU63BPGY77JFDQQ` là mã duy nhất người dùng cho phép; người dùng chỉ định dùng Billing Account có tên Education. Snapshot credit dưới đây do người dùng cung cấp ngày 11/10/2026, không phải truy vấn live từ máy:
 
 | Thuộc tính | Giá trị được cung cấp |
 |---|---|
@@ -101,60 +101,17 @@ Thông tin người dùng cung cấp ngày 11/10/2026; đây là snapshot do ng�
 | Start / end date | 17/08/2026 / 14/08/2027 |
 | Credit application type | Net pricing |
 
-**Credit ID không phải Billing Account ID.** Billing Account ID chưa được cung cấp; phải lấy từ chính account có credit khớp bảng trên và ghi vào `BILLING_ACCOUNT_ID` trong config local. Không suy ra account từ tên hiển thị hoặc tự chọn account đầu tiên đang active. Currency của ký hiệu `$` cũng phải đối chiếu trong Console; không tự gán USD/SGD.
+Credit ID không phải Billing Account ID. Read-only gcloud inventory ngày 11/10/2026 xác định account được người dùng chỉ định là **Billing Account for Education**, ID `01DAD8-AE5F1A-E3910A`, trạng thái open, currency USD. Không dùng account khác. Gcloud chỉ xác nhận tên/ID/trạng thái account, không trả về danh sách credit; trạng thái credit trong bảng vẫn là snapshot do người dùng cung cấp.
 
 Google áp dụng promotional credits tự động vào eligible costs; gcloud không phải cơ chế chọn một Credit ID cho từng job. Kiểm tra Credits và cost details của đúng account để xác minh khoản nào được áp dụng ([education credits](https://docs.cloud.google.com/billing/docs/how-to/edu-grants), [cost details](https://docs.cloud.google.com/billing/docs/how-to/cost-table)). Nếu có nhiều promotional credits cùng scope và chưa xác minh được chỉ khoản chỉ định sẽ chi trả, dừng bước có phí để làm rõ. Không redeem thêm credit, đổi account, thêm phương thức thanh toán hoặc chuyển sang trả tiền để tiếp tục.
 
-Trước mỗi session và trước thao tác có phí, phải xác nhận account linkage, credit còn Available/chưa hết hạn, actual remaining balance, usage scope và pending costs. Credit áp dụng cả billing account nên phải kiểm tra mức tiêu thụ của project khác dùng cùng account. Khi thiếu quyền đọc billing/credit, account không khớp, balance chưa rõ hoặc không bảo đảm chi phí được credit này chi trả, **dừng thao tác có phí**. Cleanup tài nguyên của project đã tạo vẫn phải thực hiện để ngừng chi phí tiếp tục.
+Read-only gcloud check ngày 11/10/2026 cho thấy project hiện có `new-cloud-256902` đang billing-disabled, chưa link với Billing Account for Education; danh sách project gắn vào Education hiện trống. Notebook đã thử link theo yêu cầu nhưng gcloud identity hiện tại bị từ chối vì thiếu quyền gán billing trên project (`resourcemanager.projects.createBillingAssignment` và `resourcemanager.projects.deleteBillingAssignment`). Vì thế project chưa sẵn sàng chạy Cloud job; không đổi sang account khác. Cần người có quyền trên project/account hoàn tất đúng liên kết. Trước mỗi lần tạo tài nguyên hoặc chạy job có phí, cập nhật trạng thái credit/balance/scope và pending cost trong Google Cloud Billing Console. Credit được áp dụng ở account-level, không chọn riêng từng job; nếu không bảo đảm chi phí chỉ trừ vào credit được phép thì dừng. Cleanup tài nguyên của project đã tạo vẫn phải thực hiện để ngừng chi phí tiếp tục.
 
 ### 4.2. Cấu hình và preflight
 
-`config/cloud.env` là file local ignored; commit `cloud.env.example` với placeholders:
+Thông số project/account/region/run được đặt ở đầu `notebooks/00_environment.ipynb`; không dùng file credential hoặc `config/cloud.env` làm đường chạy riêng. Notebook đọc account/project state, thử link `new-cloud-256902` vào Billing Account for Education đã chỉ định, rồi kiểm tra lại linkage và `billingEnabled`. Cell giữ trạng thái permission denied trong output, không tạo bucket, cluster hay job khi link chưa đạt. Các API, quota, IAM, network và credit/balance phải được kiểm tra trong notebook/Console trước khi tạo tài nguyên.
 
-```bash
-export PROJECT_ID="replace-with-project-id"
-export BILLING_ACCOUNT_ID="UNVERIFIED"
-export ALLOWED_CREDIT_ID="3LU63BPGY77JFDQQ"
-export REGION="asia-southeast1"
-export CLUSTER="dsa5208-rainfall"
-export BUCKET="replace-with-globally-unique-bucket"
-export DATA_ROOT="/Users/macbook/Data/sg historical rainfall"
-export DATAPROC_IMAGE="replace-with-supported-exact-image-version"
-export SUBNET="replace-with-regional-subnet-resource-path"
-export VM_SERVICE_ACCOUNT="replace-with-service-account-email"
-export RUN_ID="replace-with-unique-run-id"
-```
-
-Project ID phải hợp lệ; bucket name duy nhất toàn cục. Không thực thi placeholders. Chỉ dùng project gắn đúng billing account đã xác minh ở §4.1; project mới cũng phải gắn chính account này. Nếu cần project mới, chạy `gcloud projects create "$PROJECT_ID"` sau login và trước bước `config set project`. Dùng gcloud configuration riêng; tạo một lần, sau đó activate khi cần:
-
-```bash
-source config/cloud.env
-gcloud config configurations create dsa5208-rainfall
-gcloud auth login
-gcloud config set project "$PROJECT_ID"
-gcloud config set dataproc/region "$REGION"
-gcloud auth list
-gcloud config list
-```
-
-Nếu configuration đã có, dùng `gcloud config configurations activate dsa5208-rainfall`. Trong Billing Console, đối chiếu Credit ID, lấy Billing Account ID và link project với chính account đó. Account đang active chưa đủ để xác nhận credit đúng. `scripts/cloud_preflight.sh` khi triển khai phải kiểm tra linkage theo logic sau và dừng khi chưa khóa account:
-
-```bash
-test -n "${BILLING_ACCOUNT_ID:-}" || exit 1
-test "$BILLING_ACCOUNT_ID" != "UNVERIFIED" || exit 1
-linked_account="$(gcloud billing projects describe "$PROJECT_ID" \
-  --format='value(billingAccountName)')" || exit 1
-test "$linked_account" = "billingAccounts/${BILLING_ACCOUNT_ID}" || exit 1
-```
-
-Guard trên chỉ xác minh account linkage; còn phải kiểm tra `billingEnabled`, credit/balance/scope và dự toán ở §4.1. Không coi output của `gcloud billing projects describe` là bằng chứng remaining credit. Sau preflight, kiểm tra/bật APIs:
-
-```bash
-gcloud billing projects describe "$PROJECT_ID"
-gcloud services enable dataproc.googleapis.com compute.googleapis.com storage.googleapis.com
-```
-
-Preflight: billing enabled; CPU/disk quota theo region; subnet/firewall cho VM trao đổi nội bộ; user có quyền tạo cluster và `iam.serviceAccounts.actAs`. VM service account cần `roles/dataproc.worker` và quyền đọc/ghi data, staging/temp buckets phù hợp. User login trên Mac không tự trở thành identity của workers. Dùng service account gắn VM, không đưa JSON keys vào notebook. Nguồn: [Dataproc service accounts](https://docs.cloud.google.com/dataproc/docs/concepts/configuring-clusters/service-accounts).
+Preflight trong notebook: kiểm tra CPU/disk quota theo region, subnet/Private Google Access/firewall cho trao đổi nội bộ, quyền tạo cluster và `iam.serviceAccounts.actAs`. VM service account cần `roles/dataproc.worker` cùng quyền đọc/ghi data và staging/temp buckets phù hợp; không đưa JSON keys vào notebook. Chỉ đánh dấu gate đạt khi đã có output kiểm tra. Nguồn: [Dataproc service accounts](https://docs.cloud.google.com/dataproc/docs/concepts/configuring-clusters/service-accounts).
 
 ### 4.3. Giới hạn vận hành trong credit
 
@@ -168,24 +125,9 @@ Cluster có idle timeout **và** maximum lifetime, vẫn xóa thủ công khi xo
 
 ## 5. Phase 2 — GCS, Dataproc và Jupyter
 
-Bucket private, uniform access, cùng region với compute; tạo một lần:
+Bucket private, uniform access, cùng region với compute. Tạo bucket và upload đúng manifest cùng 8 CSV (2017–2024) bằng các cell riêng trong `00_environment.ipynb`; mỗi cell in trạng thái và danh sách object vào output. Không upload 2016 hoặc dữ liệu ngoài manifest.
 
-```bash
-gcloud storage buckets create "gs://${BUCKET}" \
-  --project="$PROJECT_ID" --location="$REGION" \
-  --default-storage-class=STANDARD --uniform-bucket-level-access
-```
-
-Layout: `raw/`, `manifests/`, `processed/<RUN_ID>/`, `features/<RUN_ID>/`, `notebooks/`, `models/<RUN_ID>/`, `results/<RUN_ID>/`, `staging/`, `temp/`. Upload đúng manifest, không rsync cả raw chứa 2016. Ví dụ dùng sau khi filenames đã được kiểm tra:
-
-```bash
-for year in {2017..2024}; do
-  file="${DATA_ROOT}/raw/HistoricalRainfallacrossSingapore${year}.csv"
-  test -f "$file" || exit 1
-  gcloud storage cp "$file" "gs://${BUCKET}/raw/" || exit 1
-done
-gcloud storage ls "gs://${BUCKET}/raw/"
-```
+Layout: `raw/`, `manifests/`, `processed/<RUN_ID>/`, `features/<RUN_ID>/`, `notebooks/`, `models/<RUN_ID>/`, `results/<RUN_ID>/`, `staging/`, `temp/`.
 
 Cloud runs đọc paths từ manifest, không wildcard lấy nhầm năm/object. GCS raw + manifest là nguồn input; không copy raw vào mỗi worker.
 
@@ -193,23 +135,7 @@ Cloud runs đọc paths từ manifest, không wildcard lấy nhầm năm/object.
 
 Chọn supported image, kiểm tra Jupyter/Python/Spark, pin **exact image version** sau smoke run. Khi thử bằng alias phải ghi resolved version. Local dùng `python3` 3.14 cho utilities phù hợp; cloud dùng Python đi kèm image tương thích Spark. Không ép Dataproc sang 3.14/cài PySpark mới đè runtime ([image versions](https://docs.cloud.google.com/dataproc/docs/concepts/versioning/dataproc-version-clusters)).
 
-Lệnh mẫu chỉ chạy sau preflight và điền config thật:
-
-```bash
-gcloud dataproc clusters create "$CLUSTER" \
-  --project="$PROJECT_ID" --region="$REGION" \
-  --image-version="$DATAPROC_IMAGE" \
-  --subnet="$SUBNET" --no-address \
-  --service-account="$VM_SERVICE_ACCOUNT" --scopes=cloud-platform \
-  --master-machine-type=e2-standard-4 \
-  --master-boot-disk-type=pd-balanced --master-boot-disk-size=100GB \
-  --num-workers=2 --worker-machine-type=e2-standard-4 \
-  --worker-boot-disk-type=pd-balanced --worker-boot-disk-size=100GB \
-  --bucket="$BUCKET" --temp-bucket="$BUCKET" \
-  --enable-component-gateway --optional-components=JUPYTER \
-  --properties="dataproc:jupyter.notebook.gcs.dir=gs://${BUCKET}/notebooks/" \
-  --delete-max-idle=45m --delete-max-age=3h
-```
+Tạo Dataproc cluster bằng cell riêng trong `00_environment.ipynb` sau khi price check và cost guard đạt. Cluster bật Jupyter component, dùng private networking, một master và hai workers theo cấu hình ứng viên; cell in tên cluster, region, image version, VM/disk và lifecycle settings để xem lại trong notebook. Không tạo cluster mặc định khi cost estimate hoặc credit gate chưa đạt.
 
 `3h` là lifetime session ban đầu. Idle calculation dựa trên Dataproc/YARN activity; notebook application có thể giữ cluster active. Max-age vẫn xóa cluster khi job đang chạy, làm job thất bại. Lưu checkpoint/output theo phase và theo dõi lifecycle ([scheduled deletion](https://docs.cloud.google.com/dataproc/docs/concepts/configuring-clusters/scheduled-deletion)).
 
@@ -217,13 +143,13 @@ Internal-IP cluster cần Private Google Access và network nội bộ đúng. P
 
 Mở Console → cluster → Web Interfaces → Jupyter/JupyterLab qua Component Gateway. Lưu notebook trên GCS và export về repo sau session; không chỉ giữ artifact trên local disk cluster ([Jupyter component](https://docs.cloud.google.com/dataproc/docs/concepts/components/jupyter)).
 
-`00_environment.ipynb` ghi image, Spark/Python/Java/OS, region, machine types/disks, service account, application ID/master, actual executors và Spark config. Đặt `spark.sql.session.timeZone=Asia/Singapore`. Smoke run đọc một CSV với explicit schema, tạo/read Parquet nhỏ và kiểm tra MLlib/import/GCS. Spark master phải là YARN, executors chạy trên workers. Bước cần account/UI thì mở sẵn terminal/browser và hướng dẫn người dùng.
+Trong notebook Dataproc, ghi image, Spark/Python/Java/OS, region, machine types/disks, service account, application ID/master, actual executors và Spark config. Đặt `spark.sql.session.timeZone=Asia/Singapore`. Notebook smoke run đọc một CSV với explicit schema, tạo/read Parquet nhỏ và kiểm tra MLlib/import/GCS. Spark master phải là YARN, executors chạy trên workers. Mọi stdout, bảng và hình cần cho analysis hiển thị trong notebook; lưu notebook đã chạy lên GCS và export về repo sau session.
 
 **Acceptance:** worker identity đọc/ghi GCS; Spark distributed; notebook persist; environment/lifecycle được ghi.
 
-**Bằng chứng Spark Web UI cho từng lần chạy:** mọi lệnh/batch/notebook action
+**Bằng chứng Spark Web UI cho từng lần chạy:** mọi notebook action
 đã tạo Spark application/job phải được theo dõi đến trạng thái cuối (thành công,
-thất bại hoặc bị hủy). Sau khi lệnh/action kết thúc, mở đúng application bằng
+thất bại hoặc bị hủy). Sau khi cell/action kết thúc, mở đúng application bằng
 Application ID: dùng Spark Web UI đang hoạt động nếu notebook/application còn mở,
 hoặc **Spark History Server** qua Web Interfaces/Component Gateway nếu application
 đã kết thúc. Kiểm tra tab Jobs. Chụp ảnh trang tổng quan Jobs và trang chi tiết
@@ -234,12 +160,12 @@ rồi chụp lại. Không dùng trang Dataproc Jobs hoặc
 YARN thay cho ảnh Spark UI. Bật/kiểm tra Spark event logging và History Server
 trước batch runs để các ứng dụng đã hoàn tất còn xem được. Lưu ảnh vào
 `report/evidence/spark-ui/<RUN_ID>/` với tên có Application ID, Job ID và trạng
-thái; ghi mỗi lệnh hoặc notebook action cùng đường dẫn ảnh vào
-`report/evidence/spark-ui/index.csv` (một dòng cho mỗi lệnh/action; lặp
+thái; ghi mỗi notebook action cùng đường dẫn ảnh vào
+`report/evidence/spark-ui/index.csv` (một dòng cho mỗi notebook action; lặp
 Application ID nếu cùng app có nhiều action, ghi tất cả Job ID và ảnh detail do
 action đó tạo). Chụp cả lỗi/hủy và ghi
 đúng trạng thái;
-không trình bày chúng như thành công. Lệnh local không tạo Spark application
+không trình bày chúng như thành công. Cell local không tạo Spark application
 không thuộc yêu cầu này. Tham khảo [Spark Web UI](https://spark.apache.org/docs/latest/web-ui.html)
 và [Dataproc Component Gateway](https://docs.cloud.google.com/managed-spark/docs/concepts/accessing/gateways).
 
@@ -277,18 +203,11 @@ Ghi validated Parquet partition theo year, thêm month nếu profiling cần; tr
 
 **Acceptance:** tám năm; schema/unit/time/key đạt; rejected rows có lý do; coverage có mẫu số; interval semantics có evidence.
 
-**Implementation started:** `scripts/run_quality_audit.py` đọc đúng các path trong manifest, dùng schema CSV tường minh và giữ raw bất biến. Audit dự kiến xuất `quality_by_year`, `csv_parser_corrupt_candidates`, phân bố `reading_type`/`reading_unit`, duplicate-key groups (có cờ conflict, min/max và số giá trị đọc khác nhau), metadata variations theo station, spacing deviations so với 300 giây và `audit_metadata`. Duplicate/timestamp và spacing hiện chỉ là candidates để điều tra; job không tự deduplicate, quarantine hay gán timestamp thành cuối interval. `update_timestamp` và `reading_update_timestamp` chỉ được kiểm tra parseability/thứ tự, chưa được coi là thời điểm publication đã xác minh. Output bị chặn nếu đặt trong `raw/`.
+**Implementation started:** `scripts/run_quality_audit.py` cung cấp hàm để notebook import, đọc đúng paths trong manifest, dùng schema CSV tường minh và giữ raw bất biến. Audit dự kiến xuất `quality_by_year`, `csv_parser_corrupt_candidates`, phân bố `reading_type`/`reading_unit`, duplicate-key groups (có cờ conflict, min/max và số giá trị đọc khác nhau), metadata variations theo station, spacing deviations so với 300 giây và `audit_metadata`. Duplicate/timestamp và spacing hiện chỉ là candidates để điều tra; job không tự deduplicate, quarantine hay gán timestamp thành cuối interval. `update_timestamp` và `reading_update_timestamp` chỉ được kiểm tra parseability/thứ tự, chưa được coi là thời điểm publication đã xác minh. Output bị chặn nếu đặt trong `raw/`.
 
-Lệnh chạy sau khi preflight đạt (manifest phải đọc được trên Spark driver; `--source-root` là local dataset root hoặc bucket URI):
+Mở và chạy `notebooks/01_data_quality.ipynb` trên Jupyter của Dataproc sau khi preflight đạt. Notebook load manifest, xác minh đúng tám GCS objects qua SHA-256, tạo SparkSession trên YARN, gọi `run_audit(...)` trong cell và hiển thị application ID, Spark Job ID(s), trạng thái cuối, output path cùng link Spark Web UI. Không chạy module bằng `spark-submit` hoặc terminal. Mỗi lần chạy có run prefix mới.
 
-```bash
-spark-submit scripts/run_quality_audit.py \
-  --manifest manifests/input_manifest.json \
-  --source-root "$DATA_ROOT" \
-  --output "$OUTPUT_ROOT/quality-audit-$RUN_ID"
-```
-
-**Trạng thái thực thi:** mã đã được viết và kiểm tra cú pháp/CLI, nhưng audit chưa chạy: máy hiện không có `spark-submit`/PySpark hoặc Java runtime phù hợp. Chưa submit Cloud job hay tạo tài nguyên có phí vì chưa xác minh được Credit ID `3LU63BPGY77JFDQQ` gắn với billing account nào. Trước khi chạy Cloud, cần đối chiếu SHA-256 từng object với manifest. Cờ corrupt-record của Spark chỉ bao phủ lỗi parser; Spark không xem dòng có số token thừa/thiếu là corrupt. Manifest scan hiện ghi nhận 0 dòng sai số field, nhưng cần giữ điều kiện hash-match trước khi dùng bản sao trên GCS.
+**Trạng thái thực thi:** hai notebook đã chuẩn bị xong; preflight local đã chạy và lưu output đã loại thông tin nhạy cảm trong `00_environment.ipynb`; chưa chạy Spark audit. Project `new-cloud-256902` hiện billing-disabled/chưa linked tới Education và notebook link bị chặn do thiếu quyền IAM trên project. Cần người có quyền hoàn tất billing assignment, rồi mới price check và resource setup. Trước audit, notebook phải đối chiếu SHA-256 từng GCS object với manifest. Cờ corrupt-record của Spark chỉ bao phủ lỗi parser; Spark không xem dòng có số token thừa/thiếu là corrupt. Manifest scan hiện ghi nhận 0 dòng sai số field, nhưng cần giữ điều kiện hash-match trước khi dùng bản sao trên GCS.
 
 ## 7. Phase 4 — Task 1: weather patterns
 
@@ -510,7 +429,7 @@ Mọi caption phải tự hiểu được: thời gian/split, cohort, units, sta
 
 Spark export **aggregate CSV/JSON nhỏ** cho tables/curves; không kéo toàn bộ raw/features vào Python để vẽ. Mỗi output lưu `RUN_ID`, split/cohort/config và nguồn artifact. Tạo table/numeric macros LaTeX từ outputs đã freeze để tránh chép tay sai; dùng manifest đơn giản nối figure/table với output và commit. Một metric xuất hiện ở abstract, bảng và conclusion phải khớp giá trị, rounding và cohort.
 
-Mỗi lệnh hoặc notebook action tạo Spark job được ghi thành một dòng trong
+Mỗi notebook action tạo Spark job được ghi thành một dòng trong
 evidence index. Sau khi các job của action kết thúc, mở **Spark Web UI** (live
 UI nếu application còn mở, Spark History Server nếu application đã kết thúc;
 không dùng Dataproc Jobs/YARN page), kiểm tra Jobs summary và trang chi tiết của
@@ -560,13 +479,7 @@ LaTeX source, figures và aggregate tables giữ trong repo để reproduce repo
 
 ## 14. Phase 11 — Shutdown, final QA và timeline
 
-Trước shutdown: export notebooks, persist processed/features/model/results/run manifest trên GCS và đối chiếu artifacts. Sau đó:
-
-```bash
-gcloud dataproc clusters delete "$CLUSTER" \
-  --project="$PROJECT_ID" --region="$REGION" --quiet
-gcloud dataproc clusters list --project="$PROJECT_ID" --region="$REGION"
-```
+Trước shutdown: export notebooks, persist processed/features/model/results/run manifest trên GCS và đối chiếu artifacts. Sau đó dùng cell shutdown trong `00_environment.ipynb` để xóa đúng cluster do run này tạo và truy vấn lại danh sách cluster trong project/region; giữ output xác nhận trong notebook.
 
 Xác nhận cluster biến mất, kiểm tra remaining VM/disk/tài nguyên phụ/billing. GCS còn storage charges: download và đối chiếu model/results/submission về local trước khi xóa bản cloud không còn cần; đặt retention trong credit budget và trước expiry, không giữ bucket vô thời hạn. Không thấy notebook chưa chứng minh compute đã xóa.
 
@@ -586,8 +499,8 @@ Final checklist:
 - [ ] Monotonicity, A/B ablation, onset/continuation/unseen analysis có evidence.
 - [ ] Frozen manifest trước 2024; post-test exploration được khai báo.
 - [ ] Spark processing/MLlib và distributed/runtime evidence có lưu.
-- [ ] Mỗi lệnh/notebook action Spark đã có ảnh Spark Web UI sau trạng thái cuối: Jobs summary và từng Job detail; Application ID/Job ID, trạng thái, thời lượng, stages/tasks khớp evidence index, log và output.
-- [ ] Notebook restart-and-run-all/batch dùng cùng code/config.
+- [ ] Mỗi notebook action Spark đã có ảnh Spark Web UI sau trạng thái cuối: Jobs summary và từng Job detail; Application ID/Job ID, trạng thái, thời lượng, stages/tasks khớp evidence index, log và output.
+- [ ] Notebook restart-and-run-all dùng cùng code/config và lưu outputs.
 - [ ] Reload/inference thành công từ submission package trong fresh session.
 - [ ] PDF có names/IDs/captions/limitations/sources/AI declaration chính xác.
 - [ ] Package không credential/raw/cache/hard-coded personal paths.

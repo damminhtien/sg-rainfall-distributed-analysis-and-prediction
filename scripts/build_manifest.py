@@ -1,13 +1,15 @@
-"""Stream the selected NEA rainfall CSVs into a reproducibility manifest."""
+"""Reusable functions to build a manifest from the selected NEA rainfall CSVs.
+
+Run ``build_manifest`` from ``notebooks/00_environment.ipynb`` so the scanned
+file inventory and validation summary are visible with the rest of the project
+outputs.
+"""
 
 from __future__ import annotations
 
-import argparse
 import csv
 import hashlib
 import io
-import json
-import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import BinaryIO
@@ -179,76 +181,3 @@ def build_manifest(data_root: Path) -> dict[str, object]:
         },
         "files": files,
     }
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--data-root",
-        type=Path,
-        default=Path(os.environ["DATA_ROOT"]) if os.environ.get("DATA_ROOT") else None,
-        help="Dataset directory containing raw/ (defaults to DATA_ROOT).",
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=Path("manifests/input_manifest.json"),
-        help="Manifest output path (default: manifests/input_manifest.json).",
-    )
-    return parser.parse_args()
-
-
-def main() -> int:
-    args = parse_args()
-    if args.data_root is None:
-        raise SystemExit("Pass --data-root or set DATA_ROOT to the dataset directory.")
-    data_root = args.data_root.expanduser().resolve()
-    if not (data_root / "raw").is_dir():
-        raise SystemExit(f"Expected a raw/ directory under {data_root}")
-
-    manifest = build_manifest(data_root)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    temporary_output = args.output.with_suffix(args.output.suffix + ".tmp")
-    temporary_output.write_text(
-        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-    temporary_output.replace(args.output)
-    print(f"Wrote {args.output} for {len(manifest['files'])} annual files")
-    for record in manifest["files"]:
-        print(
-            f"{record['year']}: rows={record['row_count']:,}, "
-            f"size={record['size_bytes']:,} bytes, sha256={record['sha256']}, "
-            f"times={record['timestamp_min']}..{record['timestamp_max']}, "
-            f"bad_timestamps={record['unparseable_or_missing_timestamps']:,}, "
-            f"malformed_rows={record['rows_with_wrong_field_count']:,}"
-        )
-    if manifest["selection"]["missing_expected_files"]:
-        print(f"Missing expected files: {manifest['selection']['missing_expected_files']}")
-    schema_mismatch = any(
-        not record["schema_matches_expected"] for record in manifest["files"]
-    )
-    malformed_rows = any(
-        record["rows_with_wrong_field_count"] for record in manifest["files"]
-    )
-    bad_timestamps = any(
-        record["unparseable_or_missing_timestamps"] for record in manifest["files"]
-    )
-    if schema_mismatch:
-        print("WARNING: at least one annual schema differs from the expected schema")
-    if malformed_rows:
-        print("WARNING: malformed row widths were found; investigate before cleaning")
-    if bad_timestamps:
-        print("WARNING: missing or unparseable timestamps were found")
-    if (
-        manifest["selection"]["missing_expected_files"]
-        or schema_mismatch
-        or malformed_rows
-        or bad_timestamps
-    ):
-        return 1
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

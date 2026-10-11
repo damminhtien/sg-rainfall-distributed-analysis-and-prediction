@@ -1,21 +1,14 @@
-"""Run a read-only Spark audit of the annual rainfall CSV files.
+"""Reusable functions for the Jupyter-based Spark quality audit.
 
-Example::
-
-    spark-submit scripts/run_quality_audit.py \
-      --manifest manifests/input_manifest.json \
-      --source-root "$DATA_ROOT" \
-      --output "$OUTPUT_ROOT/quality-audit-RUN_ID"
-
-``--source-root`` is the dataset root containing ``raw/``. It may be a local
-directory or a Hadoop-supported URI such as ``gs://bucket-name``. The manifest
-must be readable by the Spark driver. Outputs are written to a new directory;
-they never modify or clean the input files.
+Call :func:`run_audit` from ``notebooks/01_data_quality.ipynb`` so Spark job
+metadata and result summaries remain visible in the notebook. ``source_root``
+is the dataset root containing ``raw/``; it may be local or a Hadoop-supported
+URI such as ``gs://bucket-name``. Outputs are written to a new directory and
+never modify or clean the input files.
 """
 
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 from datetime import datetime, timezone
@@ -39,32 +32,6 @@ EXPECTED_SCHEMA = (
     "reading_unit",
 )
 CORRUPT_RECORD_COLUMN = "_corrupt_record"
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--manifest",
-        type=Path,
-        required=True,
-        help="Local JSON input manifest readable by the Spark driver.",
-    )
-    parser.add_argument(
-        "--source-root",
-        required=True,
-        help="Dataset root containing raw/; local path or Hadoop-supported URI.",
-    )
-    parser.add_argument(
-        "--output",
-        required=True,
-        help="New output directory, preferably unique to this run.",
-    )
-    parser.add_argument(
-        "--app-name",
-        default="singapore-rainfall-quality-audit",
-        help="Spark application name.",
-    )
-    return parser.parse_args()
 
 
 def read_manifest(path: Path) -> tuple[dict[str, Any], str]:
@@ -501,26 +468,3 @@ def run_audit(
         write_json(metadata, f"{output_path.rstrip('/')}/audit_metadata")
     finally:
         raw.unpersist()
-
-
-def main() -> int:
-    args = parse_args()
-    manifest, manifest_sha256 = read_manifest(args.manifest)
-    files = selected_files(manifest)
-    source_root = args.source_root.rstrip("/")
-    if not source_root:
-        raise SystemExit("--source-root cannot be empty.")
-
-    from pyspark.sql import SparkSession
-
-    spark = SparkSession.builder.appName(args.app_name).getOrCreate()
-    try:
-        run_audit(spark, files, manifest_sha256, source_root, args.output)
-    finally:
-        spark.stop()
-    print(f"Wrote read-only rainfall quality audit outputs to {args.output}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
