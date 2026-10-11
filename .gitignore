@@ -241,3 +241,6 @@ report/main.pdf
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local deployment bundles and large execution artifacts
+artifacts/

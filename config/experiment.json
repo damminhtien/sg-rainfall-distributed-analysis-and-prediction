@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "years": [
+    2017,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+  ],
+  "timezone": "Asia/Singapore",
+  "interval_seconds": 300,
+  "interval_semantics_confirmed": false,
+  "interval_semantics": "assumed interval-end convention, explicitly accepted by the user on 2026-10-11; not confirmed by NEA",
+  "availability_mode": "retrospective_event_time",
+  "availability_assumption": "final archived observations are assumed available at their event time; no real-time claim",
+  "alignment_tolerance_seconds": 0,
+  "rainfall_integer_scale": 1000000,
+  "reading_type": "TB1 Rainfall 5 Minute Total F",
+  "thresholds_mm": [
+    0.2,
+    0.5,
+    1.0,
+    2.0,
+    5.0,
+    10.0
+  ],
+  "unseen_thresholds_mm": [
+    0.3,
+    0.75,
+    1.5,
+    3.5,
+    7.5
+  ],
+  "threshold_domain_mm": [
+    0.2,
+    10.0
+  ],
+  "primary_threshold_min_positives": 100,
+  "coverage_cutoffs": [
+    0.9,
+    0.95,
+    0.99
+  ],
+  "primary_coverage_cutoff": 0.95,
+  "wet_cutoff_mm": 0.0,
+  "lag_minutes": [
+    5,
+    10,
+    15,
+    30,
+    60
+  ],
+  "rolling_minutes": [
+    15,
+    30,
+    60,
+    180
+  ],
+  "split_boundaries": [
+    "2017-01-01T00:00:00+08:00",
+    "2023-01-01T00:00:00+08:00",
+    "2023-07-01T00:00:00+08:00",
+    "2024-01-01T00:00:00+08:00",
+    "2025-01-01T00:00:00+08:00"
+  ],
+  "split_names": [
+    "train",
+    "selection",
+    "calibration",
+    "test"
+  ],
+  "pilot_fraction": 0.005,
+  "final_train_fraction": 0.02,
+  "sampling_seed": 5208,
+  "climatology_smoothing": 100.0,
+  "lr_reg_params": [
+    0.001,
+    0.01,
+    0.1,
+    1.0
+  ],
+  "gbt_configs": [
+    {
+      "maxDepth": 3,
+      "maxIter": 20
+    },
+    {
+      "maxDepth": 4,
+      "maxIter": 20
+    },
+    {
+      "maxDepth": 3,
+      "maxIter": 40
+    },
+    {
+      "maxDepth": 4,
+      "maxIter": 40
+    }
+  ],
+  "selection_pr_auc_tolerance": 0.001,
+  "selection_brier_tolerance": 0.0001,
+  "auc_num_bins": 1000,
+  "calibration_bins": 10,
+  "log_loss_epsilon": 1e-12,
+  "probability_cutoffs": [
+    0.05,
+    0.1,
+    0.2,
+    0.3,
+    0.5
+  ],
+  "monotonicity_tolerance": 1e-08,
+  "bootstrap_block": "week",
+  "bootstrap_replicates": 1000,
+  "shuffle_partitions": 64,
+  "interval_end_assumption_accepted": true,
+  "calibration_ece_trigger": 0.01
+}

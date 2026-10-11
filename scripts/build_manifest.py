@@ -10,7 +10,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import BinaryIO
 
@@ -70,7 +70,7 @@ def parse_timestamp(value: str) -> datetime | None:
     if not value:
         return None
     try:
-        timestamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        timestamp = datetime.fromisoformat(value)
     except ValueError:
         return None
     return timestamp if timestamp.tzinfo is not None else None
@@ -114,10 +114,20 @@ def inspect_file(path: Path, year: int) -> dict[str, object]:
                 if first_timestamp is None:
                     first_timestamp = timestamp
                 last_timestamp = timestamp
-                timestamp_min = timestamp if timestamp_min is None else min(timestamp_min, timestamp)
-                timestamp_max = timestamp if timestamp_max is None else max(timestamp_max, timestamp)
+                timestamp_min = (
+                    timestamp
+                    if timestamp_min is None
+                    else min(timestamp_min, timestamp)
+                )
+                timestamp_max = (
+                    timestamp
+                    if timestamp_max is None
+                    else max(timestamp_max, timestamp)
+                )
                 offset = timestamp.strftime("%z")
-                timezone_offsets.add(f"{offset[:3]}:{offset[3:]}" if offset else "naive")
+                timezone_offsets.add(
+                    f"{offset[:3]}:{offset[3:]}" if offset else "naive"
+                )
 
         sha256 = hashing_reader.digest.hexdigest()
 
@@ -164,7 +174,7 @@ def build_manifest(data_root: Path) -> dict[str, object]:
     )
     return {
         "manifest_version": 1,
-        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "created_at_utc": datetime.now(UTC).isoformat(),
         "source": {
             "name": "Historical Rainfall across Singapore",
             "collection_id": COLLECTION_ID,

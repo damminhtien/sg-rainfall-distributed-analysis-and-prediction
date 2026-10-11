@@ -51,7 +51,9 @@ def selected_files(manifest: dict[str, Any]) -> list[dict[str, Any]]:
 
     by_year = {record.get("year"): record for record in files}
     if set(by_year) != set(EXPECTED_YEARS) or len(files) != len(EXPECTED_YEARS):
-        raise ValueError("Manifest must contain exactly one input file per year 2017–2024.")
+        raise ValueError(
+            "Manifest must contain exactly one input file per year 2017–2024."
+        )
 
     validated: list[dict[str, Any]] = []
     for year in EXPECTED_YEARS:
@@ -62,7 +64,9 @@ def selected_files(manifest: dict[str, Any]) -> list[dict[str, Any]]:
         if relative_path != expected_path or relative_path.is_absolute():
             raise ValueError(f"Unexpected manifest path for {year}: {relative_path}")
         if record.get("schema") != list(EXPECTED_SCHEMA):
-            raise ValueError(f"Manifest schema differs from the expected schema for {year}.")
+            raise ValueError(
+                f"Manifest schema differs from the expected schema for {year}."
+            )
         if not isinstance(record.get("row_count"), int) or record["row_count"] < 0:
             raise ValueError(f"Manifest row_count is missing or invalid for {year}.")
         if not isinstance(record.get("sha256"), str) or len(record["sha256"]) != 64:
@@ -77,7 +81,9 @@ def join_source_path(source_root: str, relative_path: str) -> str:
 
 
 def flag_sum(F: Any, condition: Any, name: str) -> Any:
-    return F.sum(F.when(condition, F.lit(1)).otherwise(F.lit(0))).cast("long").alias(name)
+    return (
+        F.sum(F.when(condition, F.lit(1)).otherwise(F.lit(0))).cast("long").alias(name)
+    )
 
 
 def is_blank(F: Any, column_name: str) -> Any:
@@ -86,9 +92,7 @@ def is_blank(F: Any, column_name: str) -> Any:
 
 def is_finite(F: Any, column: Any) -> Any:
     return (
-        column.isNotNull()
-        & ~F.isnan(column)
-        & (F.abs(column) != F.lit(float("inf")))
+        column.isNotNull() & ~F.isnan(column) & (F.abs(column) != F.lit(float("inf")))
     )
 
 
@@ -118,8 +122,9 @@ def make_input_frame(spark: Any, files: list[dict[str, Any]], source_root: str) 
         source_path = join_source_path(source_root, record["relative_path"])
         frame = reader.csv(source_path)
         annual_frames.append(
-            frame.withColumn("_source_year", F.lit(record["year"]).cast("int"))
-            .withColumn("_source_file", F.lit(record["relative_path"]))
+            frame.withColumn(
+                "_source_year", F.lit(record["year"]).cast("int")
+            ).withColumn("_source_file", F.lit(record["relative_path"]))
         )
 
     raw = reduce(lambda left, right: left.unionByName(right), annual_frames)
@@ -191,7 +196,8 @@ def annual_quality_summary(F: Any, parsed: Any) -> list[Any]:
         "reading_type_missing": is_blank(F, "reading_type"),
         "update_timestamp_missing": is_blank(F, "update_timestamp"),
         "update_timestamp_unparseable": (
-            ~is_blank(F, "update_timestamp") & F.col("_update_timestamp_parsed").isNull()
+            ~is_blank(F, "update_timestamp")
+            & F.col("_update_timestamp_parsed").isNull()
         ),
         "update_timestamp_before_observation": (
             F.col("_update_timestamp_parsed").isNotNull()
@@ -211,17 +217,22 @@ def annual_quality_summary(F: Any, parsed: Any) -> list[Any]:
         "longitude_missing": longitude_missing,
         "longitude_unparseable": ~longitude_missing & longitude.isNull(),
         "longitude_non_finite": longitude.isNotNull() & ~finite_longitude,
-        "longitude_out_of_range": finite_longitude & ((longitude < -180) | (longitude > 180)),
+        "longitude_out_of_range": finite_longitude
+        & ((longitude < -180) | (longitude > 180)),
         "latitude_missing": latitude_missing,
         "latitude_unparseable": ~latitude_missing & latitude.isNull(),
         "latitude_non_finite": latitude.isNotNull() & ~finite_latitude,
         "latitude_out_of_range": finite_latitude & ((latitude < -90) | (latitude > 90)),
     }
 
-    return parsed.groupBy("_source_year").agg(
-        F.count(F.lit(1)).cast("long").alias("actual_row_count"),
-        *[flag_sum(F, condition, name) for name, condition in conditions.items()],
-    ).collect()
+    return (
+        parsed.groupBy("_source_year")
+        .agg(
+            F.count(F.lit(1)).cast("long").alias("actual_row_count"),
+            *[flag_sum(F, condition, name) for name, condition in conditions.items()],
+        )
+        .collect()
+    )
 
 
 def write_json(dataframe: Any, path: str) -> None:
@@ -234,7 +245,9 @@ def assert_output_is_new(spark: Any, output_path: str) -> None:
         spark.sparkContext._jsc.hadoopConfiguration()
     )
     if filesystem.exists(hadoop_path):
-        raise FileExistsError(f"Output already exists; choose a new run directory: {output_path}")
+        raise FileExistsError(
+            f"Output already exists; choose a new run directory: {output_path}"
+        )
 
 
 def assert_output_outside_raw(source_root: str, output_path: str) -> None:
@@ -242,11 +255,13 @@ def assert_output_outside_raw(source_root: str, output_path: str) -> None:
     if "://" in source_root:
         raw_root = f"{source_root.rstrip('/')}/raw"
         normalized_output = output_path.rstrip("/")
-        if normalized_output == raw_root or normalized_output.startswith(f"{raw_root}/"):
+        if normalized_output == raw_root or normalized_output.startswith(
+            f"{raw_root}/"
+        ):
             raise ValueError("--output must be outside the source raw/ directory.")
         return
 
-    raw_root = (Path(source_root).expanduser().resolve() / "raw")
+    raw_root = Path(source_root).expanduser().resolve() / "raw"
     output = Path(output_path).expanduser()
     if not output.is_absolute():
         output = Path.cwd() / output
@@ -288,7 +303,9 @@ def run_audit(
         expected_by_year = {record["year"]: record for record in files}
         unknown_years = set(actual_by_year) - set(expected_by_year)
         if unknown_years:
-            raise ValueError(f"Rows came from unexpected source years: {sorted(unknown_years)}")
+            raise ValueError(
+                f"Rows came from unexpected source years: {sorted(unknown_years)}"
+            )
 
         summary_rows = []
         for year in EXPECTED_YEARS:
@@ -312,7 +329,10 @@ def run_audit(
                 }
             )
             summary_rows.append(row)
-        write_json(spark.createDataFrame(summary_rows), f"{output_path.rstrip('/')}/quality_by_year")
+        write_json(
+            spark.createDataFrame(summary_rows),
+            f"{output_path.rstrip('/')}/quality_by_year",
+        )
 
         corrupt_candidates = raw.where(F.col(CORRUPT_RECORD_COLUMN).isNotNull()).select(
             F.col("_source_year").alias("source_year"),
@@ -320,14 +340,20 @@ def run_audit(
             F.col(CORRUPT_RECORD_COLUMN).alias("raw_corrupt_record"),
             F.lit("spark_csv_parser_corrupt_record").alias("quality_issue_reason"),
         )
-        write_json(corrupt_candidates, f"{output_path.rstrip('/')}/csv_parser_corrupt_candidates")
+        write_json(
+            corrupt_candidates,
+            f"{output_path.rstrip('/')}/csv_parser_corrupt_candidates",
+        )
 
         type_unit_counts = (
             raw.groupBy("_source_year", "reading_type", "reading_unit")
             .count()
             .withColumnRenamed("_source_year", "year")
         )
-        write_json(type_unit_counts, f"{output_path.rstrip('/')}/reading_type_unit_distribution")
+        write_json(
+            type_unit_counts,
+            f"{output_path.rstrip('/')}/reading_type_unit_distribution",
+        )
 
         station_id = F.trim(F.col("station_id"))
         observation_time = F.col("_timestamp_parsed")
@@ -340,7 +366,10 @@ def run_audit(
         )
         duplicate_keys = (
             parsed.where(valid_key)
-            .groupBy(station_id.alias("station_id"), observation_time.alias("_observation_time"))
+            .groupBy(
+                station_id.alias("station_id"),
+                observation_time.alias("_observation_time"),
+            )
             .agg(
                 F.count(F.lit(1)).cast("long").alias("duplicate_row_count"),
                 F.countDistinct(F.when(finite_reading, reading)).alias(
@@ -349,9 +378,15 @@ def run_audit(
                 F.sum(F.when(~finite_reading, 1).otherwise(0))
                 .cast("long")
                 .alias("non_finite_or_missing_reading_rows"),
-                F.min(F.when(finite_reading, reading)).alias("min_finite_numeric_reading"),
-                F.max(F.when(finite_reading, reading)).alias("max_finite_numeric_reading"),
-                F.countDistinct(F.trim(F.col("timestamp"))).alias("raw_timestamp_variants"),
+                F.min(F.when(finite_reading, reading)).alias(
+                    "min_finite_numeric_reading"
+                ),
+                F.max(F.when(finite_reading, reading)).alias(
+                    "max_finite_numeric_reading"
+                ),
+                F.countDistinct(F.trim(F.col("timestamp"))).alias(
+                    "raw_timestamp_variants"
+                ),
                 F.array_sort(F.collect_set("_source_year")).alias("source_years"),
                 F.array_sort(F.collect_set("_source_file")).alias("source_files"),
             )
@@ -366,7 +401,9 @@ def run_audit(
                 F.col("distinct_finite_numeric_readings") > 1,
             )
         )
-        write_json(duplicate_keys, f"{output_path.rstrip('/')}/duplicate_key_candidates")
+        write_json(
+            duplicate_keys, f"{output_path.rstrip('/')}/duplicate_key_candidates"
+        )
 
         longitude = F.col("_location_longitude_numeric")
         latitude = F.col("_location_latitude_numeric")
@@ -377,13 +414,21 @@ def run_audit(
             .groupBy(station_id.alias("station_id"))
             .agg(
                 F.count(F.lit(1)).cast("long").alias("row_count"),
-                F.countDistinct(F.when(~is_blank(F, "station_name"), F.trim(F.col("station_name"))))
-                .alias("distinct_nonblank_station_names"),
                 F.countDistinct(
-                    F.when(~is_blank(F, "station_device_id"), F.trim(F.col("station_device_id")))
+                    F.when(~is_blank(F, "station_name"), F.trim(F.col("station_name")))
+                ).alias("distinct_nonblank_station_names"),
+                F.countDistinct(
+                    F.when(
+                        ~is_blank(F, "station_device_id"),
+                        F.trim(F.col("station_device_id")),
+                    )
                 ).alias("distinct_nonblank_device_ids"),
-                F.countDistinct(F.when(finite_longitude, longitude)).alias("distinct_finite_longitudes"),
-                F.countDistinct(F.when(finite_latitude, latitude)).alias("distinct_finite_latitudes"),
+                F.countDistinct(F.when(finite_longitude, longitude)).alias(
+                    "distinct_finite_longitudes"
+                ),
+                F.countDistinct(F.when(finite_latitude, latitude)).alias(
+                    "distinct_finite_latitudes"
+                ),
                 F.array_sort(F.collect_set("_source_year")).alias("source_years"),
             )
             .where(
@@ -393,7 +438,10 @@ def run_audit(
                 | (F.col("distinct_finite_latitudes") > 1)
             )
         )
-        write_json(metadata_variations, f"{output_path.rstrip('/')}/station_metadata_variations")
+        write_json(
+            metadata_variations,
+            f"{output_path.rstrip('/')}/station_metadata_variations",
+        )
 
         order = Window.partitionBy(station_id).orderBy(
             observation_time,
@@ -402,10 +450,13 @@ def run_audit(
         )
         spacing = (
             parsed.where(valid_key)
-            .withColumn("_previous_observation_time", F.lag(observation_time).over(order))
+            .withColumn(
+                "_previous_observation_time", F.lag(observation_time).over(order)
+            )
             .withColumn(
                 "_elapsed_seconds",
-                observation_time.cast("long") - F.col("_previous_observation_time").cast("long"),
+                observation_time.cast("long")
+                - F.col("_previous_observation_time").cast("long"),
             )
             .where(
                 F.col("_previous_observation_time").isNotNull()
@@ -415,7 +466,10 @@ def run_audit(
                 "spacing_class",
                 F.when(F.col("_elapsed_seconds") == 0, "same_timestamp_candidate")
                 .when(F.col("_elapsed_seconds") < 0, "negative_ordering_candidate")
-                .when(F.col("_elapsed_seconds") < EXPECTED_INTERVAL_SECONDS, "under_5_minutes")
+                .when(
+                    F.col("_elapsed_seconds") < EXPECTED_INTERVAL_SECONDS,
+                    "under_5_minutes",
+                )
                 .otherwise("over_5_minutes"),
             )
             .groupBy(
@@ -426,10 +480,12 @@ def run_audit(
             )
             .agg(
                 F.count(F.lit(1)).cast("long").alias("consecutive_pair_count"),
-                F.min(F.date_format(observation_time, "yyyy-MM-dd'T'HH:mm:ssXXX"))
-                .alias("first_current_observation_sgt"),
-                F.max(F.date_format(observation_time, "yyyy-MM-dd'T'HH:mm:ssXXX"))
-                .alias("last_current_observation_sgt"),
+                F.min(
+                    F.date_format(observation_time, "yyyy-MM-dd'T'HH:mm:ssXXX")
+                ).alias("first_current_observation_sgt"),
+                F.max(
+                    F.date_format(observation_time, "yyyy-MM-dd'T'HH:mm:ssXXX")
+                ).alias("last_current_observation_sgt"),
             )
         )
         write_json(spacing, f"{output_path.rstrip('/')}/spacing_deviation_distribution")
