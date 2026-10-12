@@ -11,6 +11,8 @@ from pyspark.sql import functions as F
 from .config import config_hash
 from .features import deterministic_sample, expand_thresholds
 from .metrics import (
+    REFERENCE_PROBABILITY_CUTOFF,
+    REFERENCE_PROBABILITY_CUTOFF_POLICY,
     error_strata,
     monotonicity,
     paired_weekly_brier,
@@ -214,16 +216,6 @@ def fit_models(base, config, output_root, *, manifest_sha256, git_commit):
             ).alias("ece")
         ).first()["ece"]
         use_calibration = ece > config["calibration_ece_trigger"]
-        cutoffs = []
-        for cutoff in config["probability_cutoffs"]:
-            values = threshold_metrics(selection_scores, config, cutoff=cutoff)
-            f1 = [
-                r["f1"]
-                for r in values
-                if r["threshold_mm"] in primary and r["f1"] is not None
-            ]
-            cutoffs.append((sum(f1) / len(f1) if f1 else -1.0, cutoff))
-        cutoff = max(cutoffs, key=lambda item: (item[0], -item[1]))[1]
         if use_calibration:
             calibration = mark_unseen(
                 expand_thresholds(calibration_base, config), stations
@@ -253,7 +245,8 @@ def fit_models(base, config, output_root, *, manifest_sha256, git_commit):
             "algorithm": selected["algorithm"],
             "use_calibration": use_calibration,
             "selection_ece": ece,
-            "probability_cutoff": cutoff,
+            "probability_cutoff": REFERENCE_PROBABILITY_CUTOFF,
+            "probability_cutoff_policy": REFERENCE_PROBABILITY_CUTOFF_POLICY,
             "calibrator_recipe": "pooled monotone isotonic mapping on Jul–Dec 2023 if selection ECE exceeds frozen trigger",
             "model_root": output_root,
             "test_accessed": False,
@@ -269,8 +262,14 @@ def fit_models(base, config, output_root, *, manifest_sha256, git_commit):
 
 def final_evaluation(base, frozen, output_root):
     config = frozen["config"]
-    if frozen["config_sha256"] != config_hash(config) or frozen["test_accessed"]:
-        raise ValueError("Invalid or already-accessed freeze record.")
+    if (
+        frozen["config_sha256"] != config_hash(config)
+        or frozen["test_accessed"]
+        or frozen.get("probability_cutoff") != REFERENCE_PROBABILITY_CUTOFF
+        or frozen.get("probability_cutoff_policy")
+        != REFERENCE_PROBABILITY_CUTOFF_POLICY
+    ):
+        raise ValueError("Invalid, accessed, or incompatible model freeze.")
     spark = base.sparkSession
     model_root = frozen["model_root"]
     stations = spark.read.parquet(f"{model_root}/training_stations")
@@ -303,7 +302,7 @@ def final_evaluation(base, frozen, output_root):
                 f"{output_root}/scores/{name}"
             )
             metrics = threshold_metrics(
-                predictions, config, cutoff=frozen["probability_cutoff"]
+                predictions, config
             )
             summary = {
                 "model": name,
@@ -335,7 +334,7 @@ def final_evaluation(base, frozen, output_root):
                     {
                         "model": "selected_calibrated",
                         "per_threshold": threshold_metrics(
-                            corrected, config, cutoff=frozen["probability_cutoff"]
+                            corrected, config
                         ),
                         "monotonicity": monotonicity(corrected, config),
                     }
@@ -364,7 +363,7 @@ def final_evaluation(base, frozen, output_root):
         if calibrator is not None:
             unseen_scores = compact_scores(calibrated_scores(unseen_scores, calibrator))
         unseen_metrics = threshold_metrics(
-            unseen_scores, config, cutoff=frozen["probability_cutoff"]
+            unseen_scores, config
         )
         result = {
             "created_at_utc": datetime.now(UTC).isoformat(),
@@ -372,6 +371,7 @@ def final_evaluation(base, frozen, output_root):
             "models": summaries,
             "selected": selected,
             "selected_scoring": selected_name,
+            "probability_cutoff_policy": frozen["probability_cutoff_policy"],
             "unseen_threshold_metrics": unseen_metrics,
             "unseen_monotonicity": monotonicity(unseen_scores, config),
             "paired_week_brier": uncertainty,

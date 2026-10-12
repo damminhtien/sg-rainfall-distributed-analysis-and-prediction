@@ -70,13 +70,17 @@ class RainfallPredictor:
         ).select("station_id", "epoch", "rain_mm", "rain_units")
         if not history.limit(1).count():
             return dict(result, status="insufficient_history")
-        current_missing = not history.where(F.col("epoch") == epoch).limit(1).count()
-        if current_missing:
-            query = history.sparkSession.createDataFrame(
-                [(station_id, epoch, None, None)],
-                "station_id string, epoch long, rain_mm double, rain_units long",
+        current = (
+            history.where(F.col("epoch") == epoch)
+            .select("rain_mm")
+            .first()
+        )
+        if current is None or current["rain_mm"] is None:
+            return dict(
+                result,
+                status="missing_current_observation",
+                current_missing=True,
             )
-            history = history.unionByName(query)
         base = build_base_features(history, config, with_labels=False).where(
             F.col("epoch") == epoch
         )
@@ -98,15 +102,11 @@ class RainfallPredictor:
         unseen = (
             not self.stations.where(F.col("station_id") == station_id).limit(1).count()
         )
-        status = (
-            "unseen_station"
-            if unseen
-            else ("missing_current_observation" if current_missing else "ok")
-        )
+        status = "unseen_station" if unseen else "ok"
         return dict(
             result,
             probability=float(probability),
             status=status,
             unseen_station=unseen,
-            current_missing=current_missing,
+            current_missing=False,
         )

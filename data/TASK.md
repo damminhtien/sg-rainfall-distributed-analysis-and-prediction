@@ -85,7 +85,7 @@ Chi tiết: TASK_SPEC mục 1–3. Deadline theo mô tả: **18/10/2026, 23:59**
 - [x] Có `manifests/input_manifest.json`: đúng tám năm 2017–2024, SHA-256, bytes, rows, schema, dataset IDs/URLs và actual time ranges; không dùng 2016 làm warm-up.
 - [x] Manifest ghi rõ retrieval time gốc unknown; không thay bằng ngày scan. Tổng inventory: 48,538,713 rows, 8,047,044,701 bytes; timestamp offsets +08:00.
 - [ ] Khi retry, đối chiếu raw/GCS với manifest bằng byte hashes; không dùng object listing hoặc min/max timestamp để kết luận dữ liệu đầy đủ.
-- [ ] Dùng paths portable qua DATA_ROOT/config; cloud đọc danh sách file từ manifest, không wildcard ngoài phạm vi.
+- [ ] Require `DATA_ROOT` for Notebook 00 and keep config paths project-relative; cloud reads the explicit manifest file list.
 - [ ] Lưu run provenance và source URL; kiểm tra notebook/package không phụ thuộc đường dẫn cá nhân.
 
 ### 3.1. Data contract và hồ sơ provenance
@@ -264,11 +264,11 @@ Reading tại t không nằm trong label; đúng bằng threshold là class 0.
 - [ ] Ghi eligibility/current-history missing policy và attrition train/selection/calibration/test; không thay missing future bằng 0.
 - [ ] Ghi retrospective event-time assumption nếu update/publication chưa xác minh; availability-aware mode lọc cả interval_end≤t và available_time≤t, không dùng later revisions.
 - [ ] Kiểm tra fixtures sửa rainfall/update/metadata sau t không đổi features tại t; delayed observation bị loại trong availability-aware mode.
-- [ ] Feature dictionary liệt kê đúng các cột A/B thực đưa vào pipeline; tách station coordinates, month, current_missing và latest age là metadata/diagnostic columns nếu chưa dùng để fit.
+- [ ] Feature dictionary liệt kê đúng các cột A/B thực đưa vào pipeline; current-missing and latest-age columns are not fitted or emitted as features.
 - [ ] Lags 5/10/15/30/60 phút, totals 15/30/60/180 phút nếu thực dùng; boundaries/missing rules rõ. Fit imputer/indexer/scaler/feature selection trên train của fold.
 - [ ] Build base station/time features một lần rồi expand thresholds 0.2/0.5/1/2/5/10 mm; cùng base sample group thuộc cùng split/sampling; ghi base/expanded counts.
 - [ ] Chốt numeric threshold domain từ train support; đánh giá unseen midpoints, xử lý out-of-domain bằng status rõ, không hứa extrapolation.
-- [ ] Public inference nhận station_id/prediction_time/threshold_mm, build đúng features/preprocessing và trả probability[1]/status cho unseen/missing/domain.
+- [ ] Public inference nhận station_id/prediction_time/threshold_mm; chỉ chấm điểm khi có current observation không null, và trả `missing_current_observation` không probability nếu thiếu.
 - [ ] Khai báo sáu future sums 2024 đã materialize trước freeze (chỉ valid counts được xem theo nhật ký); không mô tả quá trình là hoàn toàn blind.
 
 ### 7.1. Tham số target và feature design đang triển khai
@@ -296,8 +296,10 @@ Month/hour có trong frame để baseline/error grouping; coords/month/latest ag
 chưa nằm trong `feature_columns()` của ML pipeline. Không liệt kê chúng như features đã fit.
 
 Hour cyclic dùng fractional hour/24; day cyclic dùng day-of-year fraction chia số ngày thực
-365/366. Training keys đòi hỏi có current reading, nên current-missing/age là constants bị bỏ.
-Inference cho phép current missing bằng query row và imputation: cần ghi rõ đây là khác biệt support với train.
+365/366. Training and inference both require a current reading, so missingness/age are excluded.
+Inference cũng chỉ hỗ trợ prediction time có current reading không null. Khi thiếu reading, API
+trả status `missing_current_observation` với probability null; không tạo query row để impute
+`rain_current`. `current_missing` và `latest_reading_age_minutes` không được tạo hoặc fit.
 
 - [ ] Fixtures cụ thể: sáu dry future→R30=0; một wet future; thiếu 1 future→invalid; duplicate key phải bị xử lý upstream; R30=tau→0; t off-grid→reject; sửa future không đổi history features.
 - [ ] Audit label_count/min/max chỉ đủ chứng minh contiguous khi cleaner đã bảo đảm unique exact-grid keys; không áp dụng shortcut này cho raw chưa dedup.
@@ -310,7 +312,7 @@ Chi tiết: TASK_SPEC mục 10–11.
 | Subset | Thời gian prediction | Công việc được phép |
 |---|---|---|
 | Train | 2017–2022 | Fit transforms/base models, train support/sampling |
-| Selection | Jan–Jun 2023 | Chọn features/hyperparameters/cutoff/calibration recipe |
+| Selection | Jan–Jun 2023 | Chọn model/hyperparameters theo PR-AUC/Brier và đánh giá nhu cầu calibration |
 | Calibration | Jul–Dec 2023 | Fit calibrator sau base-model freeze |
 | Final test | 2024 | Đánh giá frozen system một lần |
 
@@ -325,7 +327,7 @@ Chi tiết: TASK_SPEC mục 10–11.
 - [ ] Dùng attempt prefix chưa tồn tại; run mới hiện đặt `RUN_ID=20261012-full-01`, `MODEL_ATTEMPT=attempt-01` sau khi kiểm tra prefix local/GCS trống. Giữ partial app5 artifacts của run cũ `20261011-full-01`; nếu retry lần nữa thì đổi cả notebook04/05 sang attempt mới.
 - [ ] Hoàn tất notebook04 và export model/selection/calibration outputs; `gbt_A/` tồn tại trong nhật ký cũ không chứng minh `gbt_B/` hoặc freeze đã hoàn tất.
 - [ ] Inspect SQL/window/join/skew, reused cache/unpersist, rows/bytes/partitions/runtime và workers. Nếu chunk thời gian, dùng history halo 180 phút/future 30 phút rồi trim ownership.
-- [ ] Freeze manifest gồm cleaning/alignment/availability, domain/grid/features/splits/sampling/seed, model/hyperparams/calibrator/cutoff/metrics/runtime/Git commit trước notebook05.
+- [ ] Freeze manifest gồm cleaning/alignment/availability, domain/grid/features/splits/sampling/seed, model/hyperparams/calibrator, fixed 0.5 reference cutoff, metrics/input-manifest hash và code commit nếu có trước notebook05.
 - [ ] Không refit base model trên 2023 rồi giữ calibrator cũ; refit cần temporal out-of-fold calibration riêng. Changes sau test phải ghi post-test exploration.
 
 ### 8.1. Sampling, model parameters và trình tự lựa chọn
@@ -373,16 +375,16 @@ phải ghi training scope khác nhau; đây không phải equal-training-data co
 - [ ] Save pilot records cho 8 candidates và final records cho LR-A/LR-B/GBT-A/GBT-B, mỗi record gồm params/fit_seconds/support/selection metrics/path.
 - [ ] Chọn best params riêng từng algorithm bằng selection B, rồi fit matched A/B trên cùng 2% sample. Chọn deployment giữa baseline/LR-B/GBT-B, ưu tiên baseline→LR→GBT khi PR/Brier tied; same algorithm tie dùng candidate ID hiện có, không tự gọi là ít cây hơn.
 - [ ] Export `extractParamMap()` từ model đã fit để ghi cả defaults như LR tolerance/intercept và GBT stepSize/subsampling; không suy đoán defaults từ một Spark version khác.
-- [ ] Freeze cả training scope, primary thresholds, raw cutoff/calibration policy và source hash; store immutable record trước test. Tăng fraction/tuning grid sau khi xem test là thay đổi protocol.
+- [ ] Freeze cả training scope, primary thresholds, calibration policy, fixed 0.5 reference cutoff và input-manifest hash; store immutable record trước test. Không optimize classification cutoff. Tăng fraction/tuning grid sau khi xem test là thay đổi protocol.
 
 ## 9. Metrics, calibration và final evaluation
 
 Chi tiết: TASK_SPEC mục 12. **Chưa có final-test metrics hoàn chỉnh.**
 
 - [ ] Khóa selection objective mean PR-AUC primary thresholds đủ classes từ train support; tolerance/tie-break Brier rồi model đơn giản, undefined fallback rule trước test.
-- [ ] Fit calibration recipe từ selection; calibrator từ holdout Jul–Dec 2023. Assessment bắt buộc, correction chỉ khi cần; lưu mapping/domain/fallback, không chọn bins/cutoff trên test.
+- [ ] Đánh giá calibration trên selection; nếu ECE vượt trigger thì fit calibrator trên holdout Jul–Dec 2023. Lưu mapping/domain/fallback; không chọn cutoff hoặc bins trên test.
 - [ ] Sau frozen manifest, notebook05 kiểm tra config/model root và từ chối overwrite final-evaluation; đánh giá climatology/LR-B/GBT-B trên cùng eligible 2024 cohort.
-- [ ] Per-threshold metrics: base/expanded count, positives/negatives/prevalence, PR-AUC/ROC-AUC/Brier/log loss và cutoff precision/recall/F1.
+- [ ] Per-threshold metrics: base/expanded count, positives/negatives/prevalence, PR-AUC/ROC-AUC/Brier/log loss; precision/recall/F1 at fixed 0.5 are reference metrics only.
 - [ ] Ghi Spark evaluator version/numBins; không gọi areaUnderPR là Average Precision; logloss epsilon frozen, AUC N/A nếu single-class, Brier skill chỉ khi denominator>0.
 - [ ] Frozen macro weights; pooled-threshold metrics chỉ bổ sung. PR curves primary thresholds có prevalence reference/support, không giả định constant predictor area luôn bằng prevalence.
 - [ ] Reliability diagram raw/calibrated: mean p/observed frequency/count mỗi frozen bin, cùng cohort.
@@ -400,7 +402,7 @@ Chi tiết: TASK_SPEC mục 12. **Chưa có final-test metrics hoàn chỉnh.**
 | Log loss |−mean(y log p +(1−y)log(1−p)) | Clip p bằng epsilon1e-12, không clip cho mọi metric khác |
 | Reliability bins |10 equal-width | Bin=min(floor(10p),9), p=1 vào bin9 |
 | ECE trigger |0.01 | Weighted absolute reliability gap trên selection, pooled threshold rows |
-| Probability cutoffs |0.05,0.1,0.2,0.3,0.5 | Max macroF1 primary thresholds; ties chọn cutoff thấp hơn |
+| Probability cutoff |0.5 | Fixed reference for precision/recall/F1 only; never optimized |
 | Monotonic tolerance |1e-8 | Adjacent thresholds: positive excess>tolerance là violation |
 | Bootstrap |1000 replicates, week blocks, seed 5208 |95% percentile CI của paired Brier differences |
 
@@ -409,9 +411,10 @@ fit một pooled IsotonicRegression(p→label, isotonic=true) trên calibration 
 còn lại có raw reliability assessment, không mặc định mỗi model đều có calibrated version.
 Pooled calibration không bảo đảm calibration đúng ở từng threshold/station/month.
 
-Cutoff được chọn trên **raw selection scores**, sau đó dùng cho cả raw/calibrated outputs.
-Nếu muốn cutoff tối ưu cho calibrated probabilities thì phải thiết kế temporal selection riêng
-trước test; không tối ưu lại bằng calibration/test rồi trình bày như policy hiện tại.
+Không optimize classification cutoff. PR-AUC, Brier và reliability/calibration là kết quả
+chính; precision/recall/F1 tại cutoff cố định 0.5 chỉ để tham khảo trên raw và calibrated
+outputs. Isotonic calibration có thể đổi thang xác suất, nên 0.5 không được mô tả là cutoff
+tối ưu hoặc là cùng operating point trước và sau calibration.
 
 - [ ] Report raw comparison baseline/LR-B/GBT-B và selected_calibrated nếu có; cho biết deployment dùng version nào theo frozen rule, không chọn bằng test.
 - [ ] PR primary thresholds chọn train support; macro equal weighting trên fixed primary list, ghi nhóm N/A rõ. Nếu nhóm thiếu class trên selection, ghi candidates được average trên những nhóm nào.
@@ -510,13 +513,14 @@ không phải xác nhận archive hiện đã có. Giữ source LaTeX/figures/ta
 | Expected predictions | Query/probability/status/mode | Compare loaded output trong frozen tolerance |
 
 `predict(station_id,prediction_time,threshold_mm)` cần ISO8601 có timezone, exact5-minute grid,
-finite threshold trong[0.2,10] với độ chính xác scale hỗ trợ. History query hiện lấy180 phút
-cùngstation ở/beforet. Không có reading trong cửa sổ trả insufficient_history; current missing
-thì thêm nullqueryrow và impute. Unseenstation giữ probability nhưng status cảnh báo, không chứng minh khả năng generalize.
+finite threshold trong[0.2,10] với độ chính xác scale hỗ trợ. History query lấy180 phút
+cùngstation ở/beforet. Không có reading trong cửa sổ trả insufficient_history; không có reading
+hiện tại trả `missing_current_observation` với probability null. Unseen station có current
+reading vẫn nhận probability cùng status cảnh báo, không chứng minh khả năng generalize.
 
-- [ ] Status contract hiện có: `ok`, `invalid_station`, `invalid_time_or_threshold`, `off_grid_time`, `threshold_out_of_domain`, `insufficient_history`, `missing_current_observation`, `unseen_station`; ngoài probability còn mode/current_missing/unseen flags khi áp dụng.
+- [ ] Status contract hiện có: `ok`, `invalid_station`, `invalid_time_or_threshold`, `off_grid_time`, `threshold_out_of_domain`, `insufficient_history`, `missing_current_observation`, `unseen_station`; missing-current returns no probability, while valid/unseen predictions include current_missing=false.
 - [ ] Xác định xử lý threshold nhiều hơn6 decimals: feature conversion hiện có thể raise; cần quyết định status/error contract và document nhất quán, không silently round query.
-- [ ] Synthetic dryhistory36 readings giúp chạy inference; bổ sung valid wet/gaps/unseen/current missing/domain fixtures có expected outputs thay vì chỉ assert0 ≤ p ≤ 1.
+- [ ] Synthetic dryhistory36 readings giúp chạy inference; bổ sung valid wet/gaps/unseen/domain fixtures và assert missing-current returns no probability.
 - [ ] Chốt reload comparison tolerance đề xuất absolute 1e-8 trước xuất expected fixtures; xác nhận actual reproducibility trên same runtime rồi lưu giá trị này trong package.
 - [ ] Notebook05 hiện reload trong cùng Spark session; cần session/kernel mới cho acceptance fresh-session, không gọi current `RainfallPredictor.load()` là đã hoàn tất acceptance.
 - [ ] Run hướng dẫn từ archive đã giải nén và portable input path; README ghi rõ inference vẫn cần Spark/runtime tương thích, chưa phải webservice hoặc real-time deployment.

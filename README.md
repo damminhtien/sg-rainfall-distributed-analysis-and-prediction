@@ -22,8 +22,9 @@ original USD 50 credit; budget alerts are not spending caps.
 
 Run notebooks 01–05 in the Dataproc **Python 3** kernel. They create Spark on
 YARN and require event logging. Do not install a replacement PySpark runtime.
-Notebooks 00 and 06 run on the Mac in a Jupyter kernel. Set `DATA_ROOT` through
-the local notebook configuration/environment. Local Python dependencies are
+Notebook 00 runs on the Mac in a Jupyter kernel. Set `DATA_ROOT` in the local
+notebook environment to the directory containing `raw/` before running it.
+Local Python dependencies are
 in `requirements-local.txt`. There is no local Spark cluster execution path.
 
 ## Notebook order
@@ -42,11 +43,12 @@ in `requirements-local.txt`. There is no local Spark cluster execution path.
 6. `05_final_evaluation.ipynb`: once-only 2024 evaluation, unseen thresholds,
    reliability/PR curves, monotonicity, error strata and paired weekly Brier
    bootstrap; full Task 1 analysis; model reload and inference evidence.
-7. `06_report_and_package.ipynb`: download bounded report artifacts and model,
-   generate tables/figures, update the existing LaTeX report, validate the
-   submission archive and confirm cloud cleanup.
+7. A final report/package notebook is still to be added after the frozen model,
+   final evaluation, evidence and submission PDF are available. It must validate
+   these artifacts before creating an archive.
 
-Each notebook records its configuration and Spark identifiers. After every
+Notebook 04 freezes the experiment configuration with its selected model.
+Spark action outputs include application and job identifiers. After every
 Spark action, open the Spark Web UI Jobs summary and each job's detail page,
 capture the original screenshots, and index them under
 `report/evidence/spark-ui/`. Use History Server after application termination.
@@ -86,8 +88,11 @@ predictor.predict("S24", "2024-01-01T12:00:00+08:00", 1.0)
 ```
 
 History requires `station_id`, `epoch`, `rain_mm`, `rain_units`, with unique
-exact-grid station/time keys. The predictor selects history at or before the
-query time and constructs the same features. The package includes a small
+exact-grid station/time keys. Prediction is supported only when a non-null
+current observation exists at the query time; otherwise the predictor returns
+`missing_current_observation` with no probability. It selects history at or
+before a supported query time and constructs the same features. The package
+includes a small
 synthetic history fixture for loading and interface checks. Its probabilities
 are interface evidence, not measurements of real rainfall performance.
 

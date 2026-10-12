@@ -6,8 +6,12 @@ from pyspark.ml.evaluation import BinaryClassificationEvaluator
 from pyspark.sql import Window
 from pyspark.sql import functions as F
 
+REFERENCE_PROBABILITY_CUTOFF = 0.5
+REFERENCE_PROBABILITY_CUTOFF_POLICY = "fixed reference at 0.5; not optimized"
 
-def probability_metrics(scores, config, *, cutoff=0.5):
+
+def probability_metrics(scores, config):
+    cutoff = REFERENCE_PROBABILITY_CUTOFF
     invalid = (
         scores.where(
             F.col("p").isNull()
@@ -48,7 +52,7 @@ def probability_metrics(scores, config, *, cutoff=0.5):
     row.update(
         positives=positives,
         prevalence=positives / n if n else None,
-        cutoff=cutoff,
+        reference_cutoff=cutoff,
         pr_auc=None,
         roc_auc=None,
     )
@@ -75,7 +79,7 @@ def probability_metrics(scores, config, *, cutoff=0.5):
     return row
 
 
-def threshold_metrics(scores, config, *, cutoff=0.5):
+def threshold_metrics(scores, config):
     values = [
         r[0]
         for r in scores.select("threshold_mm")
@@ -89,7 +93,7 @@ def threshold_metrics(scores, config, *, cutoff=0.5):
         dict(
             threshold_mm=value,
             **probability_metrics(
-                scores.where(F.col("threshold_mm") == value), config, cutoff=cutoff
+                scores.where(F.col("threshold_mm") == value), config
             ),
         )
         for value in values

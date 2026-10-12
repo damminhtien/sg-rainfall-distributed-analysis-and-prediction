@@ -21,7 +21,9 @@ def threshold_units(value, scale):
 def feature_columns(config, variant="B"):
     columns = list(TEMPORAL_FEATURES)
     if variant == "B":
-        columns += ["rain_current", "current_missing", "latest_reading_age_minutes"]
+        # Prediction requires a current observation; missingness and age are not
+        # model inputs or supported query features.
+        columns += ["rain_current"]
         for minutes in config["lag_minutes"]:
             columns += [f"lag_{minutes}", f"lag_{minutes}_missing"]
         for minutes in config["rolling_minutes"]:
@@ -38,18 +40,16 @@ def feature_columns(config, variant="B"):
 
 
 def build_base_features(clean, config, *, with_labels=True):
-    """One row per observed station/time; missing current times are excluded from training.
+    """Build features for observed station/time rows on the exact five-minute grid.
 
-    For inference, append a query row with null rain_units before calling with_labels=False.
-    All windows operate on unique exact-grid epoch keys. Final archived values imply
-    retrospective event-time evaluation; update timestamps are not publication proof.
+    Prediction is supported only when a non-null current observation exists. All
+    windows operate on unique epoch keys; archived values imply retrospective
+    event-time evaluation, not verified publication availability.
     """
     if with_labels:
         require_label_semantics(config)
     key = Window.partitionBy("station_id").orderBy("epoch")
-    frame = clean.withColumn("rain_current", F.col("rain_mm")).withColumn(
-        "current_missing", F.col("rain_mm").isNull().cast("double")
-    )
+    frame = clean.withColumn("rain_current", F.col("rain_mm"))
     for minutes in config["lag_minutes"]:
         lag = F.first("rain_mm", ignorenulls=True).over(
             key.rangeBetween(-minutes * 60, -minutes * 60)
@@ -71,12 +71,6 @@ def build_base_features(clean, config, *, with_labels=True):
         frame = frame.withColumn(
             f"coverage_{minutes}", F.col(f"count_{minutes}") / (minutes / 5)
         )
-    last_seen = F.max(F.when(F.col("rain_mm").isNotNull(), F.col("epoch"))).over(
-        key.rangeBetween(-10800, 0)
-    )
-    frame = frame.withColumn(
-        "latest_reading_age_minutes", (F.col("epoch") - last_seen) / 60.0
-    )
     time = F.to_timestamp(F.from_unixtime("epoch"))
     fractional_hour = F.hour(time) + F.minute(time) / 60.0
     year_start = F.make_date(F.year(time), F.lit(1), F.lit(1))
@@ -178,7 +172,14 @@ def feature_dictionary(config):
                     "name": name,
                     "source": "same-station exact elapsed-time history at or before t",
                     "availability": config["availability_mode"],
-                    "missing_rule": "train-fitted median imputation plus indicators/counts",
+                    "missing_rule": (
+                        "requires a non-null observation at prediction time"
+                        if name == "rain_current"
+                        else (
+                            "train-fitted median imputation; "
+                            "lag flags and rolling counts/coverage indicate gaps"
+                        )
+                    ),
                 }
             )
     return rows
