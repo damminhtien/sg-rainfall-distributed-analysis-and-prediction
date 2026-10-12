@@ -170,6 +170,37 @@ complete-day fraction uses all expected station-days for the station IDs seen
 anywhere in 2017--2024 as its denominator, so it reflects both recording
 completeness and changes in station availability.
 
+\subsection{Computing Environment and Distributed Execution}
+For run \texttt{\runid}, the analysis notebooks ran through the Dataproc
+Jupyter interface, with rainfall data, outputs and Spark event logs stored in
+Google Cloud Storage. The retained Spark execution record shows executors on
+both worker nodes, confirming distributed execution for this analysis. No
+comparison across cluster sizes was performed, so the results do not establish
+scalability.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Recorded computing environment for run \texttt{\runid}.}
+\label{tab:computing-environment}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.31\linewidth}X@{}}
+\toprule
+Platform & Google Cloud Dataproc; cluster \texttt{dsa5208-rainfall} \\
+Region & \texttt{asia-southeast1} (Singapore) \\
+Dataproc image & \texttt{2.2.87-debian12} \\
+Spark & 3.5.3 \\
+Python & Version not recorded in the retained run evidence \\
+Master machine & \texttt{e2-standard-4} \\
+Number of workers & 2 (worker nodes \texttt{w-0} and \texttt{w-1}) \\
+Worker machine & \texttt{e2-standard-4} \\
+vCPU per worker & 4 \\
+RAM per worker & 16~GiB \\
+Disk & Balanced persistent disks: 100~GB for the master and 75~GB per worker \\
+Storage & Google Cloud Storage bucket \texttt{sg-rainfall-dsa5208-261011-data}, in Singapore \\
+Development interface & Jupyter Notebook on the Dataproc cluster \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
 \section{Task 1: Rainfall patterns}
 \subsection{Across-year distribution}
 The annual summaries use each retained five-minute reading as one observation.
