@@ -34,8 +34,8 @@ PySpark runtime. Notebook 00 runs on the Mac in a Jupyter kernel. Set
 1. `00_setup_cloud.ipynb`: prepare the selected cloud project, data bucket and
    Dataproc session.
 2. `01_clean_and_task1.ipynb`: read the annual CSVs, clean and align rainfall
-   observations, report data quality and Task 1 patterns for the pre-test
-   period.
+   observations, report data quality and Task 1 patterns for 2017–2024. The
+   2024 descriptive summaries are not used for Task 2 model selection.
 3. `02_build_features.ipynb`: build elapsed-time history features, six-reading
    targets, temporal splits and sample attrition.
 4. `03_train_evaluate.ipynb`: compare a station/month/hour climatology
