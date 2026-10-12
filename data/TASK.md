@@ -25,7 +25,7 @@ Cập nhật ngày **12/10/2026**. Bài cá nhân: **DAM MINH TIEN — A0355091E
   offset 299 giây; run dịch **epoch phân tích** thêm 1 giây cho block đó và
   giữ nguyên timestamp nguồn. Đây là giả định chưa được publisher xác nhận,
   cần nêu trong report.
-- [x] Task 2: train 2017–2022; selection Jan–Jun 2023; calibration Jul–Dec
+- [x] Task 2: train 2017–2022; model selection Jan–Jun 2023; calibration Jul–Dec
   2023; holdout 2024. Đã chọn `gbt_B` trên selection, hiệu chuẩn isotonic,
   rồi chỉ so sánh model được chọn với climatology trên holdout.
 - [x] Ở ngưỡng 0.5 mm trên 6,374,476 valid prediction times, calibrated
@@ -74,9 +74,10 @@ Core science phải đọc được ngay trong notebooks. Không đưa billing/r
 assurance, source-bundle/version ledger hay screenshot-per-job workflow vào
 điều kiện chấm bài. Model MLlib được fit trên deterministic 2% sample của
 valid training times; climatology dùng toàn bộ valid training partition.
-Selection metrics không phải independent generalization estimate vì
-Jan–Jun 2023 được dùng cho cả pilot tuning và candidate comparison. Holdout
-2024 không được dùng để tune sau test.
+Jan–Jun 2023 là tập chọn mô hình, không phải một ước lượng generalization
+độc lập. Giai đoạn này được dùng cả để tuning pilot lẫn so sánh candidate
+cuối; score của model được chọn vì thế có xu hướng lạc quan và không phải
+unbiased validation score. Holdout 2024 không được dùng để tune sau test.
 
 ## Những giới hạn cần giữ trong report
 

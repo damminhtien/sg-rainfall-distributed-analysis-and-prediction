@@ -314,7 +314,7 @@ Leakage fixtures: sửa rainfall/update/metadata sau `t` không đổi features 
 | Subset | Prediction times | Vai trò |
 |---|---|---|
 | Train | 2017–2022 | Fit preprocessing/models; threshold design/sampling |
-| Selection validation | Jan–Jun 2023 | Chọn features/hyperparameters/model, cutoff, calibration recipe |
+| Model-selection set | Jan–Jun 2023 | Chọn features/hyperparameters/model, cutoff, calibration recipe |
 | Calibration holdout | Jul–Dec 2023 | Fit calibrator sau base model freeze |
 | Final test | 2024 | Đánh giá frozen system |
 
@@ -334,7 +334,7 @@ Freeze trước test: manifests, cleaning/alignment/availability, domain/grid, f
 
 ## 11. Phase 8 — Models và distributed execution
 
-Ba models chính: climatology, Spark MLlib LogisticRegression, Spark MLlib GBTClassifier. Climatology = training empirical survival theo station/month/hour, smoothing/support policy và fallback về nhóm rộng/global cho sparse/unseen cases; support/smoothing chọn trên selection validation, lưu lookup.
+Ba models chính: climatology, Spark MLlib LogisticRegression, Spark MLlib GBTClassifier. Climatology = training empirical survival theo station/month/hour, smoothing/support policy và fallback về nhóm rộng/global cho sparse/unseen cases; support/smoothing chọn trên model-selection set, lưu lookup.
 
 LR: StringIndexer (`handleInvalid=keep`) → OneHotEncoder station → imputation/assembly → scaling phù hợp → LogisticRegression. Giữ sparse vectors, không center one-hot gây densification. GBT không cần scaling; indexed categorical station phải giữ metadata và `maxBins ≥ categories`, tính unseen bucket; one-hot là phương án khác ([GBT API](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.classification.GBTClassifier.html)).
 
@@ -350,7 +350,7 @@ Ghi rows/bytes/partitions, stage runtime và executor evidence; inspect window/j
 
 ## 12. Phase 9 — Metrics, calibration và scientific comparisons
 
-Predeclare selection objective: mean PR-AUC của primary thresholds có đủ classes trên selection validation; chọn thresholds từ train support, không loại vì test khó. Với scores gần nhau trong tolerance khóa trước, ưu tiên Brier thấp rồi model đơn giản/ít tốn hơn. Nếu metric undefined trên validation, report và dùng fallback rule khóa trước test. Ranking tốt chưa bảo đảm probability tốt.
+Predeclare selection objective: mean PR-AUC của primary thresholds có đủ classes trên model-selection set; chọn thresholds từ train support, không loại vì test khó. Với scores gần nhau trong tolerance khóa trước, ưu tiên Brier thấp rồi model đơn giản/ít tốn hơn. Nếu metric undefined trên model-selection set, report và dùng fallback rule khóa trước test. Score của candidate được chọn có xu hướng lạc quan sau lựa chọn và không phải unbiased validation estimate. Ranking tốt chưa bảo đảm probability tốt.
 
 | Output | Quy tắc |
 |---|---|
@@ -359,7 +359,7 @@ Predeclare selection objective: mean PR-AUC của primary thresholds có đủ c
 | Brier | Spark mean `(p-y)^2`; baseline/Brier skill nếu denominator > 0 |
 | Log loss | Clip bằng epsilon frozen, Spark aggregation |
 | Calibration | Frozen validation bins; mean p, observed frequency, count mỗi bin |
-| Precision/Recall/F1 | Probability cutoff chọn selection validation, tách khỏi rainfall threshold tau |
+| Precision/Recall/F1 | Probability cutoff chọn trên model-selection set, tách khỏi rainfall threshold tau |
 | Support | Base/expanded counts, positives/negatives/prevalence/station-time coverage |
 
 Spark PR-AUC không được gọi là Average Precision nếu chưa tính đúng định nghĩa. Ghi version và curve approximation; `numBins=0` tắt downsampling khi cost cho phép. Single-class nhóm ghi AUC N/A; rare groups vẫn nằm trong bảng với support/uncertainty ([evaluator API](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.evaluation.BinaryClassificationEvaluator.html)).
@@ -370,7 +370,7 @@ Calibration assessment bắt buộc, correction khi validation cho thấy cần.
 
 Monotonicity assessment bắt buộc: cùng station/time/history, `tau1 < tau2` ⇒ probability không tăng. Ghi violation rate/max excess với frozen numeric tolerance trước/sau calibration. Violation nghĩa là chưa có survival function nhất quán. Projection/interpolation correction là extension phải freeze/test/lưu trong inference pipeline, không chỉ sửa plot.
 
-Ablation A=station+time+threshold; B=A+history+missingness là chính; C=B+neighbours optional. Cùng samples/folds/grid/tuning budget; nếu C mất samples thì so sánh intersection và report coverage separately. Báo A/B ablation trên selection validation; final holdout một lần so climatology, LR-B và GBT-B trên cùng eligible cohort. Error analysis theo month/station/threshold/unseen, onset/continuation định nghĩa từ available history tại `t`.
+Ablation A=station+time+threshold; B=A+history+missingness là chính; C=B+neighbours optional. Cùng samples/folds/grid/tuning budget; nếu C mất samples thì so sánh intersection và report coverage separately. Báo A/B ablation trên model-selection set; final holdout một lần so climatology, LR-B và GBT-B trên cùng eligible cohort. Error analysis theo month/station/threshold/unseen, onset/continuation định nghĩa từ available history tại `t`.
 
 Observations chồng horizon và storms phụ thuộc theo thời gian. Confidence intervals dùng paired day/week block bootstrap, resample all stations/thresholds cùng block; block length chọn từ train/validation trước test. Không bootstrap expanded rows độc lập. Nếu budget hạn chế, ưu tiên Brier difference uncertainty, ghi metric nào chỉ có point estimate.
 
@@ -433,7 +433,7 @@ Mỗi đoạn kết quả gồm: **quan sát có số liệu → cách tính/coh
 
 **Problem and target.** Nêu input station/time/threshold, output xác suất tích lũy rainfall trong 30 phút kế tiếp **lớn hơn** threshold. Có công thức `P(R30 > tau | available history)` và một timeline ngắn giải thích sáu intervals tương lai. Nêu đơn vị, boundary convention, điều kiện đủ label/history, threshold domain và xử lý missing/unseen/out-of-domain. Khai báo giả định availability nếu chỉ làm retrospective prediction.
 
-**Features and split.** Bảng features chỉ liệt kê features thực dùng: nhóm thời gian/station/threshold, rainfall history, missingness; mỗi nhóm có cửa sổ, ý nghĩa và lý do chọn. Giải thích ngắn cách tránh nhìn tương lai. Bảng split ghi train 2017–2022, selection Jan–Jun 2023, calibration Jul–Dec 2023 và final test 2024, kèm base samples, threshold-expanded samples, positives/prevalence và purge policy. Không dùng test để chọn model/features/calibration.
+**Features and split.** Bảng features chỉ liệt kê features thực dùng: nhóm thời gian/station/threshold, rainfall history, missingness; mỗi nhóm có cửa sổ, ý nghĩa và lý do chọn. Giải thích ngắn cách tránh nhìn tương lai. Bảng split ghi train 2017–2022, model-selection set Jan–Jun 2023, calibration Jul–Dec 2023 và final test 2024, kèm base samples, threshold-expanded samples, positives/prevalence và purge policy. Không dùng test để chọn model/features/calibration.
 
 **Models and training.** Giải thích climatology baseline, MLlib LR và GBT bằng vài câu cho mỗi model; nêu preprocessing, tuning budget, actual selected hyperparameters, selection criterion và calibration recipe. Config đầy đủ ở appendix/repo. Phân biệt rainfall threshold `tau` với probability cutoff dùng precision/recall. Nêu cách xuất probability của class 1 và lưu đầy đủ pipeline.
 
@@ -443,7 +443,7 @@ Mỗi đoạn kết quả gồm: **quan sát có số liệu → cách tính/coh
 
 **Features and errors.** Tóm tắt A/B ablation để cho thấy history/missingness đóng góp thế nào. Phân tích ngắn các lỗi chính theo threshold, station/month, onset/continuation và unseen khi có samples; chọn vài kết quả có ý nghĩa thay vì đưa mọi strata vào thân bài. Báo cáo monotonicity violation và giới hạn khi suy diễn xác suất cho threshold chưa học. Uncertainty tính theo Phase 9; không gọi khác biệt nhỏ là statistically significant nếu chưa có bằng chứng phù hợp.
 
-**Kết luận Task 2.** Trả lời trực tiếp model nào được chọn trên validation, final test đạt gì, probability có đáng tin ở điều kiện nào và thất bại ở đâu. Nếu ML không hơn climatology hoặc calibration không cải thiện, báo cáo đúng kết quả và giải thích trong giới hạn evidence; không sửa scope/cohort để làm model thắng.
+**Kết luận Task 2.** Trả lời trực tiếp model nào được chọn trên model-selection set và final test đạt gì, probability có đáng tin ở điều kiện nào và thất bại ở đâu. Không gọi model-selection scores là unbiased validation estimates. Nếu ML không hơn climatology hoặc calibration không cải thiện, báo cáo đúng kết quả và giải thích trong giới hạn evidence; không sửa scope/cohort để làm model thắng.
 
 ### 13.5. Figures, tables và bằng chứng cho báo cáo
 

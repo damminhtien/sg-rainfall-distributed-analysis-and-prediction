@@ -341,7 +341,7 @@ assigned split.}
 Partition & Period & Valid windows & Invalid windows \\
 \midrule
 Training & 2017--2022 & 34,542,285 & 846,772 \\
-Selection & Jan--Jun 2023 & 3,325,499 & 11,350 \\
+Model-selection set & Jan--Jun 2023 & 3,325,499 & 11,350 \\
 Calibration & Jul--Dec 2023 & 3,393,373 & 11,884 \\
 Final test & 2024 & 6,374,476 & 31,408 \\
 Boundary-purged & Split edges & 1,200 & 380 \\
@@ -359,23 +359,26 @@ regression settings, three random-forest settings and four gradient-boosted
 tree settings. The best pilot settings were LR regularisation 0.01, RF with 50
 trees and depth 8, and GBT with depth 4 and 40 iterations.
 
-Jan--Jun 2023 was used both to select pilot settings and to compare the final
-candidates. The selection scores are therefore part of the model-selection
-process, not an independent estimate of generalisation. The 2024 partition
-was reserved for the final comparison.
+Jan--Jun 2023 is the model-selection set, not an independent generalisation
+set. It was used both to select pilot settings and to compare the final
+candidates. The selected candidate's score is therefore optimistic and must
+not be presented as an unbiased validation score or an independent estimate
+of generalisation.
+The Jul--Dec 2023 period was used for calibration after candidate selection;
+2024 was reserved for the final evaluation.
 
 \subsection{Model selection}
-Selection used mean PR-AUC across the six supported thresholds as the primary
+Model selection used mean PR-AUC across the six supported thresholds as the primary
 criterion, with mean Brier score as the tie-breaker within configured
 tolerances. LR and GBT were each assessed with the base and history feature
 sets; RF used the history feature set. Adding same-station history increased
-the mean selection PR-AUC from 0.0488 to 0.4852 for LR and from 0.0573 to
+the mean model-selection PR-AUC from 0.0488 to 0.4852 for LR and from 0.0573 to
 0.5266 for GBT. Among the common history-feature candidates, GBT-B ranked
 above RF-B and LR-B.
 
 \begin{table}[htbp]
 \centering\small
-\caption{Mean selection metrics across the six primary thresholds on
+\caption{Mean model-selection metrics across the six primary thresholds on
 January--June 2023. Higher PR-AUC and lower Brier score are preferred.}
 \label{tab:selection}
 \begin{tabular}{l r r}
@@ -477,9 +480,10 @@ Supervised ML fitting used a 2\% deterministic sample, while the climatology
 baseline used the complete valid training partition. Although both models were
 evaluated on identical 2024 rows, this training-budget difference is part of
 the comparison. Parameter tuning and final selection both used January--June
-2023, so the selection metrics are optimistic for model choice. The 2024
-holdout remains untouched by post-test tuning. Finally, the one-second 2017
-epoch correction affects the interpretation of those early timestamps and
+2023. The selected candidate's score must not be described as an unbiased
+validation score or as generalisation performance. The 2024 holdout remains
+untouched by post-test tuning. Finally, the one-second 2017 epoch correction
+affects the interpretation of those early timestamps and
 should be revisited if authoritative timestamp semantics become available.
 
 \section{Reproducibility and conclusion}

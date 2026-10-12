@@ -37,8 +37,8 @@ cloud record.
 3. `02_build_features.ipynb`: construct elapsed-time history features,
    six-reading targets, temporal splits and attrition summaries.
 4. `03_train_evaluate.ipynb`: compare climatology, LR, RF and GBT candidates;
-   select on Jan–Jun 2023, calibrate on Jul–Dec 2023 and evaluate only the
-   selected model against climatology on the 2024 holdout.
+   choose on the Jan–Jun 2023 model-selection set, calibrate on Jul–Dec 2023
+   and evaluate only the selected model against climatology on the 2024 holdout.
 5. `report/main.tex`: explain methods and results from the completed run.
 
 ## Completed run
@@ -83,8 +83,9 @@ interval-end convention is an accepted modelling assumption, not a confirmed
 NEA definition. Archived observations make this a retrospective event-time
 evaluation; real-time availability and revision history are not claimed.
 
-Train: 2017–2022; selection: Jan–Jun 2023; calibration: Jul–Dec 2023; final
-test: 2024. The selection period was used for both pilot tuning and candidate
-comparison, so its metrics are not an independent generalization estimate.
-The 2024 holdout was not used for post-test tuning. The classification cutoff
-was fixed at 0.5 for descriptive F1 and was not optimized.
+Train: 2017–2022; model-selection set: Jan–Jun 2023; calibration: Jul–Dec
+2023; final test: 2024. The Jan–Jun set was used for both pilot tuning and final
+candidate comparison. The selected candidate's score is optimistic, not an
+unbiased validation score or an independent generalization estimate. The
+2024 holdout was not used for post-test tuning. The classification cutoff was
+fixed at 0.5 for descriptive F1 and was not optimized.
