@@ -18,7 +18,7 @@ Các kết quả đã có bên dưới thuộc run cũ; cần giữ nguyên và 
 - [x] Chốt tác giả cá nhân DAM MINH TIEN, Student ID A0355091E.
 - [x] Chốt giả định timestamp là **cuối khoảng đo 5 phút** theo câu trả lời người dùng; không gọi là xác nhận từ NEA.
 - [x] Ghi chỉ dẫn mới: **tiếp tục, không chờ đối soát cost**. Không yêu cầu người dùng gửi Reports/Cost table để mở bước tiếp theo.
-- [ ] Khi thực hiện cloud, xác minh đúng project `sg-rainfall-dsa5208-261011`, region `asia-southeast1`, Billing Account for Education `01DAD8-AE5F1A-E3910A`.
+- [x] Ngày 12/10/2026 xác minh live bằng `gcloud`: project `sg-rainfall-dsa5208-261011` ACTIVE, region `asia-southeast1`, billing enabled và link tới Billing Account for Education `01DAD8-AE5F1A-E3910A`. Kiểm tra lại trước từng cloud action.
 - [ ] Chỉ dùng credit `3LU63BPGY77JFDQQ` trên account này; tuyệt đối không đổi account, redeem credit khác, thêm payment method hoặc dùng paid fallback. Chỉ dẫn bỏ chờ cost không mở rộng quyền này.
 - [ ] Chạy toàn bộ code project qua **Jupyter Notebook**; notebook00 có thể chạy trên Mac để tạo cluster, Spark processing/training chạy trên Dataproc, không dựng Spark cluster local. Lệnh gcloud gọi bằng cell `subprocess`; giữ stdout, bảng, hình và trạng thái trong output. Hàm tái sử dụng có thể nằm trong `src/` và `scripts/`.
 - [ ] Với **mỗi action Spark**, sau trạng thái cuối chụp Jobs summary và **từng Job detail trên Spark Web UI**; dùng History Server khi app đã kết thúc. Xem mục 12.
@@ -49,7 +49,7 @@ vẫn áp dụng nếu không bị chỉ dẫn mới của người dùng thay t
 
 ## 2. Việc tiếp theo — làm theo thứ tự
 
-- [ ] **A. Đồng bộ notebook billing policy** với chỉ dẫn mới: bỏ điều kiện bắt buộc chờ Reports/Cost table và reserve cũ; vẫn kiểm tra đúng account/project/credit. Không điền số usage/pending giả để vượt gate. `src/rainfall/billing.py` và notebook cloud hiện còn policy cũ, chưa sửa trong lần chuyển TODO này.
+- [x] **A. Đồng bộ notebook billing policy**: đã bỏ Reports/Cost-table và reserve gate; notebook vẫn xác minh live project/billing-account linkage, runtime ghi đúng Credit ID được phép, và các notebook cloud dùng run-scoped runtime/source URI. Không tạo usage/pending giả. Credit áp dụng tự động ở account scope; `gcloud` không thể pin credit ID theo job.
 - [ ] **B. Mở session Jupyter mới** sau preflight account/IAM/quota/network; pin runtime tương thích, bật event log và thử mở Spark UI trước full run.
 - [ ] **C. Khép cleaning audit:** xuất các bảng còn thiếu và đối soát raw = retained + excluded trước khi coi cleaning hoàn tất.
 - [ ] **D. Hoàn tất notebook 04** với attempt prefix mới: baseline, LR/GBT A/B, selection, calibration, frozen manifest. Không đánh dấu app5 dở dang là hoàn thành.
@@ -136,7 +136,7 @@ Chi tiết: TASK_SPEC mục 4–5; điều kiện chờ cost cũ đã được t
 | Machine | Master +2 workers `e2-standard-4` | Mỗi VM 4 vCPU/16 GB; tổng 12 vCPU không đồng nghĩa 12 cores cho executors |
 | Disks | `pd-balanced`, master 100 GB, worker 75 GB | Tổng 250 GB boot disks; không quay lại 300 GB khi quota chưa đủ |
 | Image/network | `2.2.87-debian12`, `--no-address` | Pin image; subnet/private access/IAP đúng |
-| Lifecycle | `--delete-max-idle=45m`, `--delete-max-age=3h` | Hard delete có thể cắt job; xuất checkpoint trước hạn |
+| Lifecycle | `--delete-max-idle=45m`, `--delete-max-age=6h` | Giới hạn tuổi cluster; xuất checkpoint giữa các phase và xác minh auto-delete không cắt action |
 | Driver/executor memory | `4g` / `4g` | Giá trị request, không gồm toàn bộ overhead/YARN reservation |
 | Executors |4 instances ×2 cores; dynamic allocation=false | Mục tiêu 8 executor cores trên 2 workers; xác minh allocated executors |
 | SQL shuffle | `shuffle_partitions=64` | Giá trị khởi đầu, chưa chứng minh tối ưu |
@@ -322,7 +322,7 @@ Chi tiết: TASK_SPEC mục 10–11.
 - [ ] Fit MLlib GBT PipelineModel dùng station one-hot như code hiện có; nếu đổi sang indexed categorical thì kiểm tra metadata/maxBins đủ cả unseen bucket; không scaling thừa.
 - [ ] Giữ label 0/1 và xuất probability[1], probabilities finite trong [0,1]. Natural prevalence mặc định; weights/oversampling nếu có phải khai báo, không rebalance test.
 - [ ] A=station+time+threshold, B=A+history+missingness: cùng eligible samples/grid/tuning budget; báo ablation trên selection.
-- [ ] Dùng attempt prefix chưa tồn tại (`models/attempt-02/` nếu còn trống); giữ partial app5 artifacts. Nếu đã có partial attempt thì đổi cả notebook04/05 sang attempt mới.
+- [ ] Dùng attempt prefix chưa tồn tại; run mới hiện đặt `RUN_ID=20261012-full-01`, `MODEL_ATTEMPT=attempt-01` sau khi kiểm tra prefix local/GCS trống. Giữ partial app5 artifacts của run cũ `20261011-full-01`; nếu retry lần nữa thì đổi cả notebook04/05 sang attempt mới.
 - [ ] Hoàn tất notebook04 và export model/selection/calibration outputs; `gbt_A/` tồn tại trong nhật ký cũ không chứng minh `gbt_B/` hoặc freeze đã hoàn tất.
 - [ ] Inspect SQL/window/join/skew, reused cache/unpersist, rows/bytes/partitions/runtime và workers. Nếu chunk thời gian, dùng history halo 180 phút/future 30 phút rồi trim ownership.
 - [ ] Freeze manifest gồm cleaning/alignment/availability, domain/grid/features/splits/sampling/seed, model/hyperparams/calibrator/cutoff/metrics/runtime/Git commit trước notebook05.
