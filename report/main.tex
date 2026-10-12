@@ -55,8 +55,10 @@ observations from 2017 to 2024 using Apache Spark. Task 1 describes within-year
 and across-year patterns with coverage-based denominators. Wet-reading
 frequency ranged from 1.94\% in 2019 to 3.20\% in 2023; among station-months
 with at least 95\% observation coverage, mean observed monthly rainfall ranged
-from 31.97 to 419.07~mm. No station met the 90\% annual-coverage rule in all
-eight years, limiting fixed-network trend comparisons. Task 2 predicts whether
+from 31.97 to 419.07~mm. Mean conditional intensity ranged from 0.58 to
+1.35~mm across eligible monthly summaries. No station met the 90\%
+annual-coverage rule in all eight years, limiting fixed-network comparisons.
+Task 2 predicts whether
 the next six complete readings exceed a rainfall threshold. A gradient-boosted
 tree with same-station history features was selected on the first half of 2023
 and calibrated on the second half. On the 2024 holdout, its calibrated
@@ -144,12 +146,29 @@ reconcile to the raw count.
 
 \subsection{Coverage definitions}
 Coverage is the count of retained five-minute readings divided by the expected
-slots in the full station calendar period. For the main monthly summaries, a
-station-month is eligible only when coverage is at least 95\%. Hourly wet
-frequency further requires at least 95\% coverage within each station-hour,
-and each eligible station-month contributes one value to the hourly average.
-These rules reduce the effect of incomplete records but do not make the
-changing station network equivalent to a fixed network.
+slots (288 per calendar day) in the full calendar period, including periods
+with no records. Rainfall
+occurrence is the share of retained readings greater than zero; missing
+readings are excluded from this denominator and are not treated as dry.
+Conditional wet intensity is the mean five-minute rainfall total among
+positive readings. A
+station-month rainfall total is the sum of observed readings and is not
+adjusted for missing slots.
+
+Monthly summaries include station-months with at least 95\% coverage and give
+each eligible station-month equal weight. For hourly summaries, the same
+monthly rule applies, and each station-month-hour must also have at least 95\%
+of its expected readings (12 per day for that hour). At a given hour, eligible
+station-month-hour summaries receive equal weight. These summaries therefore
+describe the observed station network; they do not make its changing
+composition equivalent to a fixed network.
+
+A complete day has exactly 288 retained five-minute readings. Supplementary
+complete-day estimates first average complete daily totals within each
+station-month, then give each contributing station-month equal weight. The
+complete-day fraction uses all expected station-days for the station IDs seen
+anywhere in 2017--2024 as its denominator, so it reflects both recording
+completeness and changes in station availability.
 
 \section{Task 1: Rainfall patterns}
 \subsection{Across-year distribution}
@@ -199,6 +218,13 @@ ranged from 0.37\% (August 2019) to 7.07\% (January 2024). The extrema do not
 come from a single year, so they show variation within the observed period
 rather than a stable seasonal climatology.
 
+Conditional wet intensity also varied by month. Across the eligible
+year-month summaries, it averaged 1.05~mm in March and 1.02~mm in April,
+compared with 0.69~mm in January; support ranged from six to eight years per
+calendar month. Individual summaries ranged from 0.58~mm (December 2019) to
+1.35~mm (March 2019). These differences describe the observed period and do
+not establish a stable seasonal pattern.
+
 The equal station-month hourly summaries peaked at 15:00 SGT in 2018, 2019,
 2021, 2022 and 2023, and at 16:00 in 2017, 2020 and 2024. The peak-hour
 frequencies ranged from 3.42\% in 2019 to 7.76\% in 2023. The afternoon peak
@@ -246,12 +272,12 @@ Hourly labels refer to the recorded interval-end hour in SGT.}
 \end{figure}
 
 \subsection{Network coverage and annual comparison}
-The annual coverage heatmap shows substantial station turnover and uneven
-recording periods. No station met any of the 90\%, 95\% or 99\% annual
-coverage cutoffs in all eight years. The common-station annual comparison
-therefore has no eligible rows. I do not infer an across-year rainfall trend
-from the changing network; the year-by-year distribution table remains a
-descriptive summary of the records available in each year.
+Annual coverage uses each ID's full calendar year; a station-year without
+readings has zero coverage. No ID met any of the 90\%, 95\% or 99\% cutoffs in
+all eight years, leaving no fixed-ID cohort. The annual distributions are
+therefore descriptive of the available network and do not support a
+climate-trend claim. A screen of coordinates, station names and device IDs
+found no obvious replacements or co-located IDs.
 
 \begin{figure}[htbp]
 \centering
@@ -544,8 +570,10 @@ Apache Spark. \emph{Extracting, transforming and selecting features}, Spark
 \appendix
 \section{Additional Task 1 figures}
 The following supplementary figures are included as generated notebook
-outputs. Complete-day estimates use only station-days with all 288 readings.
-Spatial summaries filter to rows with usable coordinate metadata.
+outputs. Complete-day estimates use only station-days with all 288 readings;
+the completeness fraction is relative to all expected station-days for IDs
+appearing anywhere in the eight-year archive. Spatial summaries filter to rows
+with usable coordinate metadata.
 
 \begin{figure}[htbp]
 \centering
