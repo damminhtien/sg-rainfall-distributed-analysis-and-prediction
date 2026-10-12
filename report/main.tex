@@ -211,9 +211,9 @@ predictors. It summed the next six five-minute readings, excluded targets
 whose future windows crossed a split boundary, and created examples for each
 rainfall threshold. Spark MLlib fitted logistic regression, random forest and
 gradient-boosted tree candidates; Spark scored the selection, calibration and
-2024 holdout records and computed their evaluation summaries. Charts use
-compact grouped summaries and score bins; prediction-level scores remained in
-Spark and were saved in Google Cloud Storage.
+2024 holdout records and computed their evaluation summaries. Only compact
+grouped summaries and score bins were collected for charts; prediction-level
+scores remained in Spark and were saved in Google Cloud Storage.
 
 \section{Task 1: Rainfall patterns}
 \subsection{Across-year distribution}
