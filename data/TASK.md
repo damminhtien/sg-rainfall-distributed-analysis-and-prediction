@@ -1,550 +1,240 @@
-# DSA5208 Project 2 — Singapore Rainfall Analysis and Prediction
-
-Kế hoạch đã review ngày 11/10/2026. Đây là kế hoạch thực hiện, chưa phải bằng chứng rằng data đã được kiểm định hoặc cluster/model đã chạy. Mỗi phase có output và acceptance criteria. Các lựa chọn statistical/modeling phải được ghi lại trước final test.
-
-## 1. Yêu cầu chính thức và lựa chọn triển khai
-
-Nguồn đề bài: `data/project_description.txt`. Nguồn data: [Historical Rainfall across Singapore, NEA](https://data.gov.sg/collections/2279/view).
-
-| Nội dung | Yêu cầu chính thức |
-|---|---|
-| Data | Các năm 2017–2024; quan trắc mưa mỗi 5 phút tại các trạm Singapore |
-| Task 1 | Phân tích kiểu mưa trong năm và thay đổi giữa các năm, có hình và thảo luận |
-| Task 2 | Xác suất một trạm tích lũy **hơn** ngưỡng mưa được yêu cầu trong 30 phút tiếp theo |
-| Công nghệ | Structured data processing bằng Spark; xây dựng và đánh giá model bằng Spark MLlib |
-| Report | Cleaning, patterns, features, model/results, computing environment/cluster configuration, limitations và AI usage |
-| Bàn giao | Source + README; trained model; PDF ghi tên và student ID của tất cả thành viên |
-| Nhóm/deadline | Tối đa 3 người; 18/10/2026, 23:59 theo mô tả Canvas; kiểm tra timezone/upload limit trên Canvas |
-
-**Triển khai cá nhân (1 người):** Mac + gcloud → GCS → Dataproc + Jupyter + Spark/MLlib → GCS outputs → source/model/PDF. Không dựng cluster local. Đề cho phép local/GCP/Databricks; Google Cloud là lựa chọn triển khai, không phải yêu cầu bắt buộc của đề.
-
-Các citation placeholder cũ (`Lec6`, `Project-2-Singapore-Rainfall-An…`) đã được bỏ. Khi dùng lecture trong report, đọc source và ghi tên slide/số trang chính xác.
-
-## 2. Kết quả review
-
-| Điểm yếu của bản cũ | Cách làm rõ/sửa |
-|---|---|
-| Upload toàn bộ `data/raw/`, giả định layout chưa kiểm tra | Dùng data ngoài repo; manifest chọn đúng tám file 2017–2024, loại 2016 |
-| Giả định timestamp đúng lưới 5 phút | Xác minh interval semantics và alignment trước label |
-| `observation_time ≤ t` được coi là đủ chống leakage | Kiểm tra cả availability/revisions; nêu giới hạn real-time |
-| Year split có thể để label vượt sang năm tiếp theo | Purge horizon vượt split/fold và kiểm tra label endpoint |
-| Duplicate/gap/coverage chưa có policy | Data contract, quarantine, mẫu số và attrition rõ |
-| Heatmap được xem là chứng minh không có bias | Cohort trạm ổn định, coverage và sensitivity analysis |
-| Training thresholds thay cho input ngưỡng tùy ý | Tách grid/domain/inference; kiểm tra ngưỡng chưa thấy |
-| Tuning và calibration chưa tách dữ liệu | Temporal selection và calibration holdout riêng trong 2023 |
-| PR-AUC chưa đủ cho xác suất | Thêm Brier/log loss/calibration, prevalence và uncertainty |
-| Cloud thiếu IAM/network/runtime/cost guardrails | Preflight, worker identity, pinned image, max-age và persist artifacts |
-| Model save chưa chứng minh reproduce được | Lưu toàn bộ pipeline/config; reload và infer từ submission package |
-
-**Các gate còn cần evidence:** timestamp là đầu hay cuối interval; nghĩa của update fields; quy tắc timestamp alignment; billing/project/IAM; image/runtime tương thích; source LaTeX Project 1. Skill academic-writing đã có tại `data/academic-writing-SKILL.md` và đã đọc khi lập khung báo cáo. Không tự coi các gate này đã đạt.
-
-## 3. Phase 0 — Repository và provenance
-
-Đường dẫn local lấy từ `data/pwd`:
-
-- Dataset root `/Users/macbook/Data/sg historical rainfall`, CSV ở `raw/`.
-- Course `/Users/macbook/Desktop/NUS/DSA5208`, Project 1 ở `project1/`.
-
-Full scan cục bộ 11/10/2026: thư mục `raw/` hiện có đúng tám CSV cần dùng, 2017–2024; chưa thấy file 2016 tại đường dẫn này. Ghi chú inventory cũ từng ghi chín file gồm 2016 nên không còn đúng với inventory hiện tại. NEA collection metadata công bố chín annual datasets từ 2016 đến 2024; assignment chỉ yêu cầu 2017–2024 ([collection](https://api-production.data.gov.sg/v2/public/api/collections/2279/metadata)).
-
-`scripts/build_manifest.py` đã đọc đủ 8,047,044,701 bytes / 48,538,713 data rows, tính SHA-256 mỗi file, xác nhận các file có cùng 12-column header, không có row sai field-count và không có timestamp thiếu/parse lỗi. Kết quả theo file, dataset IDs và timestamp min/max nằm trong `manifests/input_manifest.json`. Tất cả record timestamps dùng `+08:00` trong dữ liệu đã quét. Các khoảng quan sát lần lượt bắt đầu 2017 `08:04:59`, các năm 2018–2024 lúc `00:00:00` và kết thúc `23:55:00` mỗi năm. Đây mới là inventory/schema/timestamp parse scan; **chưa** kiểm tra value range, duplicates/conflicts, station coverage, gaps, timestamp alignment theo trạm hay interval semantics. Không dùng min/max làm bằng chứng dataset đầy đủ.
-
-Header/sample ban đầu cho thấy update delay (2017 observation `08:04:59`, update `08:13:31`; 2024 observation `00:00:00`, update `00:05:26`). Đây là lý do tiếp tục audit availability/alignment, không chứng minh `timestamp` là interval end.
-
-Giữ raw ngoài repo và bất biến. Chỉ chọn tám file `HistoricalRainfallacrossSingapore{2017..2024}.csv`. Không dùng 2016 ngầm làm warm-up. Code nhận `DATA_ROOT` từ config; không hard-code đường dẫn cá nhân. Manifest phải có dataset ID/source URL, năm, filename, bytes, SHA-256, retrieval time, schema và actual time range. Đối chiếu manifest local/GCS; object listing chưa chứng minh upload đúng.
-
-```text
-sg-rainfall-distributed-analysis-and-prediction/
-├── README.md
-├── requirements-local.txt
-├── requirements-cluster.txt
-├── config/
-│   ├── cloud.env.example
-│   └── experiment.json
-├── data/TASK.md
-├── notebooks/
-│   ├── 00_environment.ipynb
-│   ├── 01_data_quality.ipynb
-│   ├── 02_task1_weather_patterns.ipynb
-│   ├── 03_task2_features.ipynb
-│   ├── 04_task2_models.ipynb
-│   └── 05_final_evaluation.ipynb
-├── src/rainfall/             # config, cleaning, features, models, metrics, predict, plotting
-├── scripts/
-├── tests/
-├── figures/
-├── results/
-├── models/
-└── report/                  # main.tex, references.bib
-```
-
-**Jupyter Notebook là entry point duy nhất để chạy code của project và xem output.** Các hàm tái sử dụng nằm trong `scripts/` hoặc `src/`, được import và gọi từ notebook; không chạy phân tích bằng terminal, `spark-submit` hay batch script. Lệnh Cloud SDK cần thiết cũng được gọi trong cell Python bằng `subprocess`, có in trạng thái/kết quả vào output. Notebook được lưu cùng output cần thiết; credential và nội dung nhạy cảm không được ghi vào notebook. Mỗi run có `RUN_ID`, Git commit, input manifest hash và config hash; ghi output dưới run prefix riêng, không overwrite final results. Không commit `skills/`, `.codex/`, `.vscode/`, `AGENTS.md`, `config/cloud.env`, credential hoặc raw/cache lớn. Plan/config mẫu và bảng kết quả nhỏ có thể commit.
-
-**Acceptance:** manifest đủ tám năm; portable paths; entry point và execution order rõ; repo không chứa credential/raw.
-
-## 4. Phase 1 — Cloud preflight và budget
-
-### 4.1. Credit và billing duy nhất được phép sử dụng
-
-**Ràng buộc của người dùng: chỉ dùng khoản education credit dưới đây và đúng billing account chứa khoản credit đó. Tuyệt đối không dùng billing account khác, credit khác hoặc chi tiền ngoài khoản credit này.** Ràng buộc áp dụng cho toàn bộ project: compute, Dataproc, GCS, disk, network, logging và các tài nguyên phụ.
-
-Credit ID `3LU63BPGY77JFDQQ` là mã duy nhất người dùng cho phép; người dùng chỉ định dùng Billing Account có tên Education. Snapshot credit dưới đây do người dùng cung cấp ngày 11/10/2026, không phải truy vấn live từ máy:
-
-| Thuộc tính | Giá trị được cung cấp |
-|---|---|
-| Credit name | Scalable distributed computing for data science aug26 |
-| Credit ID | `3LU63BPGY77JFDQQ` |
-| Status / remaining | Available / 100% |
-| Remaining / original value | $50.00 / $50.00 |
-| Type | One-time |
-| Usage scope | Any service on this billing account |
-| Start / end date | 17/08/2026 / 14/08/2027 |
-| Credit application type | Net pricing |
-
-Credit ID không phải Billing Account ID. Read-only gcloud inventory ngày 11/10/2026 xác định account được người dùng chỉ định là **Billing Account for Education**, ID `01DAD8-AE5F1A-E3910A`, trạng thái open, currency USD. Không dùng account khác. Gcloud chỉ xác nhận tên/ID/trạng thái account, không trả về danh sách credit; trạng thái credit trong bảng vẫn là snapshot do người dùng cung cấp.
-
-Google áp dụng promotional credits tự động vào eligible costs; gcloud không phải cơ chế chọn một Credit ID cho từng job. Kiểm tra Credits và cost details của đúng account để xác minh khoản nào được áp dụng ([education credits](https://docs.cloud.google.com/billing/docs/how-to/edu-grants), [cost details](https://docs.cloud.google.com/billing/docs/how-to/cost-table)). Nếu có nhiều promotional credits cùng scope và chưa xác minh được chỉ khoản chỉ định sẽ chi trả, dừng bước có phí để làm rõ. Không redeem thêm credit, đổi account, thêm phương thức thanh toán hoặc chuyển sang trả tiền để tiếp tục.
-
-Read-only gcloud check ngày 11/10/2026 cho thấy project hiện có `new-cloud-256902` đang billing-disabled, chưa link với Billing Account for Education; danh sách project gắn vào Education hiện trống. Notebook đã thử link theo yêu cầu nhưng gcloud identity hiện tại bị từ chối vì thiếu quyền gán billing trên project (`resourcemanager.projects.createBillingAssignment` và `resourcemanager.projects.deleteBillingAssignment`). Vì thế project chưa sẵn sàng chạy Cloud job; không đổi sang account khác. Cần người có quyền trên project/account hoàn tất đúng liên kết. Trước mỗi lần tạo tài nguyên hoặc chạy job có phí, cập nhật trạng thái credit/balance/scope và pending cost trong Google Cloud Billing Console. Credit được áp dụng ở account-level, không chọn riêng từng job; nếu không bảo đảm chi phí chỉ trừ vào credit được phép thì dừng. Cleanup tài nguyên của project đã tạo vẫn phải thực hiện để ngừng chi phí tiếp tục.
-
-### 4.2. Cấu hình và preflight
-
-Thông số project/account/region/run được đặt ở đầu `notebooks/00_environment.ipynb`; không dùng file credential hoặc `config/cloud.env` làm đường chạy riêng. Notebook đọc account/project state, thử link `new-cloud-256902` vào Billing Account for Education đã chỉ định, rồi kiểm tra lại linkage và `billingEnabled`. Cell giữ trạng thái permission denied trong output, không tạo bucket, cluster hay job khi link chưa đạt. Các API, quota, IAM, network và credit/balance phải được kiểm tra trong notebook/Console trước khi tạo tài nguyên.
-
-Preflight trong notebook: kiểm tra CPU/disk quota theo region, subnet/Private Google Access/firewall cho trao đổi nội bộ, quyền tạo cluster và `iam.serviceAccounts.actAs`. VM service account cần `roles/dataproc.worker` cùng quyền đọc/ghi data và staging/temp buckets phù hợp; không đưa JSON keys vào notebook. Chỉ đánh dấu gate đạt khi đã có output kiểm tra. Nguồn: [Dataproc service accounts](https://docs.cloud.google.com/dataproc/docs/concepts/configuring-clusters/service-accounts).
-
-### 4.3. Giới hạn vận hành trong credit
-
-Mục tiêu chi tiêu dự toán tối đa **$40**, giữ ít nhất **$10** dự phòng cho pending usage, storage, export/download và cleanup, cùng currency với credit. Đây là ngưỡng vận hành bảo thủ, không phải spending cap do Google bảo đảm. Khi remaining credit ≤ $10 hoặc dự toán session + pending/retention costs vượt phần cho phép, không bắt đầu job/session mới; persist/download outputs và ngừng tài nguyên có phí của project.
-
-Tạo project-scoped alerts-only budget trên đúng account, theo dõi usage costs và credit application riêng; không để net cost sau credit bằng 0 che lượng credit đã tiêu. **Alerts-only budget không tự chặn chi tiêu** ([Billing budgets](https://docs.cloud.google.com/billing/docs/how-to/budgets)). Dự toán gồm VM, Dataproc fee, disk, GCS operations/storage/network và tài nguyên phụ; lấy giá theo region tại ngày chạy từ [pricing](https://cloud.google.com/dataproc/pricing). Ghi credit snapshot đầu/cuối session và usage chưa phản ánh trên Console; billing có thể cập nhật trễ ([cost details](https://docs.cloud.google.com/billing/docs/how-to/cost-table)).
-
-Cluster có idle timeout **và** maximum lifetime, vẫn xóa thủ công khi xong. Xóa cluster không làm hết phí GCS/tài nguyên phụ. Không tạo cluster trước khi preflight và dự toán đạt.
-
-**Acceptance:** `BILLING_ACCOUNT_ID` đã khóa với credit `3LU63BPGY77JFDQQ`; không account/credit khác; linkage và balance/scope được đối chiếu; budget đủ cả pending/storage/cleanup; quota/IAM/network đúng. Chưa đạt thì không thao tác có phí.
-
-## 5. Phase 2 — GCS, Dataproc và Jupyter
-
-Bucket private, uniform access, cùng region với compute. Tạo bucket và upload đúng manifest cùng 8 CSV (2017–2024) bằng các cell riêng trong `00_environment.ipynb`; mỗi cell in trạng thái và danh sách object vào output. Không upload 2016 hoặc dữ liệu ngoài manifest.
-
-Layout: `raw/`, `manifests/`, `processed/<RUN_ID>/`, `features/<RUN_ID>/`, `notebooks/`, `models/<RUN_ID>/`, `results/<RUN_ID>/`, `staging/`, `temp/`.
-
-Cloud runs đọc paths từ manifest, không wildcard lấy nhầm năm/object. GCS raw + manifest là nguồn input; không copy raw vào mỗi worker.
-
-Ứng viên cluster ban đầu: 1 master `e2-standard-4` + 2 workers cùng loại (4 vCPU, 16 GB RAM/VM), disk 100 GB/VM, không GPU. Đây là cấu hình cần price check và smoke run; master 8 GB bản cũ ít dư địa cho Jupyter/driver. Không tăng compute trước khi kiểm tra Spark plan/skew/cache/partitions.
-
-Chọn supported image, kiểm tra Jupyter/Python/Spark, pin **exact image version** sau smoke run. Khi thử bằng alias phải ghi resolved version. Local dùng `python3` 3.14 cho utilities phù hợp; cloud dùng Python đi kèm image tương thích Spark. Không ép Dataproc sang 3.14/cài PySpark mới đè runtime ([image versions](https://docs.cloud.google.com/dataproc/docs/concepts/versioning/dataproc-version-clusters)).
-
-Tạo Dataproc cluster bằng cell riêng trong `00_environment.ipynb` sau khi price check và cost guard đạt. Cluster bật Jupyter component, dùng private networking, một master và hai workers theo cấu hình ứng viên; cell in tên cluster, region, image version, VM/disk và lifecycle settings để xem lại trong notebook. Không tạo cluster mặc định khi cost estimate hoặc credit gate chưa đạt.
-
-`3h` là lifetime session ban đầu. Idle calculation dựa trên Dataproc/YARN activity; notebook application có thể giữ cluster active. Max-age vẫn xóa cluster khi job đang chạy, làm job thất bại. Lưu checkpoint/output theo phase và theo dõi lifecycle ([scheduled deletion](https://docs.cloud.google.com/dataproc/docs/concepts/configuring-clusters/scheduled-deletion)).
-
-Internal-IP cluster cần Private Google Access và network nội bộ đúng. Public PyPI/Maven downloads có thể thất bại khi thiếu internet egress; ưu tiên dependencies có sẵn hoặc compatible wheels trên GCS, tính thêm chi phí nếu dùng NAT ([network configuration](https://docs.cloud.google.com/dataproc/docs/concepts/configuring-clusters/network)). Pin/import-check SciencePlots/Matplotlib theo Python cloud trước full run.
-
-Mở Console → cluster → Web Interfaces → Jupyter/JupyterLab qua Component Gateway. Lưu notebook trên GCS và export về repo sau session; không chỉ giữ artifact trên local disk cluster ([Jupyter component](https://docs.cloud.google.com/dataproc/docs/concepts/components/jupyter)).
-
-Trong notebook Dataproc, ghi image, Spark/Python/Java/OS, region, machine types/disks, service account, application ID/master, actual executors và Spark config. Đặt `spark.sql.session.timeZone=Asia/Singapore`. Notebook smoke run đọc một CSV với explicit schema, tạo/read Parquet nhỏ và kiểm tra MLlib/import/GCS. Spark master phải là YARN, executors chạy trên workers. Mọi stdout, bảng và hình cần cho analysis hiển thị trong notebook; lưu notebook đã chạy lên GCS và export về repo sau session.
-
-**Acceptance:** worker identity đọc/ghi GCS; Spark distributed; notebook persist; environment/lifecycle được ghi.
-
-**Bằng chứng Spark Web UI cho từng lần chạy:** mọi notebook action
-đã tạo Spark application/job phải được theo dõi đến trạng thái cuối (thành công,
-thất bại hoặc bị hủy). Sau khi cell/action kết thúc, mở đúng application bằng
-Application ID: dùng Spark Web UI đang hoạt động nếu notebook/application còn mở,
-hoặc **Spark History Server** qua Web Interfaces/Component Gateway nếu application
-đã kết thúc. Kiểm tra tab Jobs. Chụp ảnh trang tổng quan Jobs và trang chi tiết
-của từng Spark Job ID; ảnh phải cho thấy Application ID/Job ID, trạng thái,
-thời lượng và thông tin
-stages/tasks hiện có. Nếu job còn chạy sau khi lệnh trả về, chờ trạng thái cuối
-rồi chụp lại. Không dùng trang Dataproc Jobs hoặc
-YARN thay cho ảnh Spark UI. Bật/kiểm tra Spark event logging và History Server
-trước batch runs để các ứng dụng đã hoàn tất còn xem được. Lưu ảnh vào
-`report/evidence/spark-ui/<RUN_ID>/` với tên có Application ID, Job ID và trạng
-thái; ghi mỗi notebook action cùng đường dẫn ảnh vào
-`report/evidence/spark-ui/index.csv` (một dòng cho mỗi notebook action; lặp
-Application ID nếu cùng app có nhiều action, ghi tất cả Job ID và ảnh detail do
-action đó tạo). Chụp cả lỗi/hủy và ghi
-đúng trạng thái;
-không trình bày chúng như thành công. Cell local không tạo Spark application
-không thuộc yêu cầu này. Tham khảo [Spark Web UI](https://spark.apache.org/docs/latest/web-ui.html)
-và [Dataproc Component Gateway](https://docs.cloud.google.com/managed-spark/docs/concepts/accessing/gateways).
-
-## 6. Phase 3 — Data contract và cleaning
-
-NEA xác nhận timestamps là SGT, data có thể thiếu records và chưa qua climate quality control; không coi raw là climate-quality data ([NEA collection](https://data.gov.sg/collections/2279/view)). Xác nhận schema từng file; header mẫu:
-
-```text
-date, timestamp, update_timestamp, station_id, station_name, station_device_id,
-location_longitude, location_latitude, reading_update_timestamp,
-reading_value, reading_type, reading_unit
-```
-
-Spark đọc CSV với schema explicit và giữ malformed rows để audit; không `inferSchema` lặp lại trên 8 năm. Giữ original/source_file và reason của quarantined rows.
-
-| Field | Contract |
-|---|---|
-| Station | ID không null/blank; audit đổi name/device/location |
-| Observation time | Parse timezone offset; giữ original; derive local year/date và đối chiếu `date` |
-| Interval end | Chỉ tạo sau khi xác minh timestamp/interval semantics và alignment |
-| Availability | Dùng update fields làm proxy sau khi xác minh nghĩa; flag missing/invalid/update-before-observation |
-| Rainfall | Numeric finite, không âm, `mm`, đúng reading type 5-minute total |
-| Coordinates | Finite, lon/lat đúng thứ tự, audit bất thường/relocation |
-| Key | `(station_id, interval_end)` unique sau duplicate policy |
-
-Timestamp `08:04:59` cho thấy không được mặc định floor vào bucket 5 phút. Column legends trên [trang 2017](https://data.gov.sg/datasets/d_1990a5a1aeaf3dd243cf4dae294a61c4/view) và [trang 2024](https://data.gov.sg/datasets/d_a0b69d3e02576a1fd0ab673e71f83507/view) hiện không giải thích đầu/cuối interval hoặc nghĩa update fields. Audit seconds/spacing theo năm/trạm và tìm thêm source documentation để xác minh. Alignment tolerance dựa trên evidence, freeze trước model selection, retain raw/offset. Không cộng readings của hai interval khác nhau vì cùng bucket. Semantics chưa rõ thì gate chưa đạt và chưa tạo label chính thức.
-
-Exact duplicates giữ một bản. Conflicting readings cùng key phải quarantine hoặc resolve theo version policy có bằng chứng; không `dropDuplicates` ngẫu nhiên/cộng duplicates. Task 1 có thể dùng canonical final reading; Task 2 history cần bản khả dụng tại prediction time. Final-only export không tái dựng được đầy đủ publication history.
-
-Missing/gap không phải 0. Giá trị cực lớn nhưng finite/nonnegative chưa đủ để loại; rainfall extremes là mục tiêu cần học. Chỉ flag/loại bằng quality rule có nguồn và sensitivity, không winsorize label để giảm độ khó.
-
-Completeness tính trên grid sau alignment: report active station-period và fixed full-calendar denominator; first/last observed không xác nhận commissioned/retired dates. Một ngày đầy đủ có 288 slots, xử lý leap year. Quality summary có rows trước/sau, invalid/conflicts/duplicates/gap lengths, station×month/year coverage, metadata drift. Giữ excluded counts/reasons.
-
-Ghi validated Parquet partition theo year, thêm month nếu profiling cần; tránh station+timestamp partitions gây nhiều file nhỏ. Snapshot có manifest/config/version/quality summary. Các phase sau đọc Parquet; chỉ đọc CSV lại khi cleaning rule đổi.
-
-**Acceptance:** tám năm; schema/unit/time/key đạt; rejected rows có lý do; coverage có mẫu số; interval semantics có evidence.
-
-**Implementation started:** `scripts/run_quality_audit.py` cung cấp hàm để notebook import, đọc đúng paths trong manifest, dùng schema CSV tường minh và giữ raw bất biến. Audit dự kiến xuất `quality_by_year`, `csv_parser_corrupt_candidates`, phân bố `reading_type`/`reading_unit`, duplicate-key groups (có cờ conflict, min/max và số giá trị đọc khác nhau), metadata variations theo station, spacing deviations so với 300 giây và `audit_metadata`. Duplicate/timestamp và spacing hiện chỉ là candidates để điều tra; job không tự deduplicate, quarantine hay gán timestamp thành cuối interval. `update_timestamp` và `reading_update_timestamp` chỉ được kiểm tra parseability/thứ tự, chưa được coi là thời điểm publication đã xác minh. Output bị chặn nếu đặt trong `raw/`.
-
-Mở và chạy `notebooks/01_data_quality.ipynb` trên Jupyter của Dataproc sau khi preflight đạt. Notebook load manifest, xác minh đúng tám GCS objects qua SHA-256, tạo SparkSession trên YARN, gọi `run_audit(...)` trong cell và hiển thị application ID, Spark Job ID(s), trạng thái cuối, output path cùng link Spark Web UI. Không chạy module bằng `spark-submit` hoặc terminal. Mỗi lần chạy có run prefix mới.
-
-**Trạng thái thực thi:** hai notebook đã chuẩn bị xong; preflight local đã chạy và lưu output đã loại thông tin nhạy cảm trong `00_environment.ipynb`; chưa chạy Spark audit. Project `new-cloud-256902` hiện billing-disabled/chưa linked tới Education và notebook link bị chặn do thiếu quyền IAM trên project. Cần người có quyền hoàn tất billing assignment, rồi mới price check và resource setup. Trước audit, notebook phải đối chiếu SHA-256 từng GCS object với manifest. Cờ corrupt-record của Spark chỉ bao phủ lỗi parser; Spark không xem dòng có số token thừa/thiếu là corrupt. Manifest scan hiện ghi nhận 0 dòng sai số field, nhưng cần giữ điều kiện hash-match trước khi dùng bản sao trên GCS.
-
-## 7. Phase 4 — Task 1: weather patterns
-
-Mỗi analysis ghi mục đích, cohort/denominator, statistic, observation, interpretation và limitation. Không cần dựng bộ câu hỏi nghiên cứu riêng; bám trực tiếp Task 1. Không cộng mọi trạm thành “tổng mưa Singapore”.
-
-| Analysis | Output/phương pháp |
-|---|---|
-| Completeness | Station×year/month heatmap, gap distribution, exclusions |
-| Seasonality | Station-month totals kèm coverage; wet probability = wet valid / all valid; intensity conditional on wet |
-| Daily cycle | Month×SGT hour heatmap với denominators và station weighting |
-| Across years | Station annual summaries trên cohort chung/coverage tương đương |
-| Spatial | Map wet frequency/intensity/extreme rate, tọa độ đã audit, kèm coverage |
-
-Primary comparison dùng equal station weighting trong cohort chung. Coverage cutoff (ứng viên 95%) phải khai báo và chạy sensitivity cutoff/cohort khác; giữ full-cohort descriptive view. Heatmap không chứng minh missingness không gây bias; complete-window filtering có thể mất storm periods.
-
-Observed total ở tháng thiếu data không phải full-month total. Coverage-adjusted estimates cần giả định missingness và comparison với observed totals. Extreme cutoff lấy từ train hoặc external definition có nguồn; training quantile không tự trở thành warning threshold chính thức.
-
-Task 1 mô tả cả 2017–2024. Freeze thiết kế Task 2 trước descriptive exploration 2024 để tránh dùng test-year findings chọn features/thresholds/models. Tám năm chỉ hỗ trợ observed variation, không climate trend/causality mạnh. Export figures + aggregate tables + plotting config; collect aggregates nhỏ.
-
-**Acceptance:** within-year/across-year findings; cohort/denominator/unit/caption/method/limitations rõ; bias sensitivity có evidence.
-
-### 7.1. EDA chi tiết và artifacts bắt buộc
-
-EDA hỗ trợ trực tiếp Task 1; không đặt thêm research questions. Thân báo cáo ưu tiên coverage, distribution, monthly/hourly và annual comparison. Tail, complete-day, station-coordinate và wet-spell panels dùng làm sensitivity/supplementary evidence; đưa appendix khi hữu ích, không kéo dài thân bài bằng các biểu đồ lặp.
-
-| Nội dung | Cách tính và support | Artifact |
+# DSA5208 Project 2 — TODO
+
+Cập nhật ngày **12/10/2026**. Bài cá nhân: **DAM MINH TIEN — A0355091E**.
+Mục tiêu: hoàn thành đúng Task 1 và Task 2 của đề, với báo cáo có bằng chứng thực tế.
+Không cần đặt câu hỏi nghiên cứu hoặc tuyên bố novelty. Project 1 chỉ tham khảo hình thức.
+
+Đọc [TASK_SPEC.md](TASK_SPEC.md) để xem toàn bộ công thức, quy tắc thống kê, acceptance criteria,
+nguồn tham khảo và nhật ký chạy cũ. Checklist này là chỉ dẫn hiện hành; đặc tả là tài liệu chi tiết.
+
+**Cách cập nhật:** `[x]` = có artifact local hoặc quyết định đã xác nhận; `[ ]` = còn việc phải làm,
+kể cả code đã có nhưng chưa chạy hoặc chỉ chạy một phần. Chỉ đánh dấu hoàn tất khi ghi được evidence.
+Một notebook không có error output chưa chứng minh tất cả cells/actions đã hoàn tất.
+Các kết quả đã có bên dưới thuộc run cũ; cần giữ nguyên và đối chiếu khi retry.
+
+## 1. Ràng buộc áp dụng xuyên suốt
+
+- [x] Chốt tác giả cá nhân DAM MINH TIEN, Student ID A0355091E.
+- [x] Chốt giả định timestamp là **cuối khoảng đo 5 phút** theo câu trả lời người dùng; không gọi là xác nhận từ NEA.
+- [x] Ghi chỉ dẫn mới: **tiếp tục, không chờ đối soát cost**. Không yêu cầu người dùng gửi Reports/Cost table để mở bước tiếp theo.
+- [ ] Khi thực hiện cloud, xác minh đúng project `sg-rainfall-dsa5208-261011`, region `asia-southeast1`, Billing Account for Education `01DAD8-AE5F1A-E3910A`.
+- [ ] Chỉ dùng credit `3LU63BPGY77JFDQQ` trên account này; tuyệt đối không đổi account, redeem credit khác, thêm payment method hoặc dùng paid fallback. Chỉ dẫn bỏ chờ cost không mở rộng quyền này.
+- [ ] Chạy toàn bộ code project qua **Jupyter Notebook trên Dataproc**, không dựng Spark cluster local, kể cả lệnh gcloud bằng cell `subprocess`; giữ stdout, bảng, hình và trạng thái trong output. Hàm tái sử dụng có thể nằm trong `src/` và `scripts/`.
+- [ ] Với **mỗi action Spark**, sau trạng thái cuối chụp Jobs summary và **từng Job detail trên Spark Web UI**; dùng History Server khi app đã kết thúc. Xem mục 12.
+- [ ] Mỗi run lưu RUN_ID, Git commit, input/config hashes; dùng prefix riêng, giữ artifacts thất bại, không overwrite final outputs.
+- [ ] Giữ raw bất biến ngoài repo; không commit credential, JSON keys, `cloud.env`, raw/cache, workstation files hoặc skills.
+
+Snapshot credit người dùng cung cấp ngày 12/10/2026: **Available, 96%, $47.91/$50.00**;
+credit one-time, Any service on this billing account, 17/08/2026–14/08/2027, Net pricing.
+Đây là snapshot, không phải số dư live hay bằng chứng project tiêu $2.09. Cost reconciliation có thể làm
+sau, không còn là điều kiện chờ người dùng. CLI không gán Credit ID riêng cho từng job.
+
+## 2. Việc tiếp theo — làm theo thứ tự
+
+- [ ] **A. Đồng bộ notebook billing policy** với chỉ dẫn mới: bỏ điều kiện bắt buộc chờ Reports/Cost table và reserve cũ; vẫn kiểm tra đúng account/project/credit. Không điền số usage/pending giả để vượt gate. `src/rainfall/billing.py` và notebook cloud hiện còn policy cũ, chưa sửa trong lần chuyển TODO này.
+- [ ] **B. Mở session Jupyter mới** sau preflight account/IAM/quota/network; pin runtime tương thích, bật event log và thử mở Spark UI trước full run.
+- [ ] **C. Khép cleaning audit:** xuất các bảng còn thiếu và đối soát raw = retained + excluded trước khi coi cleaning hoàn tất.
+- [ ] **D. Hoàn tất notebook 04** với attempt prefix mới: baseline, LR/GBT A/B, selection, calibration, frozen manifest. Không đánh dấu app5 dở dang là hoàn thành.
+- [ ] **E. Chạy notebook 05** sau freeze: đánh giá 2024 một lần, unseen thresholds, uncertainty/error analysis; sau đó EDA đủ 2017–2024.
+- [ ] **F. Thu đủ ảnh Spark UI, download/reload model**, hoàn thiện báo cáo, package và dọn tài nguyên.
+
+## 3. Đề bài, nguồn dữ liệu và provenance
+
+Chi tiết: TASK_SPEC mục 1–3. Deadline theo mô tả: **18/10/2026, 23:59**.
+
+- [ ] Đối chiếu lại đề/Canvas: Task 1 within-year và across-year; Task 2 xác suất mưa 30 phút **hơn** ngưỡng; Spark structured processing, Spark MLlib; PDF/source/README/trained model.
+- [ ] Xác nhận timezone deadline, giới hạn upload, định dạng và tên package trên Canvas.
+- [x] Có `manifests/input_manifest.json`: đúng tám năm 2017–2024, SHA-256, bytes, rows, schema, dataset IDs/URLs và actual time ranges; không dùng 2016 làm warm-up.
+- [x] Manifest ghi rõ retrieval time gốc unknown; không thay bằng ngày scan. Tổng inventory: 48,538,713 rows, 8,047,044,701 bytes; timestamp offsets +08:00.
+- [ ] Khi retry, đối chiếu raw/GCS với manifest bằng byte hashes; không dùng object listing hoặc min/max timestamp để kết luận dữ liệu đầy đủ.
+- [ ] Dùng paths portable qua DATA_ROOT/config; cloud đọc danh sách file từ manifest, không wildcard ngoài phạm vi.
+- [ ] Lưu run provenance và source URL; kiểm tra notebook/package không phụ thuộc đường dẫn cá nhân.
+
+## 4. Cloud, Dataproc và Jupyter
+
+Chi tiết: TASK_SPEC mục 4–5; điều kiện chờ cost cũ đã được thay thế ở mục 1 trên.
+
+- [ ] Kiểm tra billing linkage và `billingEnabled`, identity, region và resource targets trong notebook trước tạo tài nguyên.
+- [ ] Kiểm tra CPU/disk quota, subnet/Private Google Access, firewall nội bộ và `iam.serviceAccounts.actAs`.
+- [ ] Xác minh VM service account có Dataproc worker, GCS read/write và quyền đọc project billing cần thiết; không dùng JSON keys.
+- [ ] Dùng bucket private/uniform access cùng region; giữ `raw/`, `manifests/`, `processed/`, `features/`, `notebooks/`, `models/`, `results/`, `staging/`, `temp/` có run prefixes.
+- [ ] Chỉ upload tám CSV và manifest; đọc GCS, không copy toàn bộ raw sang mỗi worker.
+- [ ] Dùng cấu hình đã chạy tương thích: 1 master + 2 workers `e2-standard-4`; master disk 100 GB, mỗi worker 75 GB; pin image `2.2.87-debian12` hoặc ghi rõ thay đổi đã kiểm tra.
+- [ ] Ghi actual Spark/Python/Java/OS versions, executors, YARN master, machine/vCPU/RAM/disk, application ID và Spark config; timezone `Asia/Singapore`.
+- [ ] Dùng Python/PySpark đi kèm image; không cài PySpark mới đè runtime. Import-check SciencePlots/Matplotlib bằng compatible wheels khi private network không có PyPI egress.
+- [ ] Smoke qua notebook: explicit-schema CSV → Parquet write/read → MLlib → GCS; xác minh executors thật trên workers.
+- [ ] Bật Jupyter Component Gateway, event logging/History Server và xác minh truy cập Spark Jobs/Job detail.
+- [ ] Bật idle timeout và hard lifetime; checkpoint theo phase. Session cũ 45 phút idle/3 giờ hard-delete đã ngắt model run, nên phải hoàn tất/export phase trước hạn hoặc chia session.
+- [ ] Persist notebooks có output lên GCS và export local sau từng phase; không chỉ giữ trên master disk.
+- [ ] Tối ưu plan/skew/partitions/cache trước tăng compute; không collect raw/features về driver.
+
+## 5. Cleaning và chất lượng dữ liệu
+
+Chi tiết: TASK_SPEC mục 6. **Chưa hoàn tất**: cleaned `_SUCCESS` không thay thế audit.
+
+- [ ] Explicit schema 12 cột; giữ source file/raw fields/malformed records; parse timestamp/offset/local date/year.
+- [ ] Audit alignment theo trạm, đặc biệt 2017 `08:04:59`; freeze tolerance và quy tắc chuẩn hóa, không floor tùy tiện hoặc nhập hai intervals khác nhau.
+- [ ] Audit station ID/name/device/coords, range/type/unit, metadata drift/relocation; rainfall finite ≥0, đơn vị mm và đúng reading type.
+- [ ] Parse update fields; kiểm tra missing/invalid/update-before-observation, thứ tự revisions. Ghi proxy publication và giới hạn khi chưa xác minh semantics.
+- [ ] Bảo đảm key station + interval_end unique: giữ một exact duplicate; quarantine conflicting records hoặc chọn version bằng policy có bằng chứng, không random dropDuplicates/cộng bản trùng.
+- [ ] Không missing=0, future backfill/interpolation; không xóa mưa cực đoan thật nếu thiếu QC evidence/sensitivity.
+- [ ] Đếm loại bỏ theo thứ tự không trùng; đối soát **raw = retained + excluded**, kiểm tra key uniqueness và mẫu records từng lý do.
+- [ ] Coverage grid 288 intervals/ngày, leap years; tách fixed-calendar và active-period. First/last observation không phải commissioning/retirement.
+- [ ] Xuất/lưu `rejected`, `quality_by_year`, `exclusion_counts`, `alignment_distribution`, `coverage_and_gaps`, metadata drift và audit config.
+- [ ] Cleaned Parquet partition year (month nếu có lợi), tránh tiny files; lưu snapshot/manifest và runtime/action evidence.
+- [ ] Đối chiếu lại các outputs downstream với cleaning policy sau khi audit khép kín; nếu policy đổi, regenerate features/EDA và ghi version.
+
+Evidence local: `notebooks/executed/01_data_quality-attempt-2.ipynb` có hai cells đã chạy và không có
+error output; đây là execution một phần, không đủ đánh dấu toàn phase. Nhật ký raw audit ở TASK_SPEC
+ghi app1 jobs 0–20 thành công; cleaning audit còn thiếu các outputs trên.
+
+## 6. Task 1 — EDA và phân tích patterns
+
+Chi tiết công thức/mẫu số: TASK_SPEC mục 7 và 7.1. Mỗi analysis cần mục đích, cohort, denominator,
+statistic, kết quả, diễn giải và giới hạn. Notebook 02 chỉ dùng 2017–2023 trước freeze;
+EDA 2024 làm sau notebook 05/freeze, không dùng để chọn model.
+
+- [x] Có pretest aggregates CSV và `findings.json` ở `report/tables/pretest/`, analysed_years 2017–2023; notebook `02_task1_weather_patterns-attempt-2.ipynb` có bốn cells đã chạy, không có error output.
+- [x] Findings ghi common cohort rỗng ở cả cutoffs 90/95/99%; không có annual common-cohort comparison để tuyên bố xu hướng.
+- [ ] Khép các kiểm tra bên dưới cho **đủ 2017–2024**, giữ pretest outputs riêng và đối chiếu với audit cleaning hoàn chỉnh.
+- [ ] Coverage heatmap station/year và year/month: valid/expected intervals, stations, dates, denominators; không giấu periods zero-observation.
+- [ ] Distribution mỗi năm: valid/dry/wet counts/fractions, valid mean, conditional wet mean/median/P90/P95/P99/max; ghi pooled observation weighting khác equal-station.
+- [ ] Tail sensitivity: wet P99 từ train 2017–2022 cố định (pretest findings hiện 7.0 mm), strict exceedance và denominator valid; không gọi là warning threshold chính thức.
+- [ ] Daily: chỉ complete days có 288 unique exact-grid intervals; equal station-month daily mean và support, so với incomplete coverage.
+- [ ] Monthly: station-month coverage ≥95%; observed total/wet frequency/conditional intensity, equal station weighting và support. Không cộng các trạm thành “Singapore total”, không gọi partial total là full-month rainfall.
+- [ ] Hourly SGT interval-end: month AND hour-group coverage ≥95%, expected 12 × days; heatmap equal station-year-month-hour và yearly curve equal station-month, có support.
+- [ ] Across-year: common annual station cohort primary95%, sensitivity90/95/99%; nếu rỗng thì ghi N/A và trình bày changing-cohort descriptive riêng, không hạ cutoff sau khi xem kết quả để tạo trend.
+- [ ] Spatial: time-stable coordinates, annual coverage ≥95%, station support/year averaging; không suy ra area interpolation từ station map.
+- [ ] Wet spells: positive readings cùng station, cách đúng300s; duration5×n phút; tách spells censored bởi gap/boundary, median/P90/P99/max; không gọi là meteorological storm events.
+- [ ] Collect aggregates ≤20,000 rows/table; SciencePlots PDF/PNG, units/axes/captions đọc được A4, ghi actual extrema/support trong findings JSON.
+- [ ] Viết within-year và across-year findings từ bảng/hình thật; giải thích bias coverage/network, không claim climate trend hoặc causal monsoon explanation thiếu nguồn.
+
+## 7. Task 2 — Target, features và leakage
+
+Chi tiết: TASK_SPEC mục 8–9. `r(s,u)` thuộc `(u−5min,u]` theo giả định người dùng.
+`R30(s,t) = sum(r(s,t+5k min), k=1..6)`; `Y = 1[R30 > threshold_mm]`.
+Reading tại t không nằm trong label; đúng bằng threshold là class0.
+
+- [x] Có notebook `03_task2_features-attempt-1.ipynb` với bốn cells đã chạy, không có error output. Đây là evidence feature run, không chứng minh model/test hoàn tất.
+- [ ] Đối chiếu fixtures dry/wet/gap/duplicate/equality/off-grid và key uniqueness với config hiện hành; sáu future intervals distinct/contiguous/aligned, không chỉ count hoặc lead xuyên gap.
+- [ ] Freeze window boundaries (future[300,1800], history[-1500,0] cho cửa sổ30 phút), elapsed-time lags, cross-year context; không mix station.
+- [ ] Ghi eligibility/current-history missing policy và attrition train/selection/calibration/test; không thay missing future bằng0.
+- [ ] Ghi retrospective event-time assumption nếu update/publication chưa xác minh; availability-aware mode lọc cả interval_end≤t và available_time≤t, không dùng later revisions.
+- [ ] Kiểm tra fixtures sửa rainfall/update/metadata sau t không đổi features tại t; delayed observation bị loại trong availability-aware mode.
+- [ ] Feature dictionary chỉ ghi features thực dùng: station/time-valid coords/unseen, fractional-hour và leap-year day-of-year cyclic, month, numeric threshold, rainfall lags/windows, valid counts/missingness/latest age.
+- [ ] Lags5/10/15/30/60 phút, totals15/30/60/180 phút nếu thực dùng; boundaries/missing rules rõ. Fit imputer/indexer/scaler/feature selection trên train của fold.
+- [ ] Build base station/time features một lần rồi expand thresholds0.2/0.5/1/2/5/10 mm; cùng base sample group thuộc cùng split/sampling; ghi base/expanded counts.
+- [ ] Chốt numeric threshold domain từ train support; đánh giá unseen midpoints, xử lý out-of-domain bằng status rõ, không hứa extrapolation.
+- [ ] Public inference nhận station_id/prediction_time/threshold_mm, build đúng features/preprocessing và trả probability[1]/status cho unseen/missing/domain.
+- [ ] Khai báo sáu future sums2024 đã materialize trước freeze (chỉ valid counts được xem theo nhật ký); không mô tả quá trình là hoàn toàn blind.
+
+## 8. Temporal split, tuning, models và freeze
+
+Chi tiết: TASK_SPEC mục 10–11.
+
+| Subset | Thời gian prediction | Công việc được phép |
 |---|---|---|
-| Distribution | Theo năm: valid/dry/wet counts, wet fraction, mean valid rainfall, conditional wet mean, wet median/P90/P95/P99, max. Ghi rõ pooled-observation weighting. | `distribution_by_year`, `rainfall_histogram`; `rainfall_distribution.pdf` |
-| Tail | Fixed bins cho wet readings; log y để xem tail. Reference = wet P99 của **2017–2022**, giữ nguyên qua các năm. Exceedance denominator = valid readings, strict `>`. Không gọi training P99 là official warning threshold. | `rainfall_tail.pdf` |
-| Coverage | Calendar 288 slots/ngày, leap days; zero-observation periods phải có trong denominator. Reference network có thể bao gồm station chưa hoạt động; thiếu operating dates thì không gọi coverage thấp là downtime. | `coverage_summary`, `coverage_heatmap.pdf` |
-| Daily sensitivity | Chỉ ngày có đủ 288 unique exact-grid readings. Average daily rainfall theo station-month rồi equal-station average; báo complete/observed và complete/full-calendar station-days. | `daily_completeness`, `complete_daily_patterns.pdf` |
-| Month | Equal eligible-station mean của observed total, wet frequency, conditional wet intensity; primary station-month coverage ≥95%. Support stations và mean coverage đi cùng số liệu. | `monthly`, `monthly_frequency_intensity.pdf` |
-| Hour | SGT **interval-end hour**; coverage tháng **và nhóm giờ** mỗi station-month ≥95%. Expected slots cho mỗi giờ = 12×days. Audit bao gồm giờ không có observation; không thay missing rainfall bằng 0. Equal station-year-month-hour weighting trong heatmap; yearly curves equal station-month weighting. | `hourly_coverage`, `hourly_by_year`, `monthly_hourly_patterns.pdf`, `hourly_by_year.pdf` |
-| Annual comparison | Cùng station IDs trong mọi năm; fixed cutoffs 90/95/99%. Xuất số stations kể cả cohort rỗng, observed total và wet frequency. Full observed changing-cohort view riêng. | `annual_cohort_support`, `annual_common_cohort`, `annual_descriptive`, `annual_patterns.pdf` |
-| Stations | Chỉ plot station có coordinates không đổi trong toàn period; annual coverage ≥95%; equal eligible-year average. Ghi eligible years/valid slots; không nội suy diện tích hoặc suy luận nhân quả. | `station_spatial_summary`, `station_map`, `station_spatial_patterns.pdf` |
-| Wet spells | Positive readings liên tiếp đúng 300 giây cùng station. Duration = 5×records phút; gap/boundary-censored tách riêng. Count và duration median/P90/P99/max theo năm bắt đầu. Không coi gaps là dry hay sequences là meteorological storms. | `wet_spell_summary`, `wet_spell_patterns.pdf` |
+| Train | 2017–2022 | Fit transforms/base models, train support/sampling |
+| Selection | Jan–Jun 2023 | Chọn features/hyperparameters/cutoff/calibration recipe |
+| Calibration | Jul–Dec 2023 | Fit calibrator sau base-model freeze |
+| Final test | 2024 | Đánh giá frozen system một lần |
+
+- [ ] Với split[start,end), giữ t≥start và t+30min<end; audit endpoints/purge, history trước start hợp lệ; không random CV.
+- [ ] Chốt sampling pilot train/seed/fraction/actual year coverage trước threshold expansion; không gọi subsample là full-data training.
+- [ ] Khóa tuning cap: tối đa 4  LR configs và4 GBT configs trên train pilot B; chọn bằng selection và dùng cùng settings/samples cho A/B.
+- [ ] Fit climatology empirical survival station/month/hour; freeze smoothing/support và fallback sparse/unseen về nhóm rộng/global, lưu lookup.
+- [ ] Fit MLlib LR PipelineModel gồm station indexing/one-hot/impute/assembly/scaling phù hợp; giữ sparse vectors, không center one-hot.
+- [ ] Fit MLlib GBT PipelineModel, station categorical metadata/maxBins đủ cả unseen bucket; không scaling thừa.
+- [ ] Giữ label0/1 và xuất probability[1], probabilities finite[0,1]. Natural prevalence mặc định; weights/oversampling nếu có phải khai báo, không rebalance test.
+- [ ] A=station+time+threshold, B=A+history+missingness: cùng eligible samples/grid/tuning budget; báo ablation trên selection.
+- [ ] Dùng attempt prefix chưa tồn tại (`models/attempt-02/` nếu còn trống); giữ partial app5 artifacts. Nếu đã có partial attempt thì đổi cả notebook04/05 sang attempt mới.
+- [ ] Hoàn tất notebook04 và export model/selection/calibration outputs; `gbt_A/` tồn tại trong nhật ký cũ không chứng minh `gbt_B/` hoặc freeze đã hoàn tất.
+- [ ] Inspect SQL/window/join/skew, reused cache/unpersist, rows/bytes/partitions/runtime và workers. Nếu chunk thời gian, dùng history halo180 phút/future30 phút rồi trim ownership.
+- [ ] Freeze manifest gồm cleaning/alignment/availability, domain/grid/features/splits/sampling/seed, model/hyperparams/calibrator/cutoff/metrics/runtime/Git commit trước notebook05.
+- [ ] Không refit base model trên2023 rồi giữ calibrator cũ; refit cần temporal out-of-fold calibration riêng. Changes sau test phải ghi post-test exploration.
+
+## 9. Metrics, calibration và final evaluation
+
+Chi tiết: TASK_SPEC mục 12. **Chưa có final-test metrics hoàn chỉnh.**
+
+- [ ] Khóa selection objective mean PR-AUC primary thresholds đủ classes từ train support; tolerance/tie-break Brier rồi model đơn giản, undefined fallback rule trước test.
+- [ ] Fit calibration recipe từ selection; calibrator từ holdout Jul–Dec 2023. Assessment bắt buộc, correction chỉ khi cần; lưu mapping/domain/fallback, không chọn bins/cutoff trên test.
+- [ ] Sau frozen manifest, notebook05 kiểm tra config/model root và từ chối overwrite final-evaluation; đánh giá climatology/LR-B/GBT-B trên cùng eligible 2024 cohort.
+- [ ] Per-threshold metrics: base/expanded count, positives/negatives/prevalence, PR-AUC/ROC-AUC/Brier/log loss và cutoff precision/recall/F1.
+- [ ] Ghi Spark evaluator version/numBins; không gọi areaUnderPR là Average Precision; logloss epsilon frozen, AUC N/A nếu single-class, Brier skill chỉ khi denominator>0.
+- [ ] Frozen macro weights; pooled-threshold metrics chỉ bổ sung. PR curves primary thresholds có prevalence reference/support, không giả định constant predictor area luôn bằng prevalence.
+- [ ] Reliability diagram raw/calibrated: mean p/observed frequency/count mỗi frozen bin, cùng cohort.
+- [ ] Monotonicity cùng station/time/history: threshold tăng thì probability không tăng; violation rate/max excess/tolerance raw và calibrated.
+- [ ] Đánh giá unseen thresholds/domain và error strata station/month/threshold/unseen/onset/continuation định nghĩa bằng available history.
+- [ ] Paired day/week block-bootstrap uncertainty: tất cả stations/thresholds cùng block, block length chọn train/validation, không bootstrap threshold copies độc lập. Ưu tiên Brier difference nếu hạn chế runtime, ghi metrics chỉ có point estimate.
+- [ ] Lưu evaluation tables/curves/support/exclusions/run manifest; kết luận đúng kể cả ML không hơn baseline hoặc calibration không cải thiện.
+
+## 10. Báo cáo — ưu tiên Task 1 và Task 2
+
+Chi tiết: TASK_SPEC mục 13.1–13.6; sửa tại `report/main.tex`, giữ editor hiện tại.
+
+- [ ] Áp dụng `data/academic-writing-SKILL.md` khi viết; tiếng Anh rõ ràng, A4 một cột/font serif/captions/cross-references; Project1 layout tái dựng từ PDF do chưa có .tex/.cls/.sty.
+- [ ] Bìa cá nhân đúng tên/ID; 10–12 trang thân bài chỉ là gợi ý, không phải page limit/rubric chính thức.
+- [ ] Introduction ngắn: data2017–2024, hai tasks và phạm vi, không thêm research question/novelty.
+- [ ] Dataset/cleaning: source/schema/mm/SGT, interval-end assumption/update semantics, bảng yearly raw/retained/stations/validdays/coverage/exclusions; giải thích missing≠0/conflicts/gaps/revisions và sample attrition.
+- [ ] Computing environment: actual image/versions/master/workers/vCPU/RAM/disks/executors/config, pipelineflow/timings và Spark worker evidence; không dùng planned config như thực đo.
+- [ ] Task1 khoảng2.5–3 trang: coverage → distribution → monthly/hourly → across-year/cohort sensitivity; số liệu thật, denominator/support, mỗi đoạn quan sát → cách tính → diễn giải → giới hạn.
+- [ ] Task1 spatial/tail/complete-day/wet-spell đưa appendix khi không bổ sung finding chính; không gọi mạng trạm changing-cohort là climate trend.
+- [ ] Task2 khoảng3–4 trang: công thức/timeline6 future intervals/strict>, input-output/domain/missing/unseen và retrospective limitation.
+- [ ] Bảng features thực dùng có source/window/availability/missing rule; split table có base/expanded/positives/prevalence/purge.
+- [ ] Models: baseline/LR/GBT, actual selected hyperparameters, train/tuning/selection/calibration; phân biệt rainfall threshold với probability cutoff.
+- [ ] Main results: ba models cùng2024cohort, PR/ROC/Brier và per-threshold support; logloss/cutoff metrics bổ sung, macro/pooled/N/A rõ.
+- [ ] Probability quality: reliability counts/raw-calibrated, PR curves/prevalence, A/B ablation, errors/unseen/monotonicity và uncertainty phù hợp evidence.
+- [ ] Discussion: kết nối patterns với features, rainfall-only/missing/revisions/rare heavy rainfall/record length/domain/unseen/availability limits; không overclaim real-time/robust/significant.
+- [ ] Reproducibility: README/exact runtime/config/commit/manifest/modelpackage/loadpredict; conclusion trả lời cả tasks, không thêm kết quả mới.
+- [ ] Viết abstract150–200 từ cuối cùng với ít nhất một finding thật mỗi task; cập nhật conclusion khi final results có, không giữ metric unavailable như bản nộp hoàn chỉnh.
+- [ ] References nguồn thật, lecture title/page khi dùng; AI declaration đúng công cụ/model/công việc hỗ trợ và trách nhiệm cá nhân.
+- [ ] Figure/table index nối source output/run/split/cohort/config/commit; tạo numeric macros từ frozen outputs, số abstract/bảng/conclusion khớp rounding.
+- [ ] Caption tự hiểu được, axesunits/legend/A4readability, dẫn hình trong text; dùng `quality_by_year.csv`, coverage/monthly/hourly/annual figures, model/thresholdtables, PR/calibration và ablation/errors khi có evidence.
+- [ ] Dùng built-in LaTeX compiler cho file hiện tại, sửa lỗi/references/overflow; render và đọc toàn bộ pages A4, không TODO/placeholder/brokenref trong PDF nộp.
+- [ ] Requirement-to-section/page checklist đủ cleaning, within/acrossyear, features/models/environment/performance/limitations/AI; đối chiếu từng số với artifact.
+
+## 11. Model package, README và bàn giao
+
+Chi tiết: TASK_SPEC mục 13 và14.
+
+- [ ] Download toàn bộ Spark PipelineModel directory tree, calibrator/climatologylookup/fallback, schema/config/domain/availability, manifest/versions/commit và public prediction entry point.
+- [ ] Có offline history/metadata fixtures, expected probability/status/tolerance cho valid/unseen/missing/out-of-domain; không phụ thuộc bucket cá nhân còn tồn tại.
+- [ ] Fresh session đúng runtime: load/infer từ public station/time/threshold contract và compare saved fixtures; save thành công chưa đủ.
+- [ ] README đủ prerequisites/config/data source/manifest/upload/notebookorder/runtime/lifecycle/outputs/loadpredict; mọi lệnh thực thi project qua notebook.
+- [ ] Restart-and-run-all notebook workflow phù hợp split/freeze, giữ outputs/provenance; không vô tình xem test khi rerun selection.
+- [ ] Archive tự chứa README/requirements/config mẫu/notebooks/src/scripts/model/fixtures/report.pdf; giữ LaTeX/figures/aggregate tables để reproduce report.
+- [ ] Loại credentials/raw/cache/temp/hardcoded personal paths; kiểm tra Canvas size limit, giải nén chính archive và load/infer lần cuối.
+- [ ] Nộp PDF/source/model đúng yêu cầu trước deadline; lưu upload receipt. Chưa có receipt thì chưa đánh dấu submission hoàn tất.
+
+## 12. Spark UI evidence cho mọi lần chạy
+
+Chi tiết: TASK_SPEC mục5/13.5. Evidence root `report/evidence/spark-ui/<RUN_ID>/index.csv`.
+
+- [x] Có index/API metadata và ảnh `20261011-full-01/app5-jobs-summary-active-checkpoint.jpg` kèm note. Đây là active checkpoint lưu từ trang cũ, **không chứng minh terminal status**.
+- [ ] Chạy notebook11 cập nhật index một dòng/action: command/notebookcell, RUN_ID/ApplicationID/JobIDs/finalstatus/duration/stages/tasks, summarypath và mọi detailpaths.
+- [ ] Sau action kết thúc, mở đúng Spark application, tab Jobs; nếu jobs còn chạy thì chờ terminal state và chụp lại.
+- [ ] Chụp summary và mọi Job detail từ **Spark UI thật**, lưu tên có ApplicationID/JobID/status. Không thay bằng Dataproc Jobs/YARN/API JSON hoặc ảnh minh họa.
+- [ ] Capture cả failed/cancelled actions; nếu không có JobID giữ summary và ghi nojobs. Nếu không khôi phục được event logs/UI thì ghi thiếu evidence, không tự điền trạng thái.
+- [ ] Bổ sung app1/app3/app4/app5 detail/summary còn thiếu bằng History Server nếu logs khôi phục được; checkpoint app5 không thay thế các ảnh này.
+- [ ] Đối chiếu index với notebook/log/UI, mọi JobID có ảnh; chèn ảnh/index vào report appendix để xem lại.
+- [ ] Download evidence trước teardown; ghi missing screenshots trung thực nếu chưa hoàn thành.
+
+## 13. Shutdown và kiểm tra hoàn thành
+
+- [ ] Export notebooks, persist/download cleaned/features/models/results/manifests/evidence; xác minh local bản bàn giao trước xóa cloud artifacts cần dùng.
+- [ ] Xóa đúng cluster qua notebook00, lưu output; truy vấn lại project/region cluster listing.
+- [ ] Kiểm tra VM/disks/reservedaddresses/tài nguyên phụ; không suy ra đã cleanup chỉ từ notebook mất kết nối.
+- [ ] Dọn GCS staging/temp/raw/outputs không còn cần sau download/check, giữ retention rõ; cluster deletion không xóa storage charges.
+- [ ] Nếu đối soát chi phí sau run thì ghi snapshot/account-level/project-level/pending trung thực; không dùng dữ liệu chưa xác minh làm actual runtime cost trong report.
+- [ ] Audit cuối: cleaning khép kín; Task1 đủ 8 năm; target/leakage/splits đúng; ba models/calibration/A–B/monotonicity/unseen/metrics có evidence; freeze trước test; ảnh từng job; notebookoutputs; freshsessionreload; PDF/package/receipt; cleanup.
+
+## 14. Extensions — chỉ sau phần cốt lõi
+
+- [ ] Nếu cần và còn thời gian: temporal folds đúng order/purge, availability-delay sensitivity chọn bằng train/validation.
+- [ ] Optional C=B+neighbours: time-valid locations/as-offilter, không chọn correlation2024; samebudget/intersection comparison và coverage riêng.
+- [ ] Optional monotonic projection/interpolation: freeze và lưu trong inference pipeline trước test, không chỉ sửa plot.
+- [ ] Optional thêm rolling/spatial/scaling experiments chỉ khi giúp yêu cầu đề; không trì hoãn report/modelpackage để mở rộng scope.
 
-**Quy ước thời gian đã được người dùng chấp nhận:** timestamp là cuối interval 5 phút; đây là giả định của project, chưa phải xác nhận từ NEA. Calendar month/day/hour ở EDA nhóm theo timestamp cuối interval. Tổng được gắn nhãn calendar period của timestamp, không tự nhận là meteorological daily total đã xác minh.
-
-**Trình tự và output Jupyter:** `02_task1_weather_patterns.ipynb` thực hiện EDA 2017–2023; `05_final_evaluation.ipynb` thực hiện EDA đủ 2017–2024 sau freeze Task 2. Spark materialise aggregates một lần, sau đó plot/export từ các bảng nhỏ; driver collect tối đa 20,000 rows mỗi bảng, không collect raw records. Notebook hiển thị tables/figures/findings; JSON trên GCS và CSV + PDF/PNG giữ full evidence kể cả khi `.show(20)` rút gọn display. Figures dùng SciencePlots, không đòi cài TeX trên worker.
-
-`findings.json` phải chứa actual peak/trough, units, support và common-cohort availability, tính từ aggregates; chưa chạy thì không điền finding minh họa. Sau mỗi action phải review **Spark Web UI / History Server Jobs summary và từng Job detail**, chụp ảnh thật có application/job IDs, status, duration, stages/tasks. Event metadata chỉ là index hỗ trợ đối chiếu, không thay screenshots.
-
-**Acceptance EDA:** ít nhất một within-year finding, một annual comparison có sensitivity (hoặc lý do không có common cohort), và một coverage/distribution finding, tất cả có số liệu thật. Nêu peak–trough theo mm hoặc percentage points, mẫu so sánh, support và giới hạn; không kết luận chỉ từ màu biểu đồ. Nếu thiếu tháng/giờ, ghi represented months/hours, không coi là zero hoặc tuyên bố đã so sánh đầy đủ.
-
-**Trạng thái:** đã bổ sung implementation và notebook/report methods; chưa có Spark EDA run, aggregate results, final figures hoặc Spark UI screenshots để đánh dấu hoàn thành kết quả.
-
-## 8. Phase 5 — Target và inference contract
-
-Sau khi xác minh semantics, `r(s,u)` là tổng mưa interval `(u−5min,u]`; `t` là decision time trên grid 5 phút SGT:
-
-\[
-R_{30}(s,t)=\sum_{k=1}^{6}r(s,t+5k\text{ min}),
-\qquad Y(s,t,\tau)=\mathbf{1}[R_{30}(s,t)>\tau].
-\]
-
-Giữ strict `>`: bằng threshold là negative. Numeric precision theo resolution thực tế để tránh lỗi equality. Label là tổng mưa tương lai, không chỉ reading tại `t+30`, không gồm interval kết thúc tại `t`.
-
-Label valid cần đúng sáu interval khác nhau, aligned/contiguous, rainfall hợp lệ. Kiểm tra timestamps, không chỉ count. `lead(1..6)`/`rowsBetween(1,6)` trên data có gap có thể lấy readings xa hơn 30 phút. Dùng explicit grid hoặc time-range theo epoch seconds + completeness checks. Trên grid đúng, label range `[300,1800]`, past-30min range `[−1500,0]`; history còn cần availability filtering. Range boundaries inclusive ([Spark window API](https://spark.apache.org/docs/latest/api/python/reference/pyspark.sql/api/pyspark.sql.Window.rangeBetween.html)).
-
-Prediction grid có policy rõ, kể cả khi current reading thiếu; nếu loại những time này, report mất coverage. Không fill/interpolate future rainfall. Báo sample attrition theo split/station/month cho future gaps, history và boundary purge.
-
-`predict.py` nhận `station_id`, `prediction_time`, `threshold_mm`; tự lấy available history/metadata, build cùng features và trả probability. Status rõ cho unseen station/history thiếu/invalid time/out-of-domain threshold. Off-grid time reject, không âm thầm round làm đổi horizon.
-
-Grid ứng viên `0.2,0.5,1,2,5,10 mm` chỉ là training design; chốt grid/domain từ **train** theo resolution/positive support, lưu config. Threshold là numeric feature. API nhận numeric thresholds trong domain; đánh giá thêm thresholds ở giữa chưa dùng train, không hứa extrapolation ngoài domain. Climatology dùng training empirical survival để xử lý arbitrary threshold.
-
-Tính base features/label một lần cho `(station,t)`, sau đó expand grid. Threshold copies thuộc cùng split/sampling group. Ghi base samples/expanded rows và label monotonicity; copies không độc lập.
-
-**Acceptance:** correct horizon/strict inequality/completeness/domain; fixtures dry/wet/gap/duplicate/equality/off-grid; inference trả probability.
-
-## 9. Phase 6 — Features và availability leakage
-
-Feature reading phải có **cả** `interval_end ≤ t` và `available_time ≤ t`. Observation cũ chưa chắc published tại `t`; mẫu local có delay nên `rain_t` không mặc định available.
-
-Xác minh nghĩa update fields trước as-of lookup; không dùng later revisions. Nếu chỉ có final revision, ghi giới hạn và dùng conservative proxy/delay sensitivity dựa trên train. Nếu availability chưa xác minh được, gọi kết quả là **retrospective event-time prediction** giả định observation tức thời; không claim real-time performance. Availability-aware sensitivity bổ sung khi metadata cho phép. Mode/assumptions phải frozen trong results/model metadata.
-
-| Category | Features ứng viên |
-|---|---|
-| Station | ID, time-valid coordinates, unseen handling |
-| Temporal | Fractional-hour sin/cos; day-of-year sin/cos với period của năm; month |
-| History | Aligned lags 5/10/15/30/60 min; totals 15/30/60/180 min; max/mean/wet count |
-| Missingness | Valid count/coverage của window, missing indicators, latest-reading age |
-| Query | Numeric `threshold_mm` |
-| Optional spatial | Neighbour mean/max/wet count + valid-neighbour count, as-of filtered |
-
-Lags theo elapsed time, không row position. Rolling boundaries ghi rõ. Impute history bằng rule fit train + missing indicators, không backfill tương lai. Build windows với context xuyên năm/tháng; không mất history vì processing riêng từng partition. Chỉ label phải nằm hoàn toàn trong split.
-
-Metadata/neighbour locations phải khả dụng tại time tương ứng; không chọn neighbours dựa trên correlation 2024. Indexer/scaler/imputer/feature selection và learned statistics chỉ fit train của fold.
-
-Leakage fixtures: sửa rainfall/update/metadata sau `t` không đổi features tại `t`; observation cũ published sau `t` bị loại trong availability-aware mode; label dùng future; windows không nhảy qua gap/mix station. Deterministic rerun và key uniqueness cũng phải kiểm tra.
-
-**Acceptance:** feature dictionary có source/window/availability/missing rule; fixtures chứng minh các time constraints.
-
-## 10. Phase 7 — Temporal split, tuning và calibration
-
-| Subset | Prediction times | Vai trò |
-|---|---|---|
-| Train | 2017–2022 | Fit preprocessing/models; threshold design/sampling |
-| Selection validation | Jan–Jun 2023 | Chọn features/hyperparameters/model, cutoff, calibration recipe |
-| Calibration holdout | Jul–Dec 2023 | Fit calibrator sau base model freeze |
-| Final test | 2024 | Đánh giá frozen system |
-
-Tách nửa năm 2023 tránh fit calibrator và report performance trên cùng samples; ghi seasonal limitations. Nếu dùng temporal folds chọn calibration recipe, giữ order/purge. Không tune lại base model từ calibration holdout.
-
-Với split `[start,end)`, giữ `t ≥ start` và `t+30min < end` vì endpoint `end` thuộc split kế tiếp. Purge cuối 2022, giữa 2023, cuối 2023 và cuối 2024 thiếu horizon; audit prediction/label endpoints. History trước `start` là thông tin quá khứ hợp lệ. Nếu claim simulation tại training cutoff thật, training labels còn phải available trước thời điểm fit; historical final revisions không tự đáp ứng điều này.
-
-Không random CrossValidator/TrainValidationSplit mặc định. Optional temporal folds: 2017–2020→2021, 2017–2021→2022, rồi selection đầu 2023. Threshold copies/stations cùng time block giữ cùng fold.
-
-Tuning cap trước khi chạy: LR tối đa 4 regularization configs, GBT tối đa 4 depth/iteration configs trên deterministic training pilot. Full-train finalists trên 2017–2022; ghi candidate count/runtime/cost. Nếu budget buộc subsample, ghi years/cohort/seed/fraction/actual coverage, không gọi là full-data training.
-
-Mặc định base model fit 2017–2022, selected bằng đầu 2023, calibrator fit cuối 2023. Không refit base model trên toàn bộ 2023 mà giữ calibrator cũ; refit cần temporal out-of-fold calibration riêng.
-
-Freeze trước test: manifests, cleaning/alignment/availability, domain/grid, features, split cutoffs, sampling/seed, pipeline/hyperparameters/calibrator/cutoff, selection objective/metric settings và Git commit. Changes sau khi xem 2024 là post-test exploration phải khai báo.
-
-**Acceptance:** no horizon crossing; learned transforms đúng train; calibration holdout riêng; frozen manifest trước test.
-
-## 11. Phase 8 — Models và distributed execution
-
-Ba models chính: climatology, Spark MLlib LogisticRegression, Spark MLlib GBTClassifier. Climatology = training empirical survival theo station/month/hour, smoothing/support policy và fallback về nhóm rộng/global cho sparse/unseen cases; support/smoothing chọn trên selection validation, lưu lookup.
-
-LR: StringIndexer (`handleInvalid=keep`) → OneHotEncoder station → imputation/assembly → scaling phù hợp → LogisticRegression. Giữ sparse vectors, không center one-hot gây densification. GBT không cần scaling; indexed categorical station phải giữ metadata và `maxBins ≥ categories`, tính unseen bucket; one-hot là phương án khác ([GBT API](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.classification.GBTClassifier.html)).
-
-Save **PipelineModel** gồm learned preprocessing. Unseen `keep` tránh lỗi encoding, chưa chứng minh generalization; report counts/fallback. Label mapping cố định 0=no exceedance, 1=exceedance; export `probability[1]`, không nhầm class prediction với xác suất.
-
-Mặc định natural prevalence. Nếu oversample/class weights, ghi policy và ảnh hưởng probability; calibration/evaluation dùng natural validation/test prevalence. Không rebalance test.
-
-Spark SQL/DataFrame cho features/windows/metrics; `spark.ml` cho training. API links trong plan trỏ tới `latest`; khi implement phải đối chiếu documentation của Spark version đã pin trên cluster. Không collect/toPandas toàn bộ raw/features lên driver. Collect aggregates/curves có giới hạn. Base features trước threshold expansion; persist reused data có lợi, unpersist khi xong; tránh repeated CSV scans/Python UDF thay phép toán SQL có sẵn.
-
-Ghi rows/bytes/partitions, stage runtime và executor evidence; inspect window/join plan/skew. Station-only windows có thể gom nhiều năm vào task lớn. Nếu chunk theo thời gian, thêm history halo 180 phút/future halo 30 phút rồi trim ownership; không tính windows trên chunk thiếu context. Chọn file/shuffle sizes bằng profiling, không giả định một setting tối ưu.
-
-**Acceptance:** ba models dùng same held-out cohort; MLlib pipelines chạy; probabilities finite và trong [0,1]; distributed/runtime/cost evidence có lưu.
-
-## 12. Phase 9 — Metrics, calibration và scientific comparisons
-
-Predeclare selection objective: mean PR-AUC của primary thresholds có đủ classes trên selection validation; chọn thresholds từ train support, không loại vì test khó. Với scores gần nhau trong tolerance khóa trước, ưu tiên Brier thấp rồi model đơn giản/ít tốn hơn. Nếu metric undefined trên validation, report và dùng fallback rule khóa trước test. Ranking tốt chưa bảo đảm probability tốt.
-
-| Output | Quy tắc |
-|---|---|
-| PR-AUC | Spark BinaryClassificationEvaluator `areaUnderPR` trên score/probability; ghi numBins |
-| ROC-AUC | Same cohort; accuracy không là primary metric |
-| Brier | Spark mean `(p-y)^2`; baseline/Brier skill nếu denominator > 0 |
-| Log loss | Clip bằng epsilon frozen, Spark aggregation |
-| Calibration | Frozen validation bins; mean p, observed frequency, count mỗi bin |
-| Precision/Recall/F1 | Probability cutoff chọn selection validation, tách khỏi rainfall threshold tau |
-| Support | Base/expanded counts, positives/negatives/prevalence/station-time coverage |
-
-Spark PR-AUC không được gọi là Average Precision nếu chưa tính đúng định nghĩa. Ghi version và curve approximation; `numBins=0` tắt downsampling khi cost cho phép. Single-class nhóm ghi AUC N/A; rare groups vẫn nằm trong bảng với support/uncertainty ([evaluator API](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.evaluation.BinaryClassificationEvaluator.html)).
-
-Report per-threshold, macro weighting frozen, station/month strata; pooled thresholds chỉ phụ vì dễ che hiệu năng từng ngưỡng. PR curve có prevalence reference; không khẳng định Spark area của constant predictor luôn bằng prevalence.
-
-Calibration assessment bắt buộc, correction khi validation cho thấy cần. Chọn recipe bằng train/selection temporal predictions, fit trên calibration holdout; Spark IsotonicRegression hoặc sigmoid mapping nếu support phù hợp. Per-threshold mapping cần support/fallback và handling unseen thresholds. Lưu raw/calibrated outputs, mapping/domain/fallback; không chọn bins/cutoff hoặc fit mapping trên test.
-
-Monotonicity assessment bắt buộc: cùng station/time/history, `tau1 < tau2` ⇒ probability không tăng. Ghi violation rate/max excess với frozen numeric tolerance trước/sau calibration. Violation nghĩa là chưa có survival function nhất quán. Projection/interpolation correction là extension phải freeze/test/lưu trong inference pipeline, không chỉ sửa plot.
-
-Ablation A=station+time+threshold; B=A+history+missingness là chính; C=B+neighbours optional. Cùng samples/folds/grid/tuning budget; nếu C mất samples thì so sánh intersection và report coverage separately. Error analysis theo month/station/threshold/unseen, onset/continuation định nghĩa từ available history tại `t`.
-
-Observations chồng horizon và storms phụ thuộc theo thời gian. Confidence intervals dùng paired day/week block bootstrap, resample all stations/thresholds cùng block; block length chọn từ train/validation trước test. Không bootstrap expanded rows độc lập. Nếu budget hạn chế, ưu tiên Brier difference uncertainty, ghi metric nào chỉ có point estimate.
-
-**Acceptance:** comparison/threshold tables, calibration, monotonicity, A/B ablation/error analysis; support, excluded samples và uncertainty rõ.
-
-## 13. Phase 10 — Artifacts, LaTeX và submission
-
-Model package gồm PipelineModel, calibrator, climatology lookup/fallback, feature schema/config, threshold domain, availability assumptions, training manifest, versions/Git commit và prediction entry point. Download cả Spark model directory tree, không coi là một pickle. Có sample queries/expected probabilities/status cho unseen/missing/out-of-domain.
-
-Load trong fresh session cùng runtime, inference từ public station/time/threshold contract, compare saved fixtures trong frozen tolerance. Fixtures phải chứa một history/metadata sample nhỏ đủ chạy offline; dữ liệu thật lấy từ input path do người chạy cấu hình, không bắt buộc bucket cá nhân còn tồn tại. Save thành công chưa chứng minh model reproduce được.
-
-### 13.1. Trọng tâm và hình thức báo cáo
-
-**Bám trực tiếp hai tasks trong đề Project 2.** Không bắt buộc đặt research questions, hypotheses hay xây dựng khung nghiên cứu riêng. Báo cáo giải thích dữ liệu đã được xử lý thế nào, Task 1 tìm thấy patterns gì và Task 2 dự đoán xác suất tốt đến đâu. Mẫu Project 1 chỉ dùng để tham khảo hình thức LaTeX và cách trình bày bằng chứng; không chuyển nội dung nghiên cứu MongoDB sang bài này.
-
-Viết báo cáo bằng tiếng Anh rõ ràng, câu ngắn, thuật ngữ nhất quán. Dùng **LaTeX và mẫu Project 1** sau khi tìm source template. Đã kiểm tra thư mục Project 1 và submission ZIP: có PDF nhưng chưa tìm thấy `.tex/.cls/.sty`. Nếu source chưa được cung cấp, dựng bố cục dựa trên PDF và ghi rõ đây là bản tái dựng. Giữ A4, một cột, font serif dễ đọc, section numbering, captions và cross-references. Không cần sao chép toàn bộ front matter của Project 1; chỉ thêm mục lục/list of figures khi giúp đọc bài. Project 2 làm cá nhân: trang bìa và submission chỉ ghi một tên và một student ID; không sao chép danh sách thành viên Project 1.
-
-Plot dùng **SciencePlots** (import `scienceplots`) + Matplotlib, vector PDF khi phù hợp; kiểm tra TeX dependency của style. Khi viết bản báo cáo thực tế phải đọc skill **academic-writing**. Skill đã được người dùng cung cấp tại `data/academic-writing-SKILL.md` và đã đọc ngày 11/10/2026. Áp dụng cách viết theo bằng chứng, không tự tạo kết quả hoặc novelty claim. Khung hiện có ở `report/main.tex`, hướng dẫn điền ở `report/OUTLINE.md`.
-
-Chưa có rubric chấm điểm chi tiết ngoài yêu cầu trong `project_description.txt`; không tự gán trọng số điểm. Gợi ý **10–12 trang nội dung chính**, không phải page limit chính thức; references, AI declaration và appendix tính riêng. Điều chỉnh theo kết quả thực tế, không thêm hình/bảng chỉ để đủ trang.
-
-| Phần | Nội dung phải trả lời | Dung lượng gợi ý |
-|---|---|---|
-| Introduction | Bài toán, dữ liệu 2017–2024, hai nhiệm vụ và phạm vi | 0.5 trang |
-| Dataset and preprocessing | Nguồn, schema, thời gian, cleaning và dữ liệu còn lại | 1–1.5 trang |
-| Computing environment | Cấu hình thực chạy và cách dùng Spark/MLlib | 0.5 trang |
-| **Task 1: Rainfall patterns** | Within-year và across-year patterns, hình và diễn giải | **2.5–3 trang** |
-| **Task 2: Probability prediction** | Target, features, split, models, đánh giá xác suất và lỗi | **3–4 trang** |
-| Discussion and limitations | Ý nghĩa kết quả, giới hạn của dữ liệu và mô hình | 0.5–1 trang |
-| Reproducibility and conclusion | Cách chạy lại, artifacts và kết luận hai tasks | 0.5 trang |
-
-Abstract khoảng 150–200 từ, viết cuối: mục tiêu, dữ liệu/phương pháp, một kết quả Task 1 và một kết quả Task 2 có số liệu thật, giới hạn chính. Không điền số liệu minh họa vào bản nộp.
-
-### 13.2. Dataset, cleaning và môi trường chạy
-
-Đủ ngắn để người đọc hiểu nguồn gốc các kết quả, nhưng phải nêu các quyết định ảnh hưởng đến kết luận:
-
-- Nguồn dữ liệu, giai đoạn sử dụng, đơn vị rainfall, station identity và timezone. Giải thích observation timestamp khác update timestamp; ghi bằng chứng hoặc giả định về interval/availability.
-- Bảng theo năm: raw rows, rows sau cleaning, số stations, valid station-days/coverage và số observations bị loại theo lý do. Phân biệt missing, invalid, exact duplicate và conflicting records; đếm loại bỏ theo thứ tự để tránh cộng trùng.
-- Giải thích vì sao không thay missing bằng 0, cách xử lý gaps/revisions và station metadata. Nêu ảnh hưởng đến Task 1 và số samples có đủ history/future cho Task 2.
-- Cấu hình **thực chạy**: region, master/workers, machine type, vCPU/RAM, disks, Dataproc image, Spark/Python/Java versions, executor settings quan trọng. Có thời gian xử lý/training và evidence Spark jobs chạy trên workers; không dùng cấu hình dự kiến làm kết quả.
-- Với **mỗi lệnh hoặc notebook action chạy Spark**, đối chiếu application trên Spark Web UI sau khi các job kết thúc; dùng live UI nếu application còn mở, History Server nếu đã kết thúc. Lưu ảnh Jobs summary và từng Job detail, mã Application ID/Job ID, trạng thái cuối, thời lượng và stages/tasks vào chỉ mục evidence. Ghi rõ nếu ứng dụng/job thất bại hoặc không có event log để khôi phục UI.
-- Mô tả flow raw CSV → cleaned Parquet → aggregates/features → MLlib → metrics/artifacts. Log dài, Spark plans và toàn bộ config đưa appendix hoặc repo.
-
-### 13.3. Task 1 — Viết kỹ patterns và cách diễn giải
-
-Phần này phải đáp ứng riêng cả **within-year** và **across-year**, theo Phase 4. Trình bày theo thứ tự:
-
-1. **Coverage context:** hình heatmap station/year hoặc year/month và bảng quality. Cho biết tập stations/ngày hợp lệ dùng trong các hình tiếp theo; coverage thấp có thể làm tổng rainfall thấp giả tạo.
-2. **Monthly patterns:** mức rainfall và wet frequency theo tháng với denominator/coverage rõ. Chọn aggregation phù hợp ở Phase 4; không cộng rainfall của nhiều stations rồi gọi là tổng rainfall của Singapore. Nêu tháng/giai đoạn cao thấp bằng số liệu, độ nhất quán giữa năm và ảnh hưởng missingness.
-3. **Hourly patterns:** rainfall/wet frequency theo giờ SGT trên observations hợp lệ. Nêu giờ có mưa thường xuyên hoặc lượng mưa lớn hơn và độ khác biệt thực tế; tránh suy luận nguyên nhân chỉ từ hình.
-4. **Across-year patterns:** so sánh 2017–2024 bằng tập stations có coverage tương đương/common cohort. Nêu năm cao thấp và kiểm tra kết luận có đổi khi đổi coverage policy/cohort; không khẳng định xu hướng khí hậu dài hạn từ tám năm.
-5. **Spatial differences nếu hữu ích:** map hoặc station summary có units/support; phân biệt vị trí với thay đổi mạng lưới stations. Đưa appendix nếu không bổ sung insight cho yêu cầu chính.
-
-Bổ sung một đoạn **distribution** trước monthly patterns: tách valid dry/wet proportions và conditional wet intensity/quantiles, ghi pooled weighting. Dùng complete-day và wet-spell outputs để giải thích sensitivity hoặc short-term persistence khi có evidence; giữ spatial/tail detail ở appendix nếu không cần cho finding chính. Chi tiết thống kê và artifacts theo mục 7.1.
-
-Mỗi đoạn kết quả gồm: **quan sát có số liệu → cách tính/cohort → diễn giải → giới hạn liên quan**. Dùng tên hình/bảng để dẫn chứng; không chỉ mô tả màu hoặc lặp caption. Nếu đối chiếu mùa mưa/monsoon, dẫn nguồn khí tượng chính thức và tách thông tin nền khỏi kết quả được tính từ dataset. Không gán causal explanations chưa có dữ liệu chứng minh.
-
-### 13.4. Task 2 — Viết kỹ từ target đến kết quả xác suất
-
-**Problem and target.** Nêu input station/time/threshold, output xác suất tích lũy rainfall trong 30 phút kế tiếp **lớn hơn** threshold. Có công thức `P(R30 > tau | available history)` và một timeline ngắn giải thích sáu intervals tương lai. Nêu đơn vị, boundary convention, điều kiện đủ label/history, threshold domain và xử lý missing/unseen/out-of-domain. Khai báo giả định availability nếu chỉ làm retrospective prediction.
-
-**Features and split.** Bảng features chỉ liệt kê features thực dùng: nhóm thời gian/station/threshold, rainfall history, missingness; mỗi nhóm có cửa sổ, ý nghĩa và lý do chọn. Giải thích ngắn cách tránh nhìn tương lai. Bảng split ghi train 2017–2022, selection Jan–Jun 2023, calibration Jul–Dec 2023 và final test 2024, kèm base samples, threshold-expanded samples, positives/prevalence và purge policy. Không dùng test để chọn model/features/calibration.
-
-**Models and training.** Giải thích climatology baseline, MLlib LR và GBT bằng vài câu cho mỗi model; nêu preprocessing, tuning budget, actual selected hyperparameters, selection criterion và calibration recipe. Config đầy đủ ở appendix/repo. Phân biệt rainfall threshold `tau` với probability cutoff dùng precision/recall. Nêu cách xuất probability của class 1 và lưu đầy đủ pipeline.
-
-**Main results.** So sánh ba models trên cùng final-test cohort. Bảng chính có PR-AUC, ROC-AUC và Brier; log loss/cutoff metrics bổ sung khi giúp diễn giải. Bảng per-threshold có sample count, positives, prevalence và metrics của baseline/model đã chọn. Nêu rõ macro/pooled aggregation, AUC N/A với single-class nhóm và support nhỏ. Nếu bảng nhiều thresholds quá dài, giữ primary thresholds trong thân bài và đưa bảng đầy đủ appendix.
-
-**Probability quality.** Có reliability diagram với predicted probability, observed frequency và counts mỗi bin; so sánh raw/calibrated khi correction đã thực hiện. Giải thích ranking và calibration bằng kết quả thực tế: model phân biệt mưa tốt không tự đồng nghĩa xác suất đáng tin. PR curves dùng vài primary thresholds đã khóa trước test, có prevalence/support và model labels rõ.
-
-**Features and errors.** Tóm tắt A/B ablation để cho thấy history/missingness đóng góp thế nào. Phân tích ngắn các lỗi chính theo threshold, station/month, onset/continuation và unseen khi có samples; chọn vài kết quả có ý nghĩa thay vì đưa mọi strata vào thân bài. Báo cáo monotonicity violation và giới hạn khi suy diễn xác suất cho threshold chưa học. Uncertainty tính theo Phase 9; không gọi khác biệt nhỏ là statistically significant nếu chưa có bằng chứng phù hợp.
-
-**Kết luận Task 2.** Trả lời trực tiếp model nào được chọn trên validation, final test đạt gì, probability có đáng tin ở điều kiện nào và thất bại ở đâu. Nếu ML không hơn climatology hoặc calibration không cải thiện, báo cáo đúng kết quả và giải thích trong giới hạn evidence; không sửa scope/cohort để làm model thắng.
-
-### 13.5. Figures, tables và bằng chứng cho báo cáo
-
-Kế hoạch dưới đây hướng dẫn chọn outputs; không phải quota bắt buộc:
-
-| Artifact | Nội dung và nguồn dữ liệu |
-|---|---|
-| `quality_by_year.csv` / Table: data quality | Spark cleaning audit, attrition và coverage theo năm |
-| `coverage_heatmap.pdf` | Aggregated valid coverage; làm context cho Task 1 |
-| `monthly_hourly_patterns.pdf` | Hai panels monthly/hourly; units, valid denominators và cohort |
-| `annual_patterns.pdf` | So sánh năm trên common cohort; sensitivity nếu cần |
-| Table: environment / features | Actual run metadata và frozen feature config |
-| Table: model comparison / threshold results | Frozen 2024 metrics, same cohort, support và uncertainty có sẵn |
-| `pr_curves.pdf` / `calibration.pdf` | Spark score aggregates; primary thresholds, bin counts và split |
-| Table: ablation / error summary | A/B same samples và vài failure strata; bảng dài ở appendix |
-| `report/evidence/spark-ui/` + `index.csv` | Ảnh Spark History Server sau từng lệnh/application Spark: Jobs summary và chi tiết mọi Job ID do lệnh tạo; Application ID, Job ID(s), trạng thái cuối, thời lượng, stages/tasks và đường dẫn ảnh |
-
-Mọi caption phải tự hiểu được: thời gian/split, cohort, units, statistic, missingness/coverage rule và model nếu liên quan. Axis có units/labels, legend đọc được khi in A4; tránh quá nhiều đường trên một panel. Dẫn hình/bảng trong phần văn bản trước hoặc gần vị trí xuất hiện.
-
-Spark export **aggregate CSV/JSON nhỏ** cho tables/curves; không kéo toàn bộ raw/features vào Python để vẽ. Mỗi output lưu `RUN_ID`, split/cohort/config và nguồn artifact. Tạo table/numeric macros LaTeX từ outputs đã freeze để tránh chép tay sai; dùng manifest đơn giản nối figure/table với output và commit. Một metric xuất hiện ở abstract, bảng và conclusion phải khớp giá trị, rounding và cohort.
-
-Mỗi notebook action tạo Spark job được ghi thành một dòng trong
-evidence index. Sau khi các job của action kết thúc, mở **Spark Web UI** (live
-UI nếu application còn mở, Spark History Server nếu application đã kết thúc;
-không dùng Dataproc Jobs/YARN page), kiểm tra Jobs summary và trang chi tiết của
-mọi Spark Job ID do action tạo rồi chụp ảnh màn hình. Lưu ảnh gốc dưới
-`report/evidence/spark-ui/<RUN_ID>/`; appendix liệt kê Application ID, Job ID(s),
-command/action, trạng thái cuối, thời lượng và đường dẫn ảnh, đồng thời chèn ảnh
-tương ứng để người đọc xem lại.
-Nếu một application không tạo Spark Job ID, ghi rõ và giữ ảnh summary. Nếu chưa
-có kết quả chạy, để rõ chưa thực hiện; không tạo ảnh minh họa thay bằng chứng thật.
-
-### 13.6. Discussion, reproducibility và quy trình hoàn thiện
-
-Discussion tổng hợp hai tasks: patterns giúp hiểu rainfall và lựa chọn features ra sao; model tận dụng history tốt tới đâu; kết quả giới hạn bởi rainfall-only inputs, missing/revisions, short record, rare heavy rainfall, availability assumptions, threshold domain và unseen stations thế nào. Chỉ đưa limitations thật sự áp dụng. Không dùng các từ “best”, “robust”, “real-time” hoặc “significant” vượt phạm vi đã kiểm chứng.
-
-Reproducibility dẫn README, exact runtime/config/commit, manifest, model package và lệnh load/predict. Conclusion tóm tắt một hoặc hai findings chính của mỗi task và giới hạn sử dụng; không đưa kết quả mới. References gồm nguồn dữ liệu và tài liệu/phương pháp đã dùng; citation nào cũng phải có nguồn thật, không placeholders.
-
-AI declaration ghi đúng công cụ/model và công việc được hỗ trợ (planning/code/debugging/analysis/drafting/editing), trách nhiệm cá nhân theo mẫu đề; không claim mọi kết quả verified khi chưa kiểm tra. PDF có names/student IDs/references/captions.
-
-Quy trình viết:
-
-1. Viết dataset/cleaning/environment/target/split ngay khi đã xác nhận, song song với xử lý dữ liệu; chưa có kết quả thì để draft rõ, không đoán số.
-2. Hoàn thiện Task 1 từ aggregates, Task 2 từ frozen evaluation outputs; viết diễn giải sau mỗi hình/bảng.
-3. Viết discussion/conclusion/abstract cuối; bỏ đoạn lặp và phần lý thuyết không phục vụ đề.
-4. Compile LaTeX, sửa references/overflow; render và đọc toàn bộ pages ở kích thước A4. Kiểm tra figures, font, captions, table widths và ngắt trang.
-5. Đối chiếu từng yêu cầu đề với section/page: cleaning, within/across-year patterns, features, model, environment/VM config, performance, limitations/insights và AI declaration. Kiểm tra số liệu với outputs, không còn TODO/placeholder/broken references trong bản nộp.
-6. Đối chiếu từng lệnh/notebook action Spark với live Spark Web UI hoặc History Server và evidence index: mỗi action có ảnh Jobs summary; mỗi Job ID có ảnh detail, ID/trạng thái khớp log và output; không thiếu lần chạy thất bại/bị hủy.
-
-README: prerequisites/config mẫu, data nguồn/manifest/upload, notebook order, batch commands, versions/lifecycle/artifact locations và load/predict. Package tự chứa source và model cần chấm; không phụ thuộc bucket cá nhân còn truy cập được.
-
-```text
-DSA5208_Project2_StudentID/
-├── README.md
-├── requirements-local.txt
-├── requirements-cluster.txt
-├── config/                 # examples + experiment config, không credential
-├── notebooks/
-├── src/
-├── scripts/
-├── tests/
-├── models/                 # pipeline/calibrator/lookup + metadata
-└── report.pdf
-```
-
-LaTeX source, figures và aggregate tables giữ trong repo để reproduce report. Không đóng gói raw/cache/temp output/credentials. Kiểm tra Canvas size limit, giải nén/load model từ chính submission archive.
-
-**Acceptance:** PDF đầy đủ yêu cầu; README chạy được; archive tự chứa model/code/config/fixtures cần thiết; fresh-session reload và inference thành công.
-
-## 14. Phase 11 — Shutdown, final QA và timeline
-
-Trước shutdown: export notebooks, persist processed/features/model/results/run manifest trên GCS và đối chiếu artifacts. Sau đó dùng cell shutdown trong `00_environment.ipynb` để xóa đúng cluster do run này tạo và truy vấn lại danh sách cluster trong project/region; giữ output xác nhận trong notebook.
-
-Xác nhận cluster biến mất, kiểm tra remaining VM/disk/tài nguyên phụ/billing. GCS còn storage charges: download và đối chiếu model/results/submission về local trước khi xóa bản cloud không còn cần; đặt retention trong credit budget và trước expiry, không giữ bucket vô thời hạn. Không thấy notebook chưa chứng minh compute đã xóa.
-
-Final checklist:
-
-- [ ] Billing account ID thực đã xác minh chứa credit `3LU63BPGY77JFDQQ`; project chỉ link account này, không dùng credit/billing khác.
-- [ ] Credit ledger, pending costs và remaining balance đã kiểm tra; không có paid fallback khi credit không đủ/hết hạn.
-- [ ] Manifest chỉ 2017–2024, hashes và paths reproducible.
-- [ ] Manifest bytes/rows/schema/timestamp đã đối chiếu; retrieval time gốc còn unknown được khai báo rõ.
-- [ ] Schema/interval semantics/availability/quality policy có evidence.
-- [ ] Không missing=zero; duplicate/conflicts/gaps deterministic và audit được.
-- [ ] Label đúng 30 phút/strict greater-than, không vượt split/fold.
-- [ ] Learned preprocessing/model/calibration fit đúng temporal subsets.
-- [ ] Task 1 có within-year/across-year findings và coverage/bias sensitivity.
-- [ ] Inference nhận station/time/threshold; domain/status rõ.
-- [ ] Climatology/LR/GBT, per-threshold metrics, calibration assessment hoàn tất.
-- [ ] Monotonicity, A/B ablation, onset/continuation/unseen analysis có evidence.
-- [ ] Frozen manifest trước 2024; post-test exploration được khai báo.
-- [ ] Spark processing/MLlib và distributed/runtime evidence có lưu.
-- [ ] Mỗi notebook action Spark đã có ảnh Spark Web UI sau trạng thái cuối: Jobs summary và từng Job detail; Application ID/Job ID, trạng thái, thời lượng, stages/tasks khớp evidence index, log và output.
-- [ ] Notebook restart-and-run-all dùng cùng code/config và lưu outputs.
-- [ ] Reload/inference thành công từ submission package trong fresh session.
-- [ ] PDF có names/IDs/captions/limitations/sources/AI declaration chính xác.
-- [ ] Package không credential/raw/cache/hard-coded personal paths.
-- [ ] Cluster xóa, artifacts persist, remaining resources/costs đã kiểm tra.
-
-| Ngày (SGT) | Output mục tiêu |
-|---|---|
-| 11/10 | Review; manifest/schema/time semantics; cloud preflight |
-| 12/10 | Cloud smoke; quality Parquet/environment evidence; draft data/cleaning/environment |
-| 13/10 | Task 1 training-year analysis; labels/features/leakage fixtures; draft Task 1/target/split |
-| 14/10 | Three-model pilot, temporal selection/cost evidence |
-| 15/10 | Full finalists; A/B ablation; calibration holdout fit |
-| 16/10 | Freeze; final 2024 evaluation; Task 1 full-period results |
-| 17/10 | LaTeX/README/package/model reload validation |
-| 18/10 | Dự phòng lỗi/tái đóng gói; submit trước 23:59 |
-
-Điều chỉnh timeline theo gates/runtime/credit. Ưu tiên data/target/split/availability đúng, hai tasks và ba models, evaluation/model reload/report. Neighbours, expanded rolling validation, runtime scaling và monotonicity correction chỉ sau phần chính; **calibration assessment, monotonicity assessment và A/B ablation vẫn thuộc phần chính**. Nếu giảm training cohort vì budget, ghi scope thực tế và đánh giá trên full held-out cohort khi khả thi, không claim full-data training.
-
-**Acceptance:** final checklist có evidence; cluster/tài nguyên phụ được kiểm tra sau shutdown; package nộp đúng deadline và lưu receipt.
+Không đánh dấu toàn dự án hoàn thành vì TODO đã được viết. Các ô chưa tick là công việc thực thi còn lại;
+nhật ký đầy đủ và các lần chạy lỗi/dở dang được giữ nguyên trong TASK_SPEC.
