@@ -16,12 +16,13 @@ the measured run `20261012-full-02`, not the earlier `full-01` draft.
 
 ## Final checks
 
-- [ ] Compile the report and inspect every page and figure at submission size.
-- [ ] Keep the fresh Spark-session model reload marked as unverified until a
-  real load and inference check succeeds.
+- [x] Compile the 12-page report and review the table, reference and figure
+  layouts at submission size.
+- [x] Fresh Spark-session load and one-row inference succeeded; evidence is in
+  `tables/full-20261012/model_reload_validation.json`.
 - [ ] Check the final package against the assignment upload requirements and
   retain the Canvas receipt after submission.
 
-The report does not claim that Notebook 00 saved execution outputs or that the
-downloaded Spark models have been reloaded in a fresh session. See
+Notebook 00's local execution outputs are still missing. The downloaded model
+artifacts did pass the fresh-session load and inference smoke check. See
 `../data/TASK.md` for the full evidence checklist.

@@ -35,21 +35,24 @@ Cập nhật ngày **12/10/2026**. Bài cá nhân: **DAM MINH TIEN — A0355091E
   `report/figures/full-20261012/` và `report/tables/full-20261012/`.
 - [x] Model, calibrator, climatology baseline và selected manifest đã tải về
   `artifacts/models/20261012-full-02/` (khoảng 2.6 MB).
+- [x] Fresh Spark 3.5.3 session đã load pipeline GBT 5 stages, isotonic
+  calibrator, ba climatology tables và selected manifest; một prediction mẫu
+  0.5 mm chạy thành công. Raw p=0.02881781, calibrated p=0.02589584.
+  Đây chỉ là serialization/inference smoke check, không chạy lại holdout.
+  Dataproc job `ee582912264541edb80942445a23994f` đã `DONE`; cluster một node
+  `rainfall-reload-20261012` đã bị xóa. Evidence ở
+  `report/tables/full-20261012/model_reload_validation.json`.
 - [x] Report đã được cập nhật từ số liệu run này; xem `report/main.tex`.
 - [x] PDF biên dịch thành công bằng `latexmk` và đã rà lại bố cục/bảng/hình.
 - [x] ZIP nộp gồm source, notebooks, config/manifest, PDF, bảng/hình dùng trong
   report và selected model artifacts; không có raw CSV hay workstation files.
-  SHA-256: `56967b5f178a565cfa96d00a1c7922fc33f078b2a036716d875ac82ade5a817c`.
+  SHA-256: `1f3c45b581346f53f3219ca43a48c1a464ee09b9a3b63c69f0d97b928b2331b8`.
 
 ## Còn lại trước khi nộp
 
 - [ ] **Notebook 00 evidence:** setup cloud đã chạy trong workflow `full-02`,
   nhưng local `notebooks/00_setup_cloud.ipynb` không giữ execution outputs.
   Vì vậy không đánh dấu setup notebook là restart-and-run-all reproducible.
-- [ ] **Model reload:** mở `gbt_B`, isotonic calibrator và climatology từ
-  artifact trong một Spark session mới rồi chạy một inference check. Việc này
-  chưa được thực hiện; không có Dataproc cluster đang chạy khi kiểm tra ngày
-  12/10/2026. Không cần chạy lại toàn bộ 48M-row pipeline để đóng gói report.
 - [ ] **Nộp Canvas:** kiểm tra định dạng/tên file theo trang bài tập, upload
   gói cuối và xác nhận receipt. Repo không có bằng chứng upload.
 - [ ] Nếu cần chạy lại cloud, xác nhận project/quota/billing hiện hành và dùng
@@ -95,4 +98,5 @@ Jan–Jun 2023 được dùng cho cả pilot tuning và candidate comparison. Ho
 - [x] Kiểm tra ZIP khớp với `20261012-full-02` và không chứa raw CSV hoặc file
   workstation. Package path:
   `submission/DSA5208_Project2_A0355091E_full-20261012-full-02.zip`.
-- [x] README/report ghi rõ model reload chưa xác minh.
+- [x] README/report ghi rõ fresh reload smoke check đã pass và không tuyên bố
+  đã chạy lại holdout.

@@ -459,12 +459,15 @@ in this report are the PNG files produced by notebook code and downloaded from
 that run, rather than hand-drawn or Markdown-embedded charts.
 
 The 2024 selected model, isotonic calibrator, climatology tables and selected
-manifest were downloaded as a 2.6-MB Spark model tree. A fresh Spark-session
-load and inference check has not yet been performed. Notebook 00 was used for
-cloud setup, but its local notebook file has no saved execution outputs;
-notebooks 01--03 each have saved successful cell outputs. The package
-instructions identify these remaining reproducibility checks rather than
-claiming that they passed.
+manifest were downloaded as a 2.6-MB Spark model tree. A fresh Spark 3.5.3
+session loaded the five-stage GBT pipeline, isotonic calibrator, all three
+climatology tables and the selected-model manifest. One 2024 sample at the
+0.5-mm threshold produced a raw probability of 0.02882 and calibrated
+probability of 0.02590. This was a serialization and one-row inference check,
+not a rerun of the 2024 metrics. Its temporary single-node cluster was deleted
+after the job; the validation record is included with the run tables. Notebook
+00 was used for cloud setup, but its local notebook file has no saved execution
+outputs; notebooks 01--03 each have saved successful cell outputs.
 
 Task 1 found that wet-reading frequency varied from 1.94\% to 3.20\%, with
 the common annual station cohort empty under the configured coverage rules.
@@ -480,6 +483,8 @@ analysis outputs and take responsibility for the methods, results and final
 content of this individual project.
 
 \begin{thebibliography}{9}
+\small
+\setlength{\itemsep}{0pt}
 \bibitem{nea}
 National Environment Agency. \emph{Historical Rainfall across Singapore}.
 data.gov.sg. \url{https://data.gov.sg/collections/2279/view}.

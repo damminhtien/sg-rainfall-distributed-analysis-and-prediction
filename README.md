@@ -63,10 +63,12 @@ This is an analytical assumption, not a timestamp rule confirmed by NEA. The
 report describes its effect and the remaining uncertainty.
 
 The saved Spark model, calibrator and climatology artifacts are under
-`artifacts/models/20261012-full-02/`. A fresh Spark-session reload/inference
-check has not been completed. Notebook 00 was used in setup, but its local file
-does not preserve execution outputs; notebooks 01–03 contain successful saved
-outputs. See `data/TASK.md` for the evidence checklist and outstanding work.
+`artifacts/models/20261012-full-02/`. A fresh Spark 3.5.3 session loaded these
+artifacts and produced one inference result; the validation cluster was deleted
+afterward. This smoke check did not rerun holdout metrics. Notebook 00 was used
+in setup, but its local file does not preserve execution outputs; notebooks
+01–03 contain successful saved outputs. See `data/TASK.md` for the remaining
+Canvas and setup-evidence items.
 The current submission bundle is
 `submission/DSA5208_Project2_A0355091E_full-20261012-full-02.zip`; verify the
 Canvas naming and upload requirements before submitting it.
