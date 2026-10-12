@@ -201,6 +201,20 @@ Development interface & Jupyter Notebook on the Dataproc cluster \\
 \end{tabularx}
 \end{table}
 
+\pagebreak
+On this multi-worker run, Spark read the eight annual source files
+(48,538,713 rows), checked and filtered measurements, and resolved duplicate
+records for the same station and time. It computed Task 1 rainfall and
+coverage summaries. For Task 2, Spark built exact-time rainfall lags and
+rolling sums, maxima, wet counts and coverage, together with temporal
+predictors. It summed the next six five-minute readings, excluded targets
+whose future windows crossed a split boundary, and created examples for each
+rainfall threshold. Spark MLlib fitted logistic regression, random forest and
+gradient-boosted tree candidates; Spark scored the selection, calibration and
+2024 holdout records and computed their evaluation summaries. Charts use
+compact grouped summaries and score bins; prediction-level scores remained in
+Spark and were saved in Google Cloud Storage.
+
 \section{Task 1: Rainfall patterns}
 \subsection{Across-year distribution}
 The annual summaries use each retained five-minute reading as one observation.
