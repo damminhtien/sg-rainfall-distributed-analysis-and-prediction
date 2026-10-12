@@ -286,14 +286,17 @@ zero, and equality to $\tau$ is a non-exceedance. Forecasts without a current
 observation are outside the prediction task.
 
 The selected history model uses 36 numerical predictors describing cyclic
-calendar time, the threshold and current rainfall, recent same-station lags,
-and rolling summaries of rainfall history. These predictors use information
-available at or before the forecast time. Station identity is a separate
-categorical predictor, indexed and one-hot encoded with Spark MLlib. The
-resulting station indicators are combined with the 36 numerical predictors to
-form the model input~\cite{mllib}. Logistic regression uses standardized
-inputs; random forest and gradient-boosted trees use the same inputs without
-standardization.
+calendar time, the threshold and current and earlier same-station rainfall.
+The six future readings define only the outcome; predictor rainfall and
+calendar values are anchored at or before $t$. Current rainfall is measured at
+$t$, while the history summaries look backward. The archived data do not
+establish when each value first became available, so this is an event-time
+retrospective analysis rather than a verified real-time forecast. Station
+identity is a separate categorical predictor, indexed and one-hot encoded with
+Spark MLlib. The resulting station indicators are combined with the 36
+numerical predictors to form the model input~\cite{mllib}.
+Logistic regression uses standardized inputs; random forest and
+gradient-boosted trees use the same inputs without standardization.
 
 An unseen station is assigned to a reserved category that remains represented
 in the encoded predictors. Because this category has no training observations,
@@ -322,10 +325,10 @@ exceedance target. \\
 \end{table}
 
 \subsection{Temporal partitions and training}
-Split assignment is based on prediction time. Samples whose future window
-crosses a partition boundary are purged rather than assigned to either side.
-Each valid prediction time is expanded into six examples, one per configured
-rainfall threshold.
+Split assignment is based on prediction time. Samples whose 30-minute target
+reaches or crosses a partition boundary are excluded, so every retained target
+window lies wholly within its assigned partition. Each valid prediction time
+is expanded into six examples, one per configured rainfall threshold.
 
 \begin{table}[htbp]
 \centering\small
@@ -346,9 +349,10 @@ Boundary-purged & Split edges & 1,200 & 380 \\
 \end{tabular}
 \end{table}
 
-The climatology baseline uses all valid training windows and estimates
-station-month-hour exceedance probabilities with smoothed broader-level
-fallbacks. MLlib models use a deterministic 2\% sample of valid training
+The climatology baseline uses outcomes from valid 2017--2022 training windows
+only. It estimates station-month-hour exceedance probabilities with smoothed
+broader-level fallbacks and serves as a comparison rather than an ML feature.
+MLlib models use a deterministic 2\% sample of valid training
 windows: 690,699 base times before threshold expansion. The pilot used 173,478
 base times (approximately 0.5\%). Parameter pilots compared four logistic
 regression settings, three random-forest settings and four gradient-boosted
@@ -509,14 +513,13 @@ Task 1 found that wet-reading frequency varied from 1.94\% to 3.20\%, with
 the common annual station cohort empty under the configured coverage rules.
 Task 2 selected a history-feature GBT-B model and improved 2024 PR-AUC and
 Brier score over the climatology baseline at every tested primary threshold.
-The prediction results apply to complete future windows at observed
-timestamps under the stated retrospective availability assumption.
+The results describe retrospective predictions at observed timestamps with
+complete future windows; the archive does not establish real-time data
+availability.
 
 \section*{AI usage declaration}
 I used OpenAI Codex (GPT-6) to assist with project planning, notebook and Spark
-code changes, debugging, output checks and report editing. I reviewed the
-analysis outputs and take responsibility for the methods, results and final
-content of this individual project.
+code changes, debugging, output checks and report editing.
 
 \begin{thebibliography}{9}
 \small
