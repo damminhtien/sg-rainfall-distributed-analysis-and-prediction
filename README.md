@@ -3,8 +3,8 @@
 DSA5208 Project 2, individual submission by DAM MINH TIEN (A0355091E).
 The grader-facing workflow is four Jupyter notebooks followed by the report.
 Cleaning, Task 1 analysis, feature construction, model selection and evaluation
-are shown in notebook cells. No analysis module from `src/rainfall/` is needed to
-understand the science; the remaining source files are optional setup helpers.
+are shown in notebook cells. `scripts/build_manifest.py` is the only reusable
+input-inventory helper.
 
 ## Data and runtime
 

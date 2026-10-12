@@ -1,6 +1,6 @@
 """Reusable functions to build a manifest from the selected NEA rainfall CSVs.
 
-Run ``build_manifest`` from ``notebooks/00_environment.ipynb`` so the scanned
+Run ``build_manifest`` from ``notebooks/00_setup_cloud.ipynb`` so the scanned
 file inventory and validation summary are visible with the rest of the project
 outputs.
 """
