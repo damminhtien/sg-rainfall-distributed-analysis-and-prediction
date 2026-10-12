@@ -2,6 +2,8 @@
 
 Cập nhật: 12/10/2026 (Asia/Singapore). Đây là ghi chú để khôi phục bối cảnh khi làm việc tiếp; các trạng thái cloud/cost bên dưới là snapshot có ngày, phải kiểm tra lại trước khi chạy hoặc kết luận hiện trạng.
 
+**Quy tắc tiếp tục:** trước khi thực hiện yêu cầu tiếp theo trong project, đọc lại file này cùng `data/TASK.md`. Dùng các quyết định đã chốt bên dưới làm bối cảnh mặc định, không hỏi lại những câu đã được trả lời; xác minh lại mọi trạng thái cloud thay đổi theo thời gian. Cập nhật phần trạng thái khi có thêm bằng chứng hoặc quyết định mới.
+
 ## Mục tiêu và phạm vi
 
 - Project cá nhân DSA5208 Project 2: Singapore Rainfall Analysis and Prediction.
@@ -51,6 +53,16 @@ Cập nhật: 12/10/2026 (Asia/Singapore). Đây là ghi chú để khôi phục
 - Previous screenshots: an app5 Jobs-summary active checkpoint exists, but app5 job detail and app1/app3/app4 full summary/details were missing from evidence files. Screenshot requirement is still open.
 - `report/main.tex` compiled in an earlier turn, but it is not final without cleaning reconciliation, model freeze/test results, eight-year EDA, complete Spark UI screenshots, package reload, and submission receipt.
 - Prior notebook run `RUN_ID=20261011-full-01` has many artifacts in the GCS bucket. Keep it immutable; inspect each output/metadata before reuse. A fresh retry must use a distinct run ID and output prefix.
+
+## Điểm dừng lần tiếp tục gần nhất — 12/10/2026
+
+- `data/TASK.md` là checklist hiện hành. Mục A (đồng bộ billing policy và run-scoped paths) đã được hoàn tất, commit `9392908` (`Fix cloud billing gate and version run artifacts`). Commit riêng trước đó `c351f97` thêm ghi chú bộ nhớ ban đầu.
+- Run dự kiến tiếp theo là `RUN_ID=20261012-full-01`, `MODEL_ATTEMPT=attempt-01`; prefix runtime/source bundle mới được kiểm tra rỗng ở lần xác minh gần nhất. Giữ run `20261011-full-01` bất biến.
+- `notebooks/00_environment.ipynb` và analysis notebooks 01–05 đã được cập nhật để dùng manifest/source bundle theo run mới; notebook hỗ trợ 07–11 cũng đã đồng bộ. Static checks đã qua: `py_compile` cho billing helper, JSON/AST checks cho notebook code cells và rà soát old cost gates.
+- Chưa chạy notebook00, chưa tạo cluster cho run mới, và chưa có kết quả mới cho B–F. Không coi các static checks này là bằng chứng pipeline đã chạy.
+- Bước triển khai kế tiếp: xác nhận đúng cửa sổ/tab `00_environment.ipynb` trong VS Code, chọn Python 3.14 local kernel cho setup notebook, chạy cell theo thứ tự và xem output từng bước. Trước cell tạo tài nguyên, kiểm tra lại live identity, project/account link và inventory; Spark workload chỉ chạy trên Dataproc Jupyter.
+- VS Code UI ở lần cuối còn hiển thị lẫn tab notebook cũ/mới; phải xác nhận lại tên tab và kernel bằng UI trước khi chạy để tránh chạy nhầm notebook.
+- Git có thay đổi có sẵn ngoài phạm vi ghi chú này (`README.md`, `report/main.tex`, ba module `src/rainfall`, `.DS_Store`, `report/evidence/`, `report/figures/`, `report/tables/`). Không stage/revert các mục đó khi cập nhật memory.
 
 ## Working conventions
 
