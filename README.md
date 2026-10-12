@@ -39,11 +39,14 @@ PySpark runtime. Notebook 00 runs on the Mac in a Jupyter kernel. Set
 3. `02_build_features.ipynb`: build elapsed-time history features, six-reading
    targets, temporal splits and sample attrition.
 4. `03_train_evaluate.ipynb`: compare a station/month/hour climatology
-   baseline with logistic regression and gradient-boosted trees. Show the A/B
-   feature ablation; calibrate only on the separate calibration period; evaluate
-   the selected choice on 2024. PR-AUC and Brier guide selection, while F1 at
-   0.5 is descriptive. Report reliability, unseen thresholds, monotonicity and
-   paired weekly Brier uncertainty in this notebook.
+   baseline with logistic regression (LR), random forest (RF) and gradient
+   boosted trees (GBT). The selection table contains climatology, LR-A/B, RF-B
+   and GBT-A/B; pilot tuning uses four LR, three RF and four GBT configurations.
+   Select among climatology, LR-B, RF-B and GBT-B on 2023; calibrate only on the
+   separate calibration period; evaluate the selected winner against the baseline
+   on 2024. PR-AUC and Brier guide selection, while F1 at 0.5 is descriptive.
+   Report reliability, unseen thresholds, monotonicity and paired weekly Brier
+   uncertainty in this notebook.
 5. `report/main.tex`: summarize the measured notebook results.
 
 Archived experiments, auxiliary cloud diagnostics and Spark UI evidence
