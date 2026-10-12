@@ -267,16 +267,24 @@ annual cohort was empty at the configured 90\%, 95\% and 99\% cutoffs.}
 Each candidate is an observed station-time pair with a valid current rainfall
 reading. For station $s$, time $t$ and threshold $\tau$, the binary target is
 \[
-  Y_{s,t,\tau}
-  =
-  \mathbf{1}\left[
-    \sum_{k=1}^{6} R_{s,t+5k\,\mathrm{min}} > \tau
-  \right].
+  \begin{aligned}
+    \operatorname{future\_30min\_rain}(s,t)
+    &= \sum_{j=1}^{6} r(s,t+5j\,\mathrm{min}),\\
+    y(s,t,\tau)
+    &= \mathbf{1}\left[
+      \operatorname{future\_30min\_rain}(s,t) > \tau
+    \right].
+  \end{aligned}
 \]
-The six future observations must be present at the exact expected five-minute
-times. Incomplete future windows are excluded. Equality to the threshold is
-negative. Missing-current queries are unsupported, matching the training
-decision grid, which is formed from retained observations.
+Here $r(s,u)$ is the rainfall observation for the same station $s$ at exact
+timestamp $u$. The six terms are the observations at $t+5$, $t+10$, $t+15$,
+$t+20$, $t+25$ and $t+30$ minutes; the current value $r(s,t)$ is not included.
+All six future slots must be present at those exact times. A missing future
+slot invalidates the sample, and its rainfall is never imputed as zero. Thus,
+an observed zero is included as zero while a missing observation causes sample
+exclusion. The strict $>$ makes equality to the threshold negative.
+Missing-current queries are unsupported, matching the training decision grid,
+which is formed from retained observations.
 
 The selected history-feature (B) model has 36 numerical feature columns. They
 include cyclic time-of-day and day-of-year terms, the requested threshold,
