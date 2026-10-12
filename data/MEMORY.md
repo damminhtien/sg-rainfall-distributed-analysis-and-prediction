@@ -2,7 +2,7 @@
 
 Cập nhật: 12/10/2026 (Asia/Singapore). Đây là ghi chú để khôi phục bối cảnh khi làm việc tiếp; các trạng thái cloud/cost bên dưới là snapshot có ngày, phải kiểm tra lại trước khi chạy hoặc kết luận hiện trạng.
 
-**Quy tắc tiếp tục:** trước khi thực hiện yêu cầu tiếp theo trong project, đọc lại file này cùng `data/TASK.md`. Dùng các quyết định đã chốt bên dưới làm bối cảnh mặc định, không hỏi lại những câu đã được trả lời; xác minh lại mọi trạng thái cloud thay đổi theo thời gian. Cập nhật phần trạng thái khi có thêm bằng chứng hoặc quyết định mới.
+**Quy tắc tiếp tục:** trước khi thực hiện yêu cầu tiếp theo trong project, đọc lại file này cùng `data/TASK.md`. Dùng các quyết định đã chốt bên dưới làm bối cảnh mặc định, không hỏi lại những câu đã được trả lời; xác minh lại mọi trạng thái cloud thay đổi theo thời gian. Cập nhật phần trạng thái khi có thêm bằng chứng hoặc quyết định mới. Khi người dùng yêu cầu “tiếp tục” hoặc “thực hiện toàn bộ”, tiếp tục thực thi các checkbox còn mở trong TASK đến khi có evidence; không dừng ở việc viết kế hoạch/TASK nếu còn bước triển khai độc lập có thể làm an toàn trong các ràng buộc đã chốt.
 
 ## Mục tiêu và phạm vi
 
