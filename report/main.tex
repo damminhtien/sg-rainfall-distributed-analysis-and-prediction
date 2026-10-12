@@ -265,74 +265,61 @@ annual cohort was empty at the configured 90\%, 95\% and 99\% cutoffs.}
 \section{Task 2: Thirty-minute exceedance probability}
 \subsection{Target and features}
 Each candidate is an observed station-time pair with a valid current rainfall
-reading. For station $s$, time $t$ and threshold $\tau$, the binary target is
+reading. Let $r(s,u)$ denote the rainfall observed at station $s$ at time $u$.
+For threshold $\tau$, the 30-minute accumulation and exceedance label are
 \[
   \begin{aligned}
-    \operatorname{future\_30min\_rain}(s,t)
+    F_{30}(s,t)
     &= \sum_{j=1}^{6} r(s,t+5j\,\mathrm{min}),\\
     y(s,t,\tau)
     &= \mathbf{1}\left[
-      \operatorname{future\_30min\_rain}(s,t) > \tau
+      F_{30}(s,t) > \tau
     \right].
   \end{aligned}
 \]
-Here $r(s,u)$ is the rainfall observation for the same station $s$ at exact
-timestamp $u$. The six terms are the observations at $t+5$, $t+10$, $t+15$,
-$t+20$, $t+25$ and $t+30$ minutes; the current value $r(s,t)$ is not included.
-All six future slots must be present at those exact times. A missing future
-slot invalidates the sample, and its rainfall is never imputed as zero. Thus,
-an observed zero is included as zero while a missing observation causes sample
-exclusion. The strict $>$ makes equality to the threshold negative.
-Missing-current queries are unsupported, matching the training decision grid,
-which is formed from retained observations.
+The sum contains exactly six future observations, at $t+5$, $t+10$, $t+15$,
+$t+20$, $t+25$ and $t+30$ minutes for the same station. The current reading is
+not part of the target. All six observations must be present at their exact
+five-minute timestamps; a sample missing any future observation is excluded,
+and missing rainfall is not replaced by zero. An observed zero contributes
+zero, and equality to $\tau$ is a non-exceedance. Forecasts without a current
+observation are outside the prediction task.
 
-The selected history-feature (B) model has 36 numerical feature columns. They
-include cyclic time-of-day and day-of-year terms, the requested threshold,
-current rainfall, same-station lags at 5, 10, 15, 30 and 60 minutes,
-missing-lag flags, and rolling rainfall sums, maxima, wet counts, reading
-counts and coverage over 15, 30, 60 and 180 minutes. Every numerical feature
-uses information at or before the prediction timestamp. The count of 36
-excludes station identity, which is processed separately as a categorical
-predictor. Each ML pipeline applies \texttt{StringIndexer} to
-\texttt{station\_id}, then \texttt{OneHotEncoder} creates
-\texttt{station\_vector}. \texttt{VectorAssembler} joins it with the 36
-numerical columns to create the complete \texttt{assembled} model vector. GBT
-and RF use \texttt{assembled}; LR standardizes it before fitting.
+The selected history model uses 36 numerical predictors describing cyclic
+calendar time, the threshold and current rainfall, recent same-station lags,
+and rolling summaries of rainfall history. These predictors use information
+available at or before the forecast time. Station identity is a separate
+categorical predictor, indexed and one-hot encoded with Spark MLlib. The
+resulting station indicators are combined with the 36 numerical predictors to
+form the model input~\cite{mllib}. Logistic regression uses standardized
+inputs; random forest and gradient-boosted trees use the same inputs without
+standardization.
 
-The fitted \texttt{StringIndexer} uses \texttt{handleInvalid="keep"}, which
-maps an unseen station to its reserved \texttt{\_\_unknown} category at
-index \texttt{numLabels}. The following \texttt{OneHotEncoder} also uses
-\texttt{handleInvalid="keep"} and sets \texttt{dropLast=False}, so the
-indexer's unknown category retains its own one-hot coordinate. The encoder's
-additional invalid-index category is distinct: an unseen station string is
-first mapped by the indexer to the reserved category. This follows Spark
-3.5.3's documented feature-transformer behavior~\cite{mllib}.
+An unseen station is assigned to a reserved category that remains represented
+in the encoded predictors. Because this category has no training observations,
+the model cannot learn a station-specific effect for it. Calendar predictors
+and any available same-station rainfall history remain usable, but the
+time-based holdout does not measure performance at stations absent from
+training. Station coordinates and future rainfall are excluded from the
+predictors.
 
 \begin{table}[htbp]
 \centering\small
-\caption{Roles of the assignment inputs in the prediction pipeline.}
+\caption{Roles of the assignment inputs in the forecasting analysis.}
 \label{tab:prediction-inputs}
 \begin{tabularx}{\linewidth}{l >{\raggedright\arraybackslash}X}
 \toprule
 Input & Role \\
 \midrule
-Station (\texttt{station\_id}) & Categorical model predictor; also the
-grouping key for same-station historical feature construction. \\
-Prediction time & Anchors the cyclic time-of-day and day-of-year features and
-the point at which historical rainfall windows are computed. \\
-Rainfall threshold & Numerical predictor \texttt{threshold\_mm} and the
-cutoff defining the strict future-rainfall exceedance target. \\
+Station & Categorical predictor and grouping key for same-station rainfall
+history. \\
+Prediction time & Defines calendar predictors and anchors the historical
+rainfall summaries. \\
+Rainfall threshold & Numerical predictor and cutoff for the future-rainfall
+exceedance target. \\
 \bottomrule
 \end{tabularx}
 \end{table}
-
-For a station absent from training, the reserved unknown category has no
-training examples, so the fitted classifier cannot learn a station-specific
-effect for it. Temporal predictors and available same-station rainfall history
-remain usable; when history is unavailable, the missingness and coverage
-features and fitted imputer still apply. The temporal holdout is not a
-station-held-out evaluation, so transfer to entirely new stations is not
-measured. Location coordinates and future readings are not model inputs.
 
 \subsection{Temporal partitions and training}
 Split assignment is based on prediction time. Samples whose future window
