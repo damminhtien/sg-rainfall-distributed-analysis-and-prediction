@@ -42,11 +42,13 @@ Cập nhật ngày **12/10/2026**. Bài cá nhân: **DAM MINH TIEN — A0355091E
   Dataproc job `ee582912264541edb80942445a23994f` đã `DONE`; cluster một node
   `rainfall-reload-20261012` đã bị xóa. Evidence ở
   `report/tables/full-20261012/model_reload_validation.json`.
-- [x] Report đã được cập nhật từ số liệu run này; xem `report/main.tex`.
+- [x] Report đã được cập nhật từ số liệu run này và dùng đúng tên project
+  **Singapore Rainfall Analysis and Prediction** trên trang bìa/metadata; xem
+  `report/main.tex`.
 - [x] PDF biên dịch thành công bằng `latexmk` và đã rà lại bố cục/bảng/hình.
 - [x] ZIP nộp gồm source, notebooks, config/manifest, PDF, bảng/hình dùng trong
   report và selected model artifacts; không có raw CSV hay workstation files.
-  SHA-256: `1f3c45b581346f53f3219ca43a48c1a464ee09b9a3b63c69f0d97b928b2331b8`.
+  SHA-256: `04da87515c173cdb098edeb8ffcff671f8d2b0826f2d0f3a91fb1f672b6b2cd6`.
 
 ## Còn lại trước khi nộp
 

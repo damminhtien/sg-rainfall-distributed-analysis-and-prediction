@@ -1,7 +1,8 @@
-# Report status — DSA5208 Project 2
+# Report status — Singapore Rainfall Analysis and Prediction
 
 Updated 12 October 2026. The final report source is `main.tex`; it describes
-the measured run `20261012-full-02`, not the earlier `full-01` draft.
+the measured run `20261012-full-02`, not the earlier `full-01` draft. The cover
+and PDF metadata use the exact project title from the assignment.
 
 ## Completed sections
 
