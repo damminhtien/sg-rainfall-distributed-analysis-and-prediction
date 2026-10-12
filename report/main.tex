@@ -278,12 +278,53 @@ times. Incomplete future windows are excluded. Equality to the threshold is
 negative. Missing-current queries are unsupported, matching the training
 decision grid, which is formed from retained observations.
 
-The feature set has 36 columns. It includes cyclic time-of-day and day-of-year
-terms, the requested threshold, current rainfall, same-station lags at 5, 10,
-15, 30 and 60 minutes, missing-lag flags, and rolling rainfall sums, maxima,
-wet counts and coverage over 15, 30, 60 and 180 minutes. Every feature uses
-information at or before the prediction timestamp. Location coordinates and
-future readings are not model inputs.
+The selected history-feature (B) model has 36 numerical feature columns. They
+include cyclic time-of-day and day-of-year terms, the requested threshold,
+current rainfall, same-station lags at 5, 10, 15, 30 and 60 minutes,
+missing-lag flags, and rolling rainfall sums, maxima, wet counts, reading
+counts and coverage over 15, 30, 60 and 180 minutes. Every numerical feature
+uses information at or before the prediction timestamp. The count of 36
+excludes station identity, which is processed separately as a categorical
+predictor. Each ML pipeline applies \texttt{StringIndexer} to
+\texttt{station\_id}, then \texttt{OneHotEncoder} creates
+\texttt{station\_vector}. \texttt{VectorAssembler} joins it with the 36
+numerical columns to create the complete \texttt{assembled} model vector. GBT
+and RF use \texttt{assembled}; LR standardizes it before fitting.
+
+The fitted \texttt{StringIndexer} uses \texttt{handleInvalid="keep"}, which
+maps an unseen station to its reserved \texttt{\_\_unknown} category at
+index \texttt{numLabels}. The following \texttt{OneHotEncoder} also uses
+\texttt{handleInvalid="keep"} and sets \texttt{dropLast=False}, so the
+indexer's unknown category retains its own one-hot coordinate. The encoder's
+additional invalid-index category is distinct: an unseen station string is
+first mapped by the indexer to the reserved category. This follows Spark
+3.5.3's documented feature-transformer behavior~\cite{mllib}.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Roles of the assignment inputs in the prediction pipeline.}
+\label{tab:prediction-inputs}
+\begin{tabularx}{\linewidth}{l >{\raggedright\arraybackslash}X}
+\toprule
+Input & Role \\
+\midrule
+Station (\texttt{station\_id}) & Categorical model predictor; also the
+grouping key for same-station historical feature construction. \\
+Prediction time & Anchors the cyclic time-of-day and day-of-year features and
+the point at which historical rainfall windows are computed. \\
+Rainfall threshold & Numerical predictor \texttt{threshold\_mm} and the
+cutoff defining the strict future-rainfall exceedance target. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+For a station absent from training, the reserved unknown category has no
+training examples, so the fitted classifier cannot learn a station-specific
+effect for it. Temporal predictors and available same-station rainfall history
+remain usable; when history is unavailable, the missingness and coverage
+features and fitted imputer still apply. The temporal holdout is not a
+station-held-out evaluation, so transfer to entirely new stations is not
+measured. Location coordinates and future readings are not model inputs.
 
 \subsection{Temporal partitions and training}
 Split assignment is based on prediction time. Samples whose future window
@@ -494,8 +535,8 @@ Apache Spark. \emph{Spark 3.5.3 Release Notes}.
 \url{https://spark.apache.org/releases/spark-release-3-5-3.html}.
 
 \bibitem{mllib}
-Apache Spark. \emph{MLlib: Main Guide}, Spark 3.5 documentation.
-\url{https://spark.apache.org/docs/3.5.6/ml-guide.html}.
+Apache Spark. \emph{Extracting, transforming and selecting features}, Spark
+3.5.3 documentation. \url{https://spark.apache.org/docs/3.5.3/ml-features.html}.
 \end{thebibliography}
 
 \appendix

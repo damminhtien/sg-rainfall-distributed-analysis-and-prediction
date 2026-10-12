@@ -48,7 +48,7 @@ Cập nhật ngày **12/10/2026**. Bài cá nhân: **DAM MINH TIEN — A0355091E
 - [x] PDF biên dịch thành công bằng `latexmk` và đã rà lại bố cục/bảng/hình.
 - [x] ZIP nộp gồm source, notebooks, config/manifest, PDF, bảng/hình dùng trong
   report và selected model artifacts; không có raw CSV hay workstation files.
-  SHA-256: `04da87515c173cdb098edeb8ffcff671f8d2b0826f2d0f3a91fb1f672b6b2cd6`.
+  SHA-256: `1c6e57e962b572f9f28c02044e3fe22a5c912e299c42e6cae3ccf48078cb8bcf`.
 
 ## Còn lại trước khi nộp
 
