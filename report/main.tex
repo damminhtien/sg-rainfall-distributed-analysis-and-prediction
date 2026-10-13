@@ -379,6 +379,54 @@ annual cohort was empty at the configured 90\%, 95\% and 99\% cutoffs.}
 \label{fig:coverage}
 \end{figure}
 
+\clearpage
+\subsection{Additional descriptive views}
+These supplementary views extend the distribution, daily and hourly
+comparisons. Complete-day estimates include only station-days with all 288
+readings. The completeness fraction is relative to expected station-days for
+IDs observed anywhere in 2017--2024. Missing intervals can interrupt observed
+wet spells. Spatial summaries include only records with usable coordinates
+and are not area-weighted estimates of Singapore rainfall.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.96\linewidth]{\figpath/task1/complete_daily_patterns.png}
+\caption{Equal-station mean observed rainfall on complete station-days by
+year and month. Only station-days with 288 readings contribute.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.96\linewidth]{\figpath/task1/hourly_by_year.png}
+\caption{Equal station-month wet-reading frequency by hour and year, using
+the 95\% monthly and within-hour coverage requirements.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.96\linewidth]{\figpath/task1/rainfall_tail.png}
+\caption{Observed wet-reading tail summaries by year. These are record-level
+descriptions and are sensitive to data coverage and the finite observation
+period.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.96\linewidth]{\figpath/task1/wet_spell_patterns.png}
+\caption{Consecutive wet-reading spells at individual stations. Missing
+intervals censor spells; the figure is supplementary and does not imply
+continuous rainfall between observations.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\linewidth]{\figpath/task1/station_spatial_patterns.png}
+\caption{Supplementary station summaries for observations with usable
+coordinates. The plot is descriptive and is not an area-weighted map of
+Singapore rainfall.}
+\end{figure}
+\clearpage
+
 \section{Task 2: Thirty-minute exceedance probability}
 \subsection{Target and features}
 Each candidate is an observed station-time pair with a valid current rainfall
@@ -717,50 +765,5 @@ climatology). The analysis groups records by calendar week, but does not
 document how a one-week block length was selected from pre-test temporal
 dependence. Treat this interval as exploratory supplementary uncertainty, not
 as a definitive uncertainty estimate.
-
-\section{Additional Task 1 figures}
-The following supplementary figures are included as generated notebook
-outputs. Complete-day estimates use only station-days with all 288 readings;
-the completeness fraction is relative to all expected station-days for IDs
-appearing anywhere in the eight-year archive. Spatial summaries filter to rows
-with usable coordinate metadata.
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.96\linewidth]{\figpath/task1/complete_daily_patterns.png}
-\caption{Equal-station mean observed rainfall on complete station-days by
-year and month. Only station-days with 288 readings contribute.}
-\end{figure}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.96\linewidth]{\figpath/task1/hourly_by_year.png}
-\caption{Equal station-month wet-reading frequency by hour and year, using
-the 95\% monthly and within-hour coverage requirements.}
-\end{figure}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.96\linewidth]{\figpath/task1/rainfall_tail.png}
-\caption{Observed wet-reading tail summaries by year. These are record-level
-descriptions and are sensitive to data coverage and the finite observation
-period.}
-\end{figure}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.96\linewidth]{\figpath/task1/wet_spell_patterns.png}
-\caption{Consecutive wet-reading spells at individual stations. Missing
-intervals censor spells; the figure is supplementary and does not imply
-continuous rainfall between observations.}
-\end{figure}
-
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=0.82\linewidth]{\figpath/task1/station_spatial_patterns.png}
-\caption{Supplementary station summaries for observations with usable
-coordinates. The plot is descriptive and is not an area-weighted map of
-Singapore rainfall.}
-\end{figure}
 
 \end{document}
