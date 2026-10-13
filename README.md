@@ -57,10 +57,14 @@ deterministic 2% sample of valid training times; climatology used all valid
 training times. The detailed tables and notebook-generated figures are under
 `report/tables/full-20261012/` and `report/figures/full-20261012/`.
 
-The code applied a one-second epoch adjustment to the 1,775,327 2017 records
-whose timestamp offset was 299 seconds, while preserving the source timestamp.
-This is an analytical assumption, not a timestamp rule confirmed by NEA. The
-report describes its effect and the remaining uncertainty.
+Early 2017 records use a systematic five-minute timestamp convention ending
+at second 59; later 2017 records and 2018–2024 records use second 00. The same
+`:59` convention is present in the official 2016 dataset, which was not used
+in this analysis. For analytical alignment, the run advanced the 1,775,327
+early-2017 records with offset 299 seconds by one second to the corresponding
+five-minute boundary, while retaining their source timestamps. The publisher
+does not document the semantic reason for the convention change, so this is
+an alignment choice rather than a confirmed interpretation of the interval.
 
 The saved Spark model, calibrator and climatology artifacts are under
 `artifacts/models/20261012-full-02/`. A fresh Spark 3.5.3 session loaded these

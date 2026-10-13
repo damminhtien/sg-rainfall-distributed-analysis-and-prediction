@@ -1,6 +1,6 @@
 # DSA5208 Project 2 — trạng thái hiện hành
 
-Cập nhật ngày **12/10/2026**. Bài cá nhân: **DAM MINH TIEN — A0355091E**.
+Cập nhật ngày **13/10/2026**. Bài cá nhân: **DAM MINH TIEN — A0355091E**.
 Đây là checklist thực tế cho bốn notebook hiện hành; `TASK_SPEC.md` giữ lại
 đặc tả và nhật ký cũ để tham khảo. Không coi thiết kế dự kiến là kết quả đã chạy.
 
@@ -21,10 +21,13 @@ Cập nhật ngày **12/10/2026**. Bài cá nhân: **DAM MINH TIEN — A0355091E
 - [x] Task 1 đủ tám năm. Wet-reading frequency theo năm từ 1.94% (2019) đến
   3.20% (2023); common annual station cohort rỗng ở cả ngưỡng coverage 90%,
   95% và 99%, nên không kết luận annual trend trên fixed network.
-- [x] Đã xem phân phối timestamp trước cleaning. Năm 2017 có 1,775,327 dòng
-  offset 299 giây; run dịch **epoch phân tích** thêm 1 giây cho block đó và
-  giữ nguyên timestamp nguồn. Đây là giả định chưa được publisher xác nhận,
-  cần nêu trong report.
+- [x] Đã xem phân phối timestamp trước cleaning. Block đầu năm 2017 dùng quy
+  ước timestamp mỗi 5 phút kết thúc ở giây 59; các bản ghi 2017 về sau và
+  2018–2024 dùng giây 00. Quy ước `:59` cũng có trong bộ dữ liệu 2016 chính
+  thức, nhưng 2016 không nằm trong phân tích. Run dịch **epoch phân tích** của
+  1,775,327 bản ghi 2017 có offset 299 giây tiến 1 giây tới biên 5 phút và giữ
+  timestamp nguồn. Publisher không giải thích ý nghĩa của thay đổi quy ước;
+  đây là lựa chọn căn chỉnh, không phải xác nhận ngữ nghĩa interval.
 - [x] Task 2: train 2017–2022; model selection Jan–Jun 2023; calibration Jul–Dec
   2023; holdout 2024. Đã chọn `gbt_B` trên selection, hiệu chuẩn isotonic,
   rồi chỉ so sánh model được chọn với climatology trên holdout.
@@ -81,9 +84,11 @@ unbiased validation score. Holdout 2024 không được dùng để tune sau tes
 
 ## Những giới hạn cần giữ trong report
 
-- Timestamp được hiểu theo interval-end convention như một giả định; định nghĩa
-  timestamp chưa được NEA xác nhận. Riêng block offset 299 năm 2017 được dịch
-  epoch +1 giây như mô tả ở trên.
+- Cách hiểu timestamp là thời điểm kết thúc interval vẫn là giả định; NEA chưa
+  xác nhận ngữ nghĩa timestamp. Block `:59` đầu năm 2017 được dịch epoch phân
+  tích +1 giây để căn chỉnh với biên 5 phút; timestamp nguồn được giữ nguyên.
+  Quy ước `:59` cũng có trong dữ liệu 2016 chính thức, còn lý do publisher đổi
+  sang `:00` không được công bố.
 - Dữ liệu lưu trữ là retrospective. Không tái dựng thời điểm các revision lần
   đầu xuất hiện; không tuyên bố hiệu năng real-time.
 - Missing current observation nằm ngoài prediction contract. Dự đoán chỉ tại

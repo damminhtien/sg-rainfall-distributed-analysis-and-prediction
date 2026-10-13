@@ -1,14 +1,15 @@
 # Report status — Singapore Rainfall Analysis and Prediction
 
-Updated 12 October 2026. The final report source is `main.tex`; it describes
+Updated 13 October 2026. The final report source is `main.tex`; it describes
 the measured run `20261012-full-02`, not the earlier `full-01` draft. The cover
 and PDF metadata use the exact project title from the assignment.
 
 ## Completed sections
 
 - Abstract and assignment scope.
-- Data source, cleaning counts, coverage rules and the 2017 one-second epoch
-  adjustment, stated as an unverified analytical assumption.
+- Data source, cleaning counts, coverage rules and the early-2017 `:59`
+  timestamp convention, its one-second analytical alignment, and the
+  publisher's undocumented reason for the later `:00` convention.
 - Task 1 annual, monthly and hourly findings for 2017–2024, including the
   empty common annual station cohort and notebook-generated figures.
 - Task 2 target, features, temporal partitions, model comparison, calibration,

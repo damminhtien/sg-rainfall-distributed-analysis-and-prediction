@@ -98,15 +98,19 @@ interval-end convention treats a reading at time $t$ as rainfall accumulated
 over $(t-5\text{ min},t]$; this is an analysis assumption, not an NEA-confirmed
 timestamp definition.
 
-Before cleaning, the notebook displayed the timestamp-offset distribution.
-All 2018--2024 records had zero seconds modulo 300. In 2017, 3,480,779 records
-had offset 0 and 1,775,327 had offset 299. The offset-299 records occur in the
-early 2017 timestamp block; later 2017 records use offset 0. For the analytical
-epoch only, the run advances those 1,775,327 records by one second. The raw
-timestamp remains in the cleaned output. This correction aligns the early
-block to the observed five-minute boundary but is not documented by the
-dataset publisher, so it remains a limitation of the time interpretation.
-Other off-grid offsets were not accepted.
+Before cleaning, the notebook displayed a systematic timestamp convention in
+the source data: early 2017 records use five-minute timestamps ending at second
+59, whereas later 2017 records and all 2018--2024 records use second 00. The
+same \texttt{:59} convention is present in the official 2016 dataset,
+which was not used in this analysis~\cite{nea}. In 2017, 3,480,779 timestamps
+were on the five-minute boundary and 1,775,327 were one second before it. For
+analytical alignment, the run
+advanced the early \texttt{:59} timestamps by one second to the corresponding
+five-minute boundary and retained the original timestamps in the cleaned
+data.
+The dataset publisher does not document the semantic reason for the convention
+change, so this normalization is an alignment choice rather than confirmation
+of the interval's meaning. Other off-grid offsets were not accepted.
 
 Rows were checked for parse errors, missing station IDs, invalid timestamps,
 invalid rainfall, negative rainfall, date/year mismatches, reading type and
@@ -604,9 +608,12 @@ evaluated on identical 2024 rows, this training-budget difference is part of
 the comparison. Parameter tuning and final selection both used January--June
 2023. The selected candidate's score must not be described as an unbiased
 validation score or as generalisation performance. The 2024 holdout remains
-untouched by post-test tuning. Finally, the one-second 2017 epoch correction
-affects the interpretation of those early timestamps and
-should be revisited if authoritative timestamp semantics become available.
+untouched by post-test tuning. The early-2017 \texttt{:59} timestamps were
+advanced one second for analytical alignment, with the source timestamps
+retained. The publisher does not document the semantic reason for the later
+\texttt{:00} convention;
+the normalization therefore remains an alignment choice, not a verified
+interpretation of the interval.
 
 \section{Reproducibility and conclusion}
 The completed science run is \texttt{\runid}, with repository commit
