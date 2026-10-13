@@ -53,74 +53,56 @@
 \hypersetup{pageanchor=true}
 \pagenumbering{roman}
 \section*{Abstract}
-This project analyses eight annual files of Singapore five-minute rainfall
-observations from 2017 to 2024 using Apache Spark. Task 1 describes within-year
-and across-year patterns with coverage-based denominators. Wet-reading
-frequency ranged from 1.94\% in 2019 to 3.20\% in 2023; among station-months
-with at least 95\% observation coverage, mean observed monthly rainfall ranged
-from 31.97 to 419.07~mm. Mean conditional intensity ranged from 0.58 to
-1.35~mm across eligible monthly summaries. No station met the 90\%
-annual-coverage rule in all eight years, limiting fixed-network comparisons.
-Task 2 predicts whether
-the next six complete readings exceed a rainfall threshold. A gradient-boosted
-tree with same-station history features was selected on the first half of 2023
-and calibrated on the second half. On the 2024 holdout, its calibrated
-0.5-mm result had PR-AUC 0.6345 and Brier score 0.01952, compared with 0.0732
-and 0.03436 for the climatology baseline, on 6,374,476 valid prediction times.
-Model fitting used a deterministic 2\% sample of valid training times, while
-the baseline used all valid training times. Results describe retrospective
-prediction at observed timestamps; they do not establish real-time
-availability or generalisation to future sensor deployments.
+This report analyses NEA five-minute rainfall records from 2017 to 2024. Wet-
+reading frequency ranged from 1.94\% to 3.20\%. Among station-months with at
+least 95\% coverage, mean observed monthly rainfall ranged from 31.97 to
+419.07~mm and conditional wet intensity from 0.58 to 1.35~mm. No station met
+the 90\% annual-coverage rule in all eight years, so annual differences reflect
+a changing network. For Task 2, a same-station history GBT was selected on
+January--June 2023 and calibrated on July--December. On 6,374,476 valid 2024
+prediction times at the 0.5-mm threshold, it achieved PR-AUC 0.6345 and Brier
+score 0.01952, compared with 0.0732 and 0.03436 for the climatology baseline.
+The model used a deterministic 2\% training sample; the baseline used all
+training times. These are retrospective event-time results and do not establish
+real-time data availability or performance on future station networks.
 
 \tableofcontents
 \clearpage
 \pagenumbering{arabic}
 
 \section{Introduction}
-The assignment asks for rainfall-pattern analysis within and across years and
-a Spark MLlib model for short-horizon rainfall prediction. This report follows
-those two tasks. It uses the National Environment Agency's Historical Rainfall
-across Singapore collection, whose records are timestamped in Singapore Time.
-The catalog warns that records may be missing and have not undergone the
-quality-control procedures used for climate records~\cite{nea}.
+The report uses the National Environment Agency's Historical Rainfall across
+Singapore collection, timestamped in Singapore Time. The catalog warns that
+records may be missing and have not undergone climate-record quality control~\cite{nea}.
 
-The analysis processes one annual CSV for each year from 2017 through 2024.
-Task 1 uses all eight years for descriptive summaries. Task 2 uses calendar
-splits: 2017--2022 for training, January--June 2023 for model and parameter
-selection, July--December 2023 for optional calibration, and 2024 for the final
-holdout. Descriptive 2024 results from Task 1 were not used to select Task 2
-models.
+Task 1 describes all eight years. Task 2 uses 2017--2022 for training,
+January--June 2023 for model selection, July--December for calibration, and
+2024 for final evaluation. Task 1's 2024 summaries were not used to select the
+forecasting model.
 
 \section{Data and cleaning}
 \subsection{Input and timestamp handling}
-The frozen manifest lists eight files, their sizes, schemas, row counts and
-SHA-256 digests. The files contain 48,538,713 rows and 12 columns. The rainfall
-field is the NEA reading type \texttt{TB1 Rainfall 5 Minute Total F}, in
-millimetres. The original download time was not recorded. The project's
+The frozen manifest records eight annual files, their schemas, row counts and
+SHA-256 digests. They contain 48,538,713 rows and 12 columns. The rainfall field
+is NEA reading type \texttt{TB1 Rainfall 5 Minute Total F}, in millimetres. The
+download time was not recorded. The project's
 interval-end convention treats a reading at time $t$ as rainfall accumulated
 over $(t-5\text{ min},t]$; this is an analysis assumption, not an NEA-confirmed
 timestamp definition.
 
-Before cleaning, the notebook displayed a systematic timestamp convention in
-the source data: early 2017 records use five-minute timestamps ending at second
-59, whereas later 2017 records and all 2018--2024 records use second 00. The
-same \texttt{:59} convention is present in the official 2016 dataset,
-which was not used in this analysis~\cite{nea}. In 2017, 3,480,779 timestamps
-were on the five-minute boundary and 1,775,327 were one second before it. For
-analytical alignment, the run
-advanced the early \texttt{:59} timestamps by one second to the corresponding
-five-minute boundary and retained the original timestamps in the cleaned
-data.
-The dataset publisher does not document the semantic reason for the convention
-change, so this normalization is an alignment choice rather than confirmation
-of the interval's meaning. Other off-grid offsets were not accepted.
+Early 2017 records systematically end at second 59; later 2017 and 2018--2024
+records end at second 00. The same \texttt{:59} convention appears in the
+official 2016 dataset, which was not used here~\cite{nea}. In 2017, 3,480,779
+timestamps fell on five-minute boundaries and 1,775,327 fell one second before
+them. The early \texttt{:59} values were advanced one second for alignment, and
+the source timestamps were retained. The publisher does not document the
+convention change's meaning, so this is an alignment choice; other off-grid
+offsets were rejected.
 
-Rows were checked for parse errors, missing station IDs, invalid timestamps,
-invalid rainfall, negative rainfall, date/year mismatches, reading type and
-unit. Duplicate station-time keys were resolved deterministically. Coordinates
-are not required for the rainfall modelling data; they are filtered only for
-the supplementary spatial summary. Missing readings remain gaps and are never
-filled with zero.
+Validation covered parsing, station IDs, timestamps, nonnegative rainfall,
+date/year, reading type and unit. Duplicate station-time keys were resolved
+deterministically. Coordinates were used only for the supplementary spatial
+summary. Missing readings remain gaps and were not filled with zero.
 
 \begin{table}[htbp]
 \centering\small
@@ -179,11 +161,10 @@ anywhere in 2017--2024 as its denominator, so it reflects both recording
 completeness and changes in station availability.
 
 \subsection{Computing Environment and Distributed Execution}
-For run \texttt{\runid}, the analysis notebooks ran through the Dataproc
-Jupyter interface, with rainfall data, outputs and Spark event logs stored in
-Google Cloud Storage (GCS). The two completed event logs summarized below
-record executors on both worker hosts and hundreds of successful tasks across
-multiple stages.
+For run \texttt{\runid}, notebooks ran through Dataproc Jupyter; rainfall data,
+outputs and Spark event logs were stored in Google Cloud Storage (GCS). The two
+completed event logs below record executors on both worker hosts and successful
+tasks across multiple stages.
 
 \textbf{Architecture.} The notebook interface submitted Spark work to the
 Dataproc master; Spark executors processed partitions on the worker nodes and
@@ -211,9 +192,9 @@ used by the completed applications in Table~\ref{tab:spark-job-evidence}.
 \end{tikzpicture}
 \end{center}
 
-The project ran distributed Spark workloads on a multi-worker Dataproc
-cluster; it did not conduct a controlled scaling study, so the analytical and
-predictive results do not establish linear scalability.
+The project used distributed Spark execution on a multi-worker Dataproc
+cluster. It did not conduct a scaling study, so these results do not establish
+linear scalability.
 
 \begin{table}[htbp]
 \centering\small
@@ -237,21 +218,14 @@ Development interface & Jupyter Notebook on the Dataproc cluster \\
 \end{table}
 
 \pagebreak
-On this multi-worker run, Spark read the eight annual source files
-(48,538,713 rows), checked and filtered measurements, and resolved duplicate
-records for the same station and time. It computed Task 1 rainfall and
-coverage summaries. For Task 2, Spark built exact-time rainfall lags and
-rolling sums, maxima, wet counts and coverage, together with temporal
-predictors. It summed the next six five-minute readings, excluded targets
-whose future windows crossed a split boundary, and created examples for each
-rainfall threshold. Spark MLlib fitted logistic regression, random forest and
-gradient-boosted tree candidates; Spark scored the selection, calibration and
-2024 holdout records and computed their evaluation summaries. Only compact
-grouped summaries and score bins were collected for charts; prediction-level
-scores remained in Spark and were saved in Google Cloud Storage.
-
-Two completed Spark event logs provide direct execution evidence
-(Table~\ref{tab:spark-job-evidence}).
+Spark validated and deduplicated 48.54 million readings, computed grouped Task 1
+summaries, built Task 2 exact-time lags, rolling features and six-reading
+targets, expanded examples by threshold, then fit MLlib candidates and scored
+selection, calibration and 2024 data. Logs show distributed scan and feature-
+generation stages with exchanges and shuffle. Only grouped summaries and score
+bins were collected for plotting; prediction-level scores remained in Spark and
+were saved to GCS. Table~\ref{tab:spark-job-evidence} reports the two completed
+event logs.
 
 \begin{table}[htbp]
 \centering\footnotesize
@@ -286,11 +260,6 @@ The retained event logs for model fitting and final scoring lack a terminal
 application-end event, so their application-wide task totals and runtimes are
 not reported here. The source event logs are
 \url{gs://sg-rainfall-dsa5208-261011-data/spark-history/}.
-
-The application IDs are:
-
-{\small \texttt{application\_1791792408578\_0003};
-\texttt{application\_1791792408578\_0008}.}
 
 \section{Task 1: Rainfall patterns}
 \subsection{Across-year distribution}
@@ -405,19 +374,12 @@ found no obvious replacements or co-located IDs.
 \centering
 \includegraphics[width=0.86\linewidth]{\figpath/task1/coverage_heatmap.png}
 \caption{Annual valid-slot coverage by station from 2017 through 2024. Blank
-cells represent a station-year with no retained observations. The common
-annual cohort was empty at the configured 90\%, 95\% and 99\% cutoffs.}
+cells represent a station-year with no retained observations.}
 \label{fig:coverage}
 \end{figure}
 
 \clearpage
 \subsection{Additional descriptive views}
-These supplementary views extend the distribution, daily and hourly
-comparisons. Complete-day estimates include only station-days with all 288
-readings. The completeness fraction is relative to expected station-days for
-IDs observed anywhere in 2017--2024. Missing intervals can interrupt observed
-wet spells. Spatial summaries include only records with usable coordinates
-and are not area-weighted estimates of Singapore rainfall.
 
 \begin{figure}[htbp]
 \centering
@@ -481,26 +443,21 @@ and missing rainfall is not replaced by zero. An observed zero contributes
 zero, and equality to $\tau$ is a non-exceedance. Forecasts without a current
 observation are outside the prediction task.
 
-The selected history model uses 36 numerical predictors describing cyclic
-calendar time, the threshold and current and earlier same-station rainfall.
-The six future readings define only the outcome; predictor rainfall and
-calendar values are anchored at or before $t$. Current rainfall is measured at
-$t$, while the history summaries look backward. The archived data do not
-establish when each value first became available, so this is an event-time
-retrospective analysis rather than a verified real-time forecast. Station
-identity is a separate categorical predictor, indexed and one-hot encoded with
-Spark MLlib. The resulting station indicators are combined with the 36
-numerical predictors to form the model input~\cite{mllib}.
-Logistic regression uses standardized inputs; random forest and
-gradient-boosted trees use the same inputs without standardization.
-
-An unseen station is assigned to a reserved category that remains represented
-in the encoded predictors. Because this category has no training observations,
-the model cannot learn a station-specific effect for it. Calendar predictors
-and any available same-station rainfall history remain usable, but the
-time-based holdout does not measure performance at stations absent from
-training. Station coordinates and future rainfall are excluded from the
-predictors.
+The selected history model has 36 numerical predictor columns for cyclic time,
+threshold and current or earlier same-station rainfall. All predictor
+information is anchored at or before $t$; the six future readings define only
+the outcome. The archive does not show when revised readings became available,
+so this is a retrospective event-time analysis, not a verified real-time
+forecast. Station ID is treated as categorical: StringIndexer and OneHotEncoder
+keep invalid values, and OneHotEncoder does not drop the final category
+(\texttt{dropLast=False}). VectorAssembler joins the station vector with the 36
+numerical columns~\cite{mllib}. An unseen station maps to a retained category,
+but the model has no training examples from which to learn its station-specific
+effect. Calendar features and available rainfall history still contribute; the
+time-based holdout does not estimate transfer to unseen stations. Logistic
+regression uses standardized inputs; random forest and gradient-boosted trees
+use the assembled inputs without standardization. Coordinates and future
+rainfall are excluded from the predictors.
 
 \begin{table}[htbp]
 \centering\small
@@ -545,46 +502,30 @@ Boundary-purged & Split edges & 1,200 & 380 \\
 \end{tabular}
 \end{table}
 
-The climatology baseline groups valid windows by station, calendar month and
-hour of day, using only the complete 2017--2022 training partition. For each
-threshold, it estimates the fraction whose next-30-minute total is strictly
-greater than that threshold; equality is negative. The station-month-hour
-rate is shrunk toward the month-hour rate, then toward the overall rate, with
-a smoothing weight of 100 windows at each step. No minimum cell support is
-imposed; an unseen station-month-hour cell, including one for a station absent
-from training, uses the month-hour rate, and an unseen month-hour uses the
-overall rate. No 2023 or 2024 outcomes enter these rates. A separate rule
-retains thresholds with at least 100 positive and one negative training
-window; it does not filter cells. The baseline is a comparator, not an ML
-feature.
-MLlib models use a deterministic 2\% sample of valid training
-windows: 690,699 base times before threshold expansion. The pilot used 173,478
-base times (approximately 0.5\%). Parameter pilots compared four logistic
-regression settings, three random-forest settings and four gradient-boosted
-tree settings. The best pilot settings were LR regularisation 0.01, RF with 50
-trees and depth 8, and GBT with depth 4 and 40 iterations.
+Using only 2017--2022, the climatology baseline estimates strict exceedance
+rates by station, month, hour and threshold. It shrinks each station-month-hour
+rate toward its month-hour rate, then the overall rate, using 100 windows per
+step. Cells have no minimum support: unseen station-month-hour combinations
+use the month-hour rate, and unseen month-hour combinations use the overall
+rate. Thresholds with fewer than 100 positive or fewer than one negative
+training window are excluded. No 2023 or 2024 outcomes enter the baseline.
 
-Jan--Jun 2023 is the model-selection set, not an independent generalisation
-set. It was used both to select pilot settings and to compare the final
-candidates. The selected candidate's score is therefore optimistic and must
-not be presented as an unbiased validation score or an independent estimate
-of generalisation.
-The Jul--Dec 2023 period was used for calibration after candidate selection;
-2024 was reserved for the final evaluation.
+ML candidates used a deterministic 2\% sample of valid training times; the
+baseline used all valid training times. The selected GBT-B used depth 4 and 40
+iterations. July--December 2023 was used to fit its isotonic calibration, and
+2024 was reserved for final evaluation.
 
 \subsection{Model selection}
-Model selection used mean PR-AUC across the six supported thresholds as the primary
-criterion, with mean Brier score as the tie-breaker within configured
-tolerances. LR and GBT were assessed with feature sets A and B; RF used B.
-Adding current and same-station rainfall history increased mean selection
-PR-AUC from 0.0488 to 0.4852 for LR and from 0.0573 to 0.5266 for GBT.
-Among the history-feature candidates, GBT-B ranked above RF-B and LR-B.
+Mean PR-AUC across the six primary thresholds ranked the candidates, with mean
+Brier score as a tie-breaker. LR and GBT were assessed with feature sets A and
+B; RF used B. Adding rainfall history increased mean selection PR-AUC from
+0.0488 to 0.4852 for LR and from 0.0573 to 0.5266 for GBT. GBT-B ranked above
+RF-B and LR-B among the history-feature candidates.
 
 \begin{table}[htbp]
 \centering\small
 \caption{Mean model-selection metrics across the six primary thresholds on
-January--June 2023. A and B are defined in the text; these are model-selection
-scores, not independent generalisation estimates. Higher PR-AUC and lower
+January--June 2023. A and B are defined in the text. Higher PR-AUC and lower
 Brier score are preferred.}
 \label{tab:selection}
 \begin{tabularx}{\linewidth}{l X r r}
@@ -601,20 +542,14 @@ GBT-B & B & 0.5266 & 0.01554 \\
 \end{tabularx}
 \end{table}
 
-Feature set A comprises station identity, cyclic hour-of-day and day-of-year
-features, and rainfall threshold. B adds current rainfall, exact same-station
-lags and missingness indicators, rolling totals, maxima, wet counts, counts,
-and coverage.
-For the GBT ablation, mean PR-AUC increased from 0.0573 to 0.5266 and mean
-Brier score decreased from 0.02606 to 0.01554. Because January--June 2023 was
-also used for parameter and candidate selection, this comparison is
-descriptive rather than an independent estimate of generalisation.
-
-GBT-B was selected with maximum depth 4 and 40 iterations. Its selection
-expected calibration error (ECE) was 0.02259, above the configured 0.01
-calibration trigger. An isotonic mapping was fitted using July--December 2023.
-The classification cutoff was fixed at 0.5 for reference F1; it was not
-optimized.
+Feature set A uses station, cyclic time and threshold. B adds current and
+historical same-station rainfall, including missingness and window-support
+summaries. For GBT, B raised mean PR-AUC from 0.0573 to 0.5266 and lowered mean
+Brier score from 0.02606 to 0.01554. January--June 2023 was used both for pilot
+parameter selection and candidate comparison, so these are selection scores,
+not independent generalisation estimates. Selection ECE was 0.02259, above the
+preconfigured 0.01 calibration trigger; isotonic calibration was fit on
+July--December. The 0.5 cutoff for reference F1 was fixed, not tuned.
 
 \subsection{Feature-family explanation}
 The selected Spark GBT's normalized split importance was grouped using the
@@ -631,8 +566,7 @@ themselves, and zero station importance here is not a station-ablation result.
 \centering
 \includegraphics[width=0.92\linewidth]{\figpath/task2/feature_family_importance.png}
 \caption{Normalized, gain-weighted Spark GBT split importance aggregated by
-feature family across the 40 trees in the selected GBT-B model. Importance
-summarizes predictive splits, not causal effects.}
+feature family across the 40 trees in the selected GBT-B model.}
 \label{fig:feature-family-importance}
 \end{figure}
 
@@ -662,25 +596,19 @@ of 0.5 and was not used for model selection.}
 \end{tabular}
 \end{table}
 
-At the 0.5-mm threshold, calibrated GBT-B increased PR-AUC from 0.0732 to
-0.6345 and reduced Brier score from 0.03436 to 0.01952. The positive fraction
-was 3.62\%, so PR-AUC is more informative than accuracy for this imbalanced
-target and was the primary ranking metric; Brier score summarized probability
-error. At the fixed probability cutoff of 0.5, GBT-B precision was 0.812,
-recall was 0.471, and F1 was 0.596. The baseline made no positive predictions
-at that cutoff, giving zero recall and undefined precision and F1. Across all
-threshold rows, the paired mean Brier difference
-(GBT-B minus climatology) was $-0.00878$.
+At 0.5~mm, calibrated GBT-B increased PR-AUC from 0.0732 to 0.6345 and reduced
+Brier score from 0.03436 to 0.01952; positive prevalence was 3.62\%. At the
+fixed 0.5 probability cutoff, precision was 0.812, recall 0.471 and F1 0.596.
+The baseline predicted no positives at this cutoff. Its precision and F1 are
+undefined, and recall is zero. Across the six thresholds, the paired mean
+Brier difference (GBT-B minus climatology) was $-0.00878$.
 
-Pooled over the six primary thresholds on the 2024 holdout, ECE was 0.00172 for
-calibrated GBT-B and 0.00142 for the baseline. Calibration improved the
-selected model's probability reliability relative to its selection-period
-trigger, but its held-out ECE was slightly higher than the baseline. The
-observed monotonicity violation rate across the
-six primary thresholds was 0.0121\%; across the five intermediate thresholds
-it was 0.0151\%. The largest upward probability increase between adjacent
-thresholds was 0.299. The calibrated probabilities are therefore not
-perfectly ordered for every threshold pair.
+Across the six primary thresholds, holdout ECE was 0.00172 for calibrated
+GBT-B and 0.00142 for the baseline. Threshold monotonicity violations affected
+0.0121\% of primary-threshold predictions and 0.0151\% of intermediate-
+threshold predictions; the largest adjacent upward probability difference
+was 0.299. Thus, calibrated probabilities were not perfectly ordered across
+thresholds.
 
 \begin{figure}[htbp]
 \centering
@@ -691,75 +619,30 @@ generated from the scored test predictions.}
 \label{fig:holdout}
 \end{figure}
 
-The notebook also evaluated five intermediate thresholds (0.3, 0.75, 1.5,
-3.5 and 7.5~mm) on the same holdout. These results assess interpolation within
-the configured threshold domain; they are not a second test cohort. Their
-PR-AUC values ranged from 0.3407 to 0.6568. The full per-threshold outputs are
-retained with the run tables.
+Five intermediate thresholds on the same 2024 cohort had PR-AUC values from
+0.3407 to 0.6568. They describe interpolation within the tested threshold
+range, not a separate test cohort.
 
 \section{Discussion and limitations}
-The descriptive summaries show a pronounced afternoon increase in wet-reading
-frequency and substantial variation across months and years. The 95\%
-coverage rule limits the influence of partial station-months, but eligibility
-still varies by month. The absence of a common station cohort across all eight
-years prevents a direct fixed-network annual comparison. Annual differences
-should be read as differences in the available records, not as a climate trend.
+No station met the 90\% annual-coverage rule in every year, so annual
+differences describe a changing network and do not establish a climate trend.
+Archived timestamps do not establish when revised readings became available,
+so the results are not verified real-time forecasts.
 
-The selected history-feature GBT improved PR-AUC and Brier score over the
-climatology baseline on the 2024 observed-station/time cohort. The evaluation
-does not establish transfer to stations absent from training or to future
-operational conditions. The archive is retrospective and contains update
-timestamps; this project does not reconstruct when revised readings first
-became available. It assumes instantaneous availability at the recorded event
-time. Missing current readings are outside the prediction contract.
+The ML models used a 2\% training sample while the baseline used all valid
+training times; the comparison therefore reflects different training-data
+budgets.
 
-Supervised ML fitting used a 2\% deterministic sample, while the climatology
-baseline used the complete valid training partition. Although both models were
-evaluated on identical 2024 rows, this training-budget difference is part of
-the comparison. Parameter tuning and final selection both used January--June
-2023. The selected candidate's score must not be described as an unbiased
-validation score or as generalisation performance. The 2024 holdout remains
-untouched by post-test tuning. The early-2017 \texttt{:59} timestamps were
-advanced one second for analytical alignment, with the source timestamps
-retained. The publisher does not document the semantic reason for the later
-\texttt{:00} convention;
-the normalization therefore remains an alignment choice, not a verified
-interpretation of the interval.
-
-\section{Reproducibility and conclusion}
-The completed science run is \texttt{\runid}, with repository commit
-\texttt{ea454b3}. Its input hashes are:
-\begin{quote}\small\ttfamily
-Experiment config SHA-256:\\
-daeebb8814a3157e3347ecceb152b7e48\\
-c47310df1071b7dca08d9622c0d62d6\\
-Input manifest SHA-256:\\
-41080cf58fc68f899c06145d573620b6\\
-1777bbcc3b13d90c69020a6dcd790688
-\end{quote}
-Cleaning, feature generation and training/evaluation outputs are retained in
-the local executed notebooks and under the run's GCS prefix. The saved figures
-in this report are the PNG files produced by notebook code and downloaded from
-that run, rather than hand-drawn or Markdown-embedded charts.
-
-The 2024 selected model, isotonic calibrator, climatology tables and selected
-manifest were downloaded as a 2.6-MB Spark model tree. A fresh Spark 3.5.3
-session loaded the five-stage GBT pipeline, isotonic calibrator, all three
-climatology tables and the selected-model manifest. One 2024 sample at the
-0.5-mm threshold produced a raw probability of 0.02882 and calibrated
-probability of 0.02590. This was a serialization and one-row inference check,
-not a rerun of the 2024 metrics. Its temporary single-node cluster was deleted
-after the job; the validation record is included with the run tables. Notebook
-00 was used for cloud setup, but its local notebook file has no saved execution
-outputs; notebooks 01--03 each have saved successful cell outputs.
-
-Task 1 found that wet-reading frequency varied from 1.94\% to 3.20\%, with
-the common annual station cohort empty under the configured coverage rules.
-Task 2 selected a history-feature GBT-B model and improved 2024 PR-AUC and
-Brier score over the climatology baseline at every tested primary threshold.
-The results describe retrospective predictions at observed timestamps with
-complete future windows; the archive does not establish real-time data
-availability.
+\section{Conclusion}
+Wet-reading frequency ranged from 1.94\% to 3.20\% across 2017--2024, and the
+hourly peak occurred between 15:00 and 16:00 SGT in every year. For the 0.5-mm
+Task 2 threshold, calibrated GBT-B achieved PR-AUC 0.6345 and Brier score
+0.01952, compared with 0.0732 and 0.03436 for the climatology baseline. It had
+higher PR-AUC and lower Brier score at each primary threshold. Run
+\texttt{\runid} (commit \texttt{ea454b3}) produced these results; its input
+manifest, configuration, notebooks and outputs are retained with the run.
+Conclusions apply to retrospective records with complete future windows, not
+to verified real-time availability or future station networks.
 
 \section*{AI usage declaration}
 I used OpenAI Codex (GPT-6) to assist with project planning, notebook and Spark
@@ -826,14 +709,11 @@ executor's input and shuffle read/write.}
 
 \clearpage
 \section{Supplementary Task 2 uncertainty analysis}
-The paired Brier difference was also summarized with a calendar-week
-bootstrap. Squared-error differences were paired for the same station, time
-and rainfall threshold, then aggregated by calendar week across stations and
-thresholds. Resampling the 53 weeks with replacement 1,000 times gave a 95\%
-interval of $[-0.01089,-0.00672]$ for the pooled mean difference (GBT-B minus
-climatology). The analysis groups records by calendar week, but does not
-document how a one-week block length was selected from pre-test temporal
-dependence. Treat this interval as exploratory supplementary uncertainty, not
-as a definitive uncertainty estimate.
+An exploratory calendar-week bootstrap paired squared-error differences for
+the same station, time and threshold, then resampled the 53 weeks 1,000 times.
+The 95\% interval for the pooled mean difference (GBT-B minus climatology) was
+$[-0.01089,-0.00672]$. The one-week block length was not selected from a
+pre-test dependence analysis, so this interval is supplementary rather than a
+definitive uncertainty estimate.
 
 \end{document}
