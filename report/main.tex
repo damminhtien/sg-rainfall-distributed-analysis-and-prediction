@@ -462,9 +462,18 @@ Boundary-purged & Split edges & 1,200 & 380 \\
 \end{tabular}
 \end{table}
 
-The climatology baseline uses outcomes from valid 2017--2022 training windows
-only. It estimates station-month-hour exceedance probabilities with smoothed
-broader-level fallbacks and serves as a comparison rather than an ML feature.
+The climatology baseline groups valid windows by station, calendar month and
+hour of day, using only the complete 2017--2022 training partition. For each
+threshold, it estimates the fraction whose next-30-minute total is strictly
+greater than that threshold; equality is negative. The station-month-hour
+rate is shrunk toward the month-hour rate, then toward the overall rate, with
+a smoothing weight of 100 windows at each step. No minimum cell support is
+imposed; an unseen station-month-hour cell, including one for a station absent
+from training, uses the month-hour rate, and an unseen month-hour uses the
+overall rate. No 2023 or 2024 outcomes enter these rates. A separate rule
+retains thresholds with at least 100 positive and one negative training
+window; it does not filter cells. The baseline is a comparator, not an ML
+feature.
 MLlib models use a deterministic 2\% sample of valid training
 windows: 690,699 base times before threshold expansion. The pilot used 173,478
 base times (approximately 0.5\%). Parameter pilots compared four logistic
