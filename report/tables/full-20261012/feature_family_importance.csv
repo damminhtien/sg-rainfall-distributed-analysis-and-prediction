@@ -1,0 +1,12 @@
+feature_family,normalized_importance,internal_split_count
+Current rainfall,0.4502133249,79
+Threshold,0.2340368916,173
+Rolling maxima,0.1026624978,62
+Rolling totals,0.1023799030,62
+Wet-count persistence,0.0587437203,72
+Time of day,0.0309279337,96
+Short lags,0.0147864484,36
+Seasonal cycle,0.0058675229,19
+Longer lags,0.0003817575,1
+Station identity,0.0000000000,0
+Window support,0.0000000000,0

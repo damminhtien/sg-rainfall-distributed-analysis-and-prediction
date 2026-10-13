@@ -496,36 +496,66 @@ The Jul--Dec 2023 period was used for calibration after candidate selection;
 \subsection{Model selection}
 Model selection used mean PR-AUC across the six supported thresholds as the primary
 criterion, with mean Brier score as the tie-breaker within configured
-tolerances. LR and GBT were each assessed with the base and history feature
-sets; RF used the history feature set. Adding same-station history increased
-the mean model-selection PR-AUC from 0.0488 to 0.4852 for LR and from 0.0573 to
-0.5266 for GBT. Among the common history-feature candidates, GBT-B ranked
-above RF-B and LR-B.
+tolerances. LR and GBT were assessed with feature sets A and B; RF used B.
+Adding current and same-station rainfall history increased mean selection
+PR-AUC from 0.0488 to 0.4852 for LR and from 0.0573 to 0.5266 for GBT.
+Among the history-feature candidates, GBT-B ranked above RF-B and LR-B.
 
 \begin{table}[htbp]
 \centering\small
 \caption{Mean model-selection metrics across the six primary thresholds on
-January--June 2023. Higher PR-AUC and lower Brier score are preferred.}
+January--June 2023. A and B are defined in the text; these are model-selection
+scores, not independent generalisation estimates. Higher PR-AUC and lower
+Brier score are preferred.}
 \label{tab:selection}
-\begin{tabular}{l r r}
+\begin{tabularx}{\linewidth}{l X r r}
 \toprule
-Candidate & Mean PR-AUC & Mean Brier \\
+Candidate & Feature set & Mean PR-AUC & Mean Brier \\
 \midrule
-Climatology & 0.0522 & 0.02583 \\
-LR-A & 0.0488 & 0.02616 \\
-LR-B & 0.4852 & 0.01795 \\
-RF-B & 0.5026 & 0.01677 \\
-GBT-A & 0.0573 & 0.02606 \\
-GBT-B & 0.5266 & 0.01554 \\
+Climatology & Training-only baseline & 0.0522 & 0.02583 \\
+LR-A & A & 0.0488 & 0.02616 \\
+LR-B & B & 0.4852 & 0.01795 \\
+RF-B & B & 0.5026 & 0.01677 \\
+GBT-A & A & 0.0573 & 0.02606 \\
+GBT-B & B & 0.5266 & 0.01554 \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
+
+Feature set A comprises station identity, cyclic hour-of-day and day-of-year
+features, and rainfall threshold. B adds current rainfall, exact same-station
+lags and missingness indicators, rolling totals, maxima, wet counts, counts,
+and coverage.
+For the GBT ablation, mean PR-AUC increased from 0.0573 to 0.5266 and mean
+Brier score decreased from 0.02606 to 0.01554. Because January--June 2023 was
+also used for parameter and candidate selection, this comparison is
+descriptive rather than an independent estimate of generalisation.
 
 GBT-B was selected with maximum depth 4 and 40 iterations. Its selection
 expected calibration error (ECE) was 0.02259, above the configured 0.01
 calibration trigger. An isotonic mapping was fitted using July--December 2023.
 The classification cutoff was fixed at 0.5 for reference F1; it was not
 optimized.
+
+\subsection{Feature-family explanation}
+The selected Spark GBT's normalized split importance was grouped using the
+fitted feature-vector layout~\cite{gbtimportance}. The 90 station-vector
+indices were combined as station identity; the remaining 36 numeric inputs
+were mapped in assembler order to the feature families in
+Figure~\ref{fig:feature-family-importance}. Current rainfall contributed
+45.0\% and threshold 23.4\%. No split used station identity or window-support
+features in this fitted model. This importance is predictive, not causal:
+correlated lag and rolling features can redistribute importance among
+themselves, and zero station importance here is not a station-ablation result.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\linewidth]{\figpath/task2/feature_family_importance.png}
+\caption{Normalized Spark GBT split importance aggregated by feature family
+for the selected GBT-B model. Values summarize predictive splits, not causal
+effects.}
+\label{fig:feature-family-importance}
+\end{figure}
 
 \subsection{Final 2024 holdout}
 The final evaluation compared the frozen GBT-B model after isotonic calibration
@@ -668,6 +698,10 @@ Apache Spark. \emph{Spark 3.5.3 Release Notes}.
 \bibitem{mllib}
 Apache Spark. \emph{Extracting, transforming and selecting features}, Spark
 3.5.3 documentation. \url{https://spark.apache.org/docs/3.5.3/ml-features.html}.
+
+\bibitem{gbtimportance}
+Apache Spark. \emph{GBTClassificationModel API}, Spark 3.5.3.
+\url{https://spark.apache.org/docs/3.5.3/api/scala/org/apache/spark/ml/classification/GBTClassificationModel.html}.
 \end{thebibliography}
 
 \appendix

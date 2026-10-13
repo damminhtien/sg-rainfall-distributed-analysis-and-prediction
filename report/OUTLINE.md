@@ -13,12 +13,13 @@ and PDF metadata use the exact project title from the assignment.
 - Task 1 annual, monthly and hourly findings for 2017–2024, including the
   empty common annual station cohort and notebook-generated figures.
 - Task 2 target, features, temporal partitions, model comparison, calibration,
-  2024 holdout, unseen thresholds, monotonicity and weekly-block uncertainty.
+  2024 holdout, unseen thresholds, monotonicity, weekly-block uncertainty,
+  the A/B feature-set comparison and final GBT feature-family importance.
 - Reproducibility hashes, AI-use declaration and limitations.
 
 ## Final checks
 
-- [x] Compile the 12-page report and review the table, reference and figure
+- [x] Compile the 16-page report and review the table, reference and figure
   layouts at submission size.
 - [x] Fresh Spark-session load and one-row inference succeeded; evidence is in
   `tables/full-20261012/model_reload_validation.json`.
