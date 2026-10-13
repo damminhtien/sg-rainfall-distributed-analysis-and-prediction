@@ -124,32 +124,33 @@ filled with zero.
 
 \begin{table}[htbp]
 \centering\small
-\caption{Raw and retained rainfall records by source year. The station column
-counts distinct retained station IDs within that year.}
+\caption{Rainfall records retained by source year, with exclusions separated
+into validation filters and duplicate resolution. The station column counts
+distinct retained station IDs within that year.}
 \label{tab:cleaning}
-\begin{tabular}{r r r r r}
+\begin{tabular}{r r r r r r}
 \toprule
-Year & Raw rows & Retained rows & Stations & Not retained \\
+Year & Raw rows & Retained rows & \shortstack{Validation\\filtered} & \shortstack{Duplicate\\rows} & Stations \\
 \midrule
-2017 & 5,256,106 & 5,256,020 & 62 & 86 \\
-2018 & 4,594,246 & 4,594,246 & 56 & 0 \\
-2019 & 5,026,862 & 5,026,862 & 54 & 0 \\
-2020 & 6,334,473 & 6,334,473 & 80 & 0 \\
-2021 & 7,044,646 & 7,044,646 & 76 & 0 \\
-2022 & 7,133,230 & 7,133,230 & 72 & 0 \\
-2023 & 6,742,890 & 6,742,890 & 74 & 0 \\
-2024 & 6,406,260 & 6,406,260 & 70 & 0 \\
+2017 & 5,256,106 & 5,256,020 & 0 & 86 & 62 \\
+2018 & 4,594,246 & 4,594,246 & 0 & 0 & 56 \\
+2019 & 5,026,862 & 5,026,862 & 0 & 0 & 54 \\
+2020 & 6,334,473 & 6,334,473 & 0 & 0 & 80 \\
+2021 & 7,044,646 & 7,044,646 & 0 & 0 & 76 \\
+2022 & 7,133,230 & 7,133,230 & 0 & 0 & 72 \\
+2023 & 6,742,890 & 6,742,890 & 0 & 0 & 74 \\
+2024 & 6,406,260 & 6,406,260 & 0 & 0 & 70 \\
 \midrule
-Total & 48,538,713 & 48,538,627 & --- & 86 \\
+Total & 48,538,713 & 48,538,627 & 0 & 86 & --- \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The raw audit found zero malformed rows, missing-station rows, invalid
-timestamps and invalid rainfall values. The final saved exclusion summary
-groups the 86 non-retained 2017 rows as filtered or duplicate records; it does
-not preserve a finer reason breakdown. The retained and excluded totals
-reconcile to the raw count.
+The row-level audit of the 2017 source file found no records rejected by
+validation. All 86 exclusions came from duplicate resolution: they shared an
+existing station-time key and the same rainfall measurement. No conflicting
+station-time key was excluded. The retained and excluded totals reconcile to
+the raw count.
 
 \subsection{Coverage definitions}
 Coverage is the count of retained five-minute readings divided by the expected
