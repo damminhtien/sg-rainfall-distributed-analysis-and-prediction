@@ -215,6 +215,48 @@ gradient-boosted tree candidates; Spark scored the selection, calibration and
 grouped summaries and score bins were collected for charts; prediction-level
 scores remained in Spark and were saved in Google Cloud Storage.
 
+Two completed Spark event logs provide direct execution evidence
+(Table~\ref{tab:spark-job-evidence}).
+
+\begin{table}[htbp]
+\centering\footnotesize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.1}
+\caption{Representative distributed Spark workloads from run \texttt{\runid}.}
+\label{tab:spark-job-evidence}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.17\linewidth}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedright\arraybackslash}p{0.14\linewidth}@{}}
+\toprule
+Workload & Input and Spark operations & Parallel execution & Shuffle / I/O & Runtime \\
+\midrule
+Raw-data scan\\App 0003, Job 0 / Stage 0 &
+8 annual CSVs; 48.54 million readings. CSV scan, filtering, aggregation and
+Exchange appear in the recorded plan. &
+2 worker nodes; executor IDs 1--3 recorded across the application. App total:
+14 jobs, 14 stages, 576 successful tasks; Stage 0: 63 tasks. &
+Stage 0 read 8.05 GB; no shuffle was recorded for this stage. &
+App: 2m50s; Stage 0: 81.4s \\
+Feature generation\\App 0008, Job 7 / Stage 9 &
+48.54 million cleaned rows. Window calculations, Exchange and Parquet output
+to \texttt{base\_features}. &
+2 worker nodes; executor IDs 1--3 recorded across the application. App total:
+13 jobs, 13 stages, 110 successful tasks; Stage 9: 26 tasks. &
+Stage 9 read 1.25 GB and wrote 1.45 GB to shuffle. &
+App: 9m08s; Stage 9: 32.4s \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Both logs include an application-end event, and every recorded job succeeded.
+The retained event logs for model fitting and final scoring lack a terminal
+application-end event, so their application-wide task totals and runtimes are
+not reported here. The source event logs are
+\url{gs://sg-rainfall-dsa5208-261011-data/spark-history/}.
+
+The application IDs are:
+
+{\small \texttt{application\_1791792408578\_0003};
+\texttt{application\_1791792408578\_0008}.}
+
 \section{Task 1: Rainfall patterns}
 \subsection{Across-year distribution}
 The annual summaries use each retained five-minute reading as one observation.
