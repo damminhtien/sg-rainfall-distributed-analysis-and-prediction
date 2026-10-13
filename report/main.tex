@@ -571,7 +571,7 @@ of 0.5 and was not used for model selection.}
 \label{tab:test}
 \begin{tabular}{r r r r r r r}
 \toprule
-\shortstack{Threshold\\(mm)} & \shortstack{Prevalence\\(\%)} & \shortstack{Baseline\\PR-AUC} & \shortstack{GBT calibrated\\PR-AUC} & \shortstack{Baseline\\Brier} & \shortstack{GBT calibrated\\Brier} & \shortstack{GBT\\F1} \\
+\shortstack{Threshold\\(mm)} & \shortstack{Positive prevalence\\(\%)} & \shortstack{Baseline\\PR-AUC} & \shortstack{GBT calibrated\\PR-AUC} & \shortstack{Baseline\\Brier} & \shortstack{GBT calibrated\\Brier} & \shortstack{GBT\\F1} \\
 \midrule
 0.2 & 4.86 & 0.0986 & 0.6617 & 0.04520 & 0.02520 & 0.5941 \\
 0.5 & 3.62 & 0.0732 & 0.6345 & 0.03436 & 0.01952 & 0.5961 \\
@@ -586,16 +586,21 @@ of 0.5 and was not used for model selection.}
 At the 0.5-mm threshold, calibrated GBT-B increased PR-AUC from 0.0732 to
 0.6345 and reduced Brier score from 0.03436 to 0.01952. The positive fraction
 was 3.62\%, so PR-AUC is more informative than accuracy for this imbalanced
-target. Across all threshold rows, the paired mean Brier difference
+target and was the primary ranking metric; Brier score summarized probability
+error. At the fixed probability cutoff of 0.5, GBT-B precision was 0.812,
+recall was 0.471, and F1 was 0.596. The baseline made no positive predictions
+at that cutoff, giving zero recall and undefined precision and F1. Across all
+threshold rows, the paired mean Brier difference
 (GBT-B minus climatology) was $-0.00878$. A bootstrap over 53 calendar-week
 blocks gave a 95\% interval from $-0.01089$ to $-0.00672$ using 1,000
 replicates. This interval describes the pooled threshold-expanded losses under
 the weekly resampling procedure.
 
-On the 2024 holdout, ECE was 0.00172 for calibrated GBT-B and 0.00142 for the
-baseline. Calibration improved the selected model's probability reliability
-relative to its selection-period trigger, but its held-out ECE was slightly
-higher than the baseline. The observed monotonicity violation rate across the
+Pooled over the six primary thresholds on the 2024 holdout, ECE was 0.00172 for
+calibrated GBT-B and 0.00142 for the baseline. Calibration improved the
+selected model's probability reliability relative to its selection-period
+trigger, but its held-out ECE was slightly higher than the baseline. The
+observed monotonicity violation rate across the
 six primary thresholds was 0.0121\%; across the five intermediate thresholds
 it was 0.0151\%. The largest upward probability increase between adjacent
 thresholds was 0.299. The calibrated probabilities are therefore not
