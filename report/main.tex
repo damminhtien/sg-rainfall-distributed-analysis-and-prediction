@@ -12,6 +12,7 @@
 \usepackage{caption}
 \usepackage{hyperref}
 \usepackage{tikz}
+\usepackage{pdflscape}
 \usetikzlibrary{positioning}
 
 \newcommand{\projecttitle}{Singapore Rainfall Analysis and Prediction}
@@ -787,7 +788,42 @@ Google Cloud. \emph{2.2.x release image versions}.
 \url{https://docs.cloud.google.com/managed-spark/docs/concepts/versioning/image-release-2.2}.
 \end{thebibliography}
 
+\clearpage
 \appendix
+\renewcommand{\thefigure}{A}
+\begin{landscape}
+\section{Spark UI execution evidence}
+These historical Spark History Server views were reconstructed from the
+retained event log for completed feature-generation application 0008. The
+executor DNS suffixes are omitted while the worker names are retained. In the
+Executors view, ``Active'' is the last status recorded in the log, not a live
+cluster state.
+
+\begin{center}
+\includegraphics[width=.95\linewidth]{figures/full-20261012/spark_ui_feature_job.png}
+\captionof{figure}{Spark Jobs detail for feature-generation application 0008,
+Job 7. Stage 9 succeeded with 26/26 tasks, 1,193.4~MiB input and 1,385.3~MiB
+shuffle write. The Executors view in Fig.~\ref{fig:spark-ui-executors} shows
+the application's executors across both workers.}
+\label{fig:spark-ui-feature-job}
+\end{center}
+\end{landscape}
+
+\clearpage
+\renewcommand{\thefigure}{B}
+\begin{landscape}
+\thispagestyle{plain}
+\begin{center}
+\includegraphics[width=.92\linewidth]{figures/full-20261012/spark_ui_executors.png}
+\captionof{figure}{Spark Executors view for feature-generation application
+0008. Executor processes 1--3 ran across workers w-0 and w-1, with two cores
+per executor and 110 completed tasks across 13 stages. The table shows each
+executor's input and shuffle read/write.}
+\label{fig:spark-ui-executors}
+\end{center}
+\end{landscape}
+
+\clearpage
 \section{Supplementary Task 2 uncertainty analysis}
 The paired Brier difference was also summarized with a calendar-week
 bootstrap. Squared-error differences were paired for the same station, time
