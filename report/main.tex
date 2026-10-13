@@ -11,6 +11,8 @@
 \usepackage{array}
 \usepackage{caption}
 \usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{positioning}
 
 \newcommand{\projecttitle}{Singapore Rainfall Analysis and Prediction}
 
@@ -177,10 +179,39 @@ completeness and changes in station availability.
 \subsection{Computing Environment and Distributed Execution}
 For run \texttt{\runid}, the analysis notebooks ran through the Dataproc
 Jupyter interface, with rainfall data, outputs and Spark event logs stored in
-Google Cloud Storage. The retained Spark execution record shows executors on
-both worker nodes, confirming distributed execution for this analysis. No
-comparison across cluster sizes was performed, so the results do not establish
-scalability.
+Google Cloud Storage (GCS). The two completed event logs summarized below
+record executors on both worker hosts and hundreds of successful tasks across
+multiple stages.
+
+\textbf{Architecture.} The notebook interface submitted Spark work to the
+Dataproc master; Spark executors processed partitions on the worker nodes and
+read and wrote data in GCS. The diagram shows the two-worker configuration
+used by the completed applications in Table~\ref{tab:spark-job-evidence}.
+
+\begin{center}
+\begin{tikzpicture}[
+  node distance=8mm and 15mm,
+  component/.style={draw, rounded corners, align=center, minimum height=8mm,
+                    text width=34mm, font=\small},
+  worker/.style={component, text width=27mm},
+  link/.style={->, thick}
+]
+  \node[component] (notebook) {Dataproc Jupyter\\Notebook interface};
+  \node[component, below=of notebook] (master) {Dataproc master\\Spark driver};
+  \node[worker, below left=of master] (workerone) {Worker 1\\Spark executor};
+  \node[worker, below right=of master] (workertwo) {Worker 2\\Spark executor};
+  \node[component, below=25mm of master] (gcs) {Google Cloud Storage\\inputs, outputs, event logs};
+  \draw[link] (notebook) -- (master);
+  \draw[link] (master) -- (workerone);
+  \draw[link] (master) -- (workertwo);
+  \draw[<->, thick] (workerone) -- (gcs);
+  \draw[<->, thick] (workertwo) -- (gcs);
+\end{tikzpicture}
+\end{center}
+
+The project ran distributed Spark workloads on a multi-worker Dataproc
+cluster; it did not conduct a controlled scaling study, so the analytical and
+predictive results do not establish linear scalability.
 
 \begin{table}[htbp]
 \centering\small
@@ -192,14 +223,12 @@ Platform & Google Cloud Dataproc; cluster \texttt{dsa5208-rainfall} \\
 Region & \texttt{asia-southeast1} (Singapore) \\
 Dataproc image & \texttt{2.2.87-debian12} \\
 Spark & 3.5.3 \\
-Python & Version not recorded in the retained run evidence \\
-Master machine & \texttt{e2-standard-4} \\
-Number of workers & 2 (worker nodes \texttt{w-0} and \texttt{w-1}) \\
-Worker machine & \texttt{e2-standard-4} \\
-vCPU per worker & 4 \\
-RAM per worker & 16~GiB \\
+Python & Image includes Python 3.11; notebook-kernel version not separately recorded~\cite{dataprocimage} \\
+Master machine & \texttt{e2-standard-4}; 4 vCPU and 16~GiB RAM \\
+Number of workers & 2 during Apps 0003 and 0008; later resized to 4 at 19:54 SGT on 12 October 2026 \\
+Worker machine & \texttt{e2-standard-4}; 4 vCPU and 16~GiB RAM per worker \\
 Disk & Balanced persistent disks: 100~GB for the master and 75~GB per worker \\
-Storage & Google Cloud Storage bucket \texttt{sg-rainfall-dsa5208-261011-data}, in Singapore \\
+Storage & GCS bucket \texttt{sg-rainfall-dsa5208-261011-data}, region \texttt{asia-southeast1} \\
 Development interface & Jupyter Notebook on the Dataproc cluster \\
 \bottomrule
 \end{tabularx}
@@ -752,6 +781,10 @@ Apache Spark. \emph{Extracting, transforming and selecting features}, Spark
 \bibitem{gbtimportance}
 Apache Spark. \emph{GBTClassificationModel API}, Spark 3.5.3.
 \url{https://spark.apache.org/docs/3.5.3/api/scala/org/apache/spark/ml/classification/GBTClassificationModel.html}.
+
+\bibitem{dataprocimage}
+Google Cloud. \emph{2.2.x release image versions}.
+\url{https://docs.cloud.google.com/managed-spark/docs/concepts/versioning/image-release-2.2}.
 \end{thebibliography}
 
 \appendix
