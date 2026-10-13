@@ -13,8 +13,9 @@ and PDF metadata use the exact project title from the assignment.
 - Task 1 annual, monthly and hourly findings for 2017–2024, including the
   empty common annual station cohort and notebook-generated figures.
 - Task 2 target, features, temporal partitions, model comparison, calibration,
-  2024 holdout, unseen thresholds, monotonicity, weekly-block uncertainty,
-  the A/B feature-set comparison and final GBT feature-family importance.
+  2024 holdout, unseen thresholds, monotonicity, A/B feature-set comparison
+  and final GBT feature-family importance; exploratory weekly-block uncertainty
+  is in the appendix.
 - Reproducibility hashes, AI-use declaration and limitations.
 
 ## Final checks

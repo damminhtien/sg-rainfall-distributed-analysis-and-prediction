@@ -591,10 +591,7 @@ error. At the fixed probability cutoff of 0.5, GBT-B precision was 0.812,
 recall was 0.471, and F1 was 0.596. The baseline made no positive predictions
 at that cutoff, giving zero recall and undefined precision and F1. Across all
 threshold rows, the paired mean Brier difference
-(GBT-B minus climatology) was $-0.00878$. A bootstrap over 53 calendar-week
-blocks gave a 95\% interval from $-0.01089$ to $-0.00672$ using 1,000
-replicates. This interval describes the pooled threshold-expanded losses under
-the weekly resampling procedure.
+(GBT-B minus climatology) was $-0.00878$.
 
 Pooled over the six primary thresholds on the 2024 holdout, ECE was 0.00172 for
 calibrated GBT-B and 0.00142 for the baseline. Calibration improved the
@@ -710,6 +707,17 @@ Apache Spark. \emph{GBTClassificationModel API}, Spark 3.5.3.
 \end{thebibliography}
 
 \appendix
+\section{Supplementary Task 2 uncertainty analysis}
+The paired Brier difference was also summarized with a calendar-week
+bootstrap. Squared-error differences were paired for the same station, time
+and rainfall threshold, then aggregated by calendar week across stations and
+thresholds. Resampling the 53 weeks with replacement 1,000 times gave a 95\%
+interval of $[-0.01089,-0.00672]$ for the pooled mean difference (GBT-B minus
+climatology). The analysis groups records by calendar week, but does not
+document how a one-week block length was selected from pre-test temporal
+dependence. Treat this interval as exploratory supplementary uncertainty, not
+as a definitive uncertainty estimate.
+
 \section{Additional Task 1 figures}
 The following supplementary figures are included as generated notebook
 outputs. Complete-day estimates use only station-days with all 288 readings;
