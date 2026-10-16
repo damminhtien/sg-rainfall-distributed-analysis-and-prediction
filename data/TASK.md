@@ -1,6 +1,6 @@
 # DSA5208 Project 2 — Current Status
 
-Updated **13/10/2026**. Individual assignment: **DAM MINH TIEN — A0355091E**.
+Updated **13/10/2026**. Individual assignment.
 This is the practical checklist for the four current notebooks; `TASK_SPEC.md` retains the detailed specification and older run log for reference. Do not treat planned designs as completed results.
 
 ## Completed run
@@ -57,5 +57,5 @@ The core scientific work should be immediately accessible in the notebooks. Bill
 ## Submission checks
 
 - [x] Read the compiled PDF and review the cover, tables/figures, references, and measurements.
-- [x] Verify that the ZIP matches `20261012-full-02` and contains no raw CSVs or workstation files. Package path: `submission/DSA5208_Project2_A0355091E_full-20261012-full-02.zip`.
+- [x] Verify that the ZIP matches `20261012-full-02` and contains no raw CSVs or workstation files.
 - [x] README/report state that the fresh reload smoke check passed and do not claim that the holdout was rerun.

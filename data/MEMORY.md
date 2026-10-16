@@ -7,7 +7,6 @@ Updated: 12/10/2026 (Asia/Singapore). This note restores context when work resum
 ## Goals and scope
 
 - Individual DSA5208 Project 2: Singapore Rainfall Analysis and Prediction.
-- Sole author: **DAM MINH TIEN**, Student ID **A0355091E**.
 - Follow the two assignment tasks: Task 1 analyzes rainfall patterns within and across years; Task 2 predicts the probability that cumulative rainfall at a station over the next 30 minutes will be **greater than** a threshold.
 - Do not invent research questions, novelty claims, or rubric weights. Project 1 is a reference for presentation only.
 - The report carries substantial assessment weight: prioritize evidence-based writing with real measurements and clearly stated denominators/cohorts/limitations. Write the abstract last, after final results are available.
