@@ -514,10 +514,10 @@ iterations. July--December 2023 was used to fit its isotonic calibration, and
 
 \subsection{Model selection}
 Mean PR-AUC across the six primary thresholds ranked the candidates, with mean
-Brier score as a tie-breaker. LR and GBT were assessed with feature sets A and
-B; RF used B. Adding rainfall history increased mean selection PR-AUC from
-0.0488 to 0.4852 for LR and from 0.0573 to 0.5266 for GBT. GBT-B ranked above
-RF-B and LR-B among the history-feature candidates.
+Brier score as a tie-breaker. LR used feature set A, GBT used sets A and B, and
+RF used B. For GBT, adding rainfall history increased mean selection PR-AUC
+from 0.0573 to 0.5266. GBT-B ranked above RF-B among the history-feature
+candidates.
 
 \begin{table}[htbp]
 \centering\small
@@ -531,7 +531,6 @@ Candidate & Feature set & Mean PR-AUC & Mean Brier \\
 \midrule
 Climatology & Training-only baseline & 0.0522 & 0.02583 \\
 LR-A & A & 0.0488 & 0.02616 \\
-LR-B & B & 0.4852 & 0.01795 \\
 RF-B & B & 0.5026 & 0.01677 \\
 GBT-A & A & 0.0573 & 0.02606 \\
 GBT-B & B & 0.5266 & 0.01554 \\

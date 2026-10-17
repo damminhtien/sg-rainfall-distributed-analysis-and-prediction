@@ -19,8 +19,8 @@ artifacts. Do not describe the original sequential run as a clean run-all.
 | 2024 | Held-out final evaluation after freeze |
 
 The 30-minute target is purged at every split boundary. Notebook 03 opens only
-search_train, hp_validation and model_selection. Five selection candidates
-were retained: climatology, LR-A, RF-B, GBT-A and GBT-B; LR-B was removed.
+search_train, hp_validation and model_selection. The five selection candidates
+were climatology, LR-A, RF-B, GBT-A and GBT-B.
 The 2022 selected GBT-B specification is depth 4 and 40 iterations. No
 2/10/50/100% scaling study was run; the final model was fit on 100% of valid
 2017-2022 training windows.
@@ -40,7 +40,7 @@ untouched blind test.
 - [x] Remove pilot_fraction and final_train_fraction; set final training to 100%.
 - [x] Update Notebook 02 temporal roles and purged-boundary fixture.
 - [x] Replace Notebook 03 design with development-only selection and add Notebook 04.
-- [x] Remove LR-B and omit the training-fraction scaling study per the later instruction.
+- [x] Omit the training-fraction scaling study.
 - [x] Run Notebook 03; it succeeded, selected GBT-B from five candidates, and saved the frozen spec.
 - [x] Fit the final model on all valid 2017-2022 rows and fit the 2023 isotonic calibrator.
 - [x] Recover final 2024 metrics from saved anchor predictions; PAVA and interpolated curves have zero violations.

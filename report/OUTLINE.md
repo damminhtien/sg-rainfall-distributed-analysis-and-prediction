@@ -21,9 +21,9 @@ model and prediction specification were frozen.
 4. **Model selection.** Hyperparameter screening uses a deterministic 10%
    sample before survivor refits on all eligible 2017-2020 rows. The 2022
    comparison uses 10% samples of 2017-2021 training and 2022 evaluation.
-   Report the five candidates and measured counts/metrics/fit times; LR-B was
-   removed. Include the GBT-A/B history-feature comparison. No training-fraction
-   scaling study was run.
+   Report the five candidates and measured counts/metrics/fit times. Include
+   the GBT-A/B history-feature comparison. No training-fraction scaling study
+   was run.
 5. **Probability pipeline.** Report GBT-B refitted on every valid 2017-2022
    row, predetermined 2023 isotonic calibration, equal-weight non-increasing
    PAVA over six anchors, and in-domain linear interpolation.
