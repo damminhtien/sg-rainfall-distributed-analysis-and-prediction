@@ -1,9 +1,8 @@
-"""Run the frozen v2 development and final notebooks sequentially on Dataproc."""
+"""Run model development and final evaluation notebooks on Dataproc."""
 
 from __future__ import annotations
 
 import datetime as dt
-import hashlib
 import json
 import os
 import re
@@ -12,11 +11,11 @@ import sys
 from pathlib import Path
 
 
-BUCKET = os.environ.get("BUCKET", "sg-rainfall-dsa5208-261011-data")
+BUCKET = os.environ.get("BUCKET", "")
 RUN_ID = os.environ.get("RUN_ID", "")
 ROOT = f"gs://{BUCKET}/runs/{RUN_ID}"
-ARTIFACT_ROOT = f"{ROOT}/results/overnight_execution"
-WORK_DIR = Path(os.environ.get("RUN_WORK_DIR", f"/var/tmp/dsa5208-{RUN_ID}"))
+ARTIFACT_ROOT = f"{ROOT}/results/notebook_execution"
+WORK_DIR = Path(os.environ.get("RUN_WORK_DIR", f"/var/tmp/dsa5208-{RUN_ID or 'run'}"))
 NOTEBOOKS = (
     ("03_model_development.ipynb", "notebook_03_model_development"),
     ("04_final_fit_evaluate.ipynb", "notebook_04_final_fit_evaluate"),
@@ -70,21 +69,22 @@ def require_gcs_object(uri: str) -> None:
 
 
 def main() -> int:
-    if not re.fullmatch(r"\d{8}-v2-[a-z0-9-]+", RUN_ID):
-        raise ValueError("Set RUN_ID to a fresh, versioned v2 run prefix.")
+    if not BUCKET or not RUN_ID:
+        raise RuntimeError("Set BUCKET and a new RUN_ID before submitting Spark jobs.")
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,62}", RUN_ID):
+        raise ValueError("RUN_ID may contain only letters, numbers, periods, underscores and hyphens.")
 
     WORK_DIR.mkdir(parents=True, exist_ok=True)
     required = (
         f"{ROOT}/config/experiment.json",
         f"{ROOT}/config/input_manifest.json",
-        f"{ROOT}/config/source_hashes.json",
         f"{ROOT}/base_features/_SUCCESS",
         *(f"{ROOT}/source/notebooks/{name}" for name, _ in NOTEBOOKS),
     )
     for uri in required:
         require_gcs_object(uri)
 
-    spec_uri = f"{ROOT}/artifacts/frozen_spec.json"
+    spec_uri = f"{ROOT}/artifacts/selected_model.json"
     existing_spec = subprocess.run(
         ["gcloud", "storage", "objects", "describe", spec_uri],
         stdout=subprocess.DEVNULL,
@@ -92,9 +92,9 @@ def main() -> int:
         text=True,
     )
     if existing_spec.returncode == 0:
-        raise FileExistsError(f"Refusing to reuse run with frozen spec: {spec_uri}")
+        raise FileExistsError(f"A selected model already exists for this run: {spec_uri}")
     if "not found" not in existing_spec.stderr.lower() and "no objects" not in existing_spec.stderr.lower():
-        raise RuntimeError(f"Could not verify frozen spec absence: {existing_spec.stderr}")
+        raise RuntimeError(f"Could not check the selected-model path: {existing_spec.stderr}")
 
     status = {
         "run_id": RUN_ID,
@@ -134,14 +134,12 @@ def main() -> int:
                 encoding="utf-8",
             )
             compile(script_path.read_text(encoding="utf-8"), str(script_path), "exec")
-            script_hash = hashlib.sha256(script_path.read_bytes()).hexdigest()
             upload(script_path, f"{ARTIFACT_ROOT}/source/{script_path.name}")
 
             log_path = WORK_DIR / f"{job_name}.log"
             status["notebooks"][job_name] = {
                 "state": "running",
                 "started_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
-                "script_sha256": script_hash,
             }
             status["current_notebook"] = job_name
             write_status(status)

@@ -81,15 +81,14 @@ python -m ipykernel install --user \
   --display-name "Python (DSA5208 Rainfall)"
 ```
 
-Place the eight CSVs under `$DATA_ROOT/raw/`, set `DATA_ROOT`, and run
-`00_setup_cloud.ipynb` locally. Its default target run ID is
-`20261016-v2-fixed8-04`; use a new target run ID for each fresh model run. Review the
-project, Education billing link, region, bucket, quota, and provisioning
-settings before running its cloud setup cells. The notebook uploads the
-notebooks, shared modeling helper, config, and source hashes for that run. It
-copies the existing base-feature partitions from the run named by
-`base_features_source_run_id` in the config, currently
-`20261016-v2-full-01`.
+Place the eight CSVs under `$DATA_ROOT/raw/`, then set `DATA_ROOT`,
+`GOOGLE_CLOUD_PROJECT`, `BILLING_ACCOUNT_ID`, `BUCKET`, and a new `RUN_ID` in
+the local environment before running `00_setup_cloud.ipynb`. Account and
+project identifiers are read from the environment rather than stored in the
+notebook. Review the region, bucket, quota, and provisioning settings before
+running its cloud setup cells. The notebook uploads the analysis notebooks,
+shared modeling helper, and experiment configuration. It copies the saved
+feature partitions named by `base_features_source_run_id` in the config.
 
 The analysis notebooks use Dataproc image `2.2.87-debian12` with bundled
 Python 3.11 and Spark 3.5.3. Do not install or upgrade PySpark on that image.
@@ -106,9 +105,9 @@ config. Notebook 03 and Notebook 04 use the target run ID.
 2. `03_model_development.ipynb` uses only `search_train`, `hp_validation`, and
    `model_selection`. It writes the selected model specification after
    candidate comparison.
-3. `04_final_fit_evaluate.ipynb` checks the selected specification and
-   config/input/source hashes before it refits on all valid 2017–2022 data,
-   fits the calibrator on 2023, and then evaluates the held-out 2024 period.
+3. `04_final_fit_evaluate.ipynb` reads the selected model configuration,
+   refits on all valid 2017–2022 data, fits the calibrator on 2023, and
+   evaluates the 2024 period.
 
 On the Dataproc master, the same two stages can run sequentially with
 `RUN_ID=<target-run-id> python scripts/run_notebooks_sequentially.py`. Start an
