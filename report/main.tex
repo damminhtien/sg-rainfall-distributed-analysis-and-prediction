@@ -765,7 +765,7 @@ F1; Table~\ref{tab:operating-point} reports precision and recall at the fixed
 the six primary thresholds. Every threshold uses the same 6,374,476 prediction
 times. F1 uses a fixed probability cutoff of 0.5. PR-AUC is Spark's 1,000-bin
 evaluator result. ROC-AUC uses continuous probabilities and
-\texttt{roc\_auc\_score}~\cite{sklearnroc}; climatology probabilities were
+\texttt{roc\_auc\_score}; climatology probabilities were
 reconstructed from training-only histograms for the same valid 2024 cohort.
 Paired values are climatology / final PAVA.}
 \label{tab:test}
@@ -842,7 +842,7 @@ panel shows sample counts for the final PAVA bins.}
 predictions at 0.5 and 10~mm. Horizontal dotted lines mark the positive
 prevalence. PR-AUC values in Table~\ref{tab:test} use Spark's 1,000-bin
 evaluator; the plotted curves use the saved scores and
-\texttt{precision\_recall\_curve}~\cite{sklearnpr}.}
+\texttt{precision\_recall\_curve}.}
 \label{fig:pr-curves}
 \end{figure}
 
@@ -946,13 +946,6 @@ take responsibility for the final submission.
 National Environment Agency. \emph{Historical Rainfall across Singapore}.
 data.gov.sg. \url{https://data.gov.sg/collections/2279/view}.
 
-\bibitem{sklearnroc}
-Scikit-learn Developers. \emph{roc\_auc\_score}.
-\url{https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html}.
-
-\bibitem{sklearnpr}
-Scikit-learn Developers. \emph{precision\_recall\_curve}.
-\url{https://scikit-learn.org/stable/modules/generated/sklearn.metrics.precision_recall_curve.html}.
 \end{thebibliography}
 
 \clearpage
