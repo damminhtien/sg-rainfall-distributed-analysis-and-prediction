@@ -71,16 +71,18 @@ observations and changing station coverage, wet-reading frequency was found to
 range from 1.94\% to 3.20\% across the eight years, with a recurring afternoon
 peak.
 
-For prediction, we compared several MLlib models using station, time, rainfall
-threshold and recent same-station rainfall history, with separate periods for
-training, validation, model selection, calibration and final testing. The
-selected gradient-boosted tree model was retrained on 34.5 million valid
+For prediction, we compared several MLlib models using station, time and
+rainfall threshold predictors. Separate periods were used for training,
+validation, model selection, calibration and final evaluation. The selected
+gradient-boosted tree model was retrained on 34.5 million valid
 2017--2022 windows and evaluated on 6.37 million held-out 2024 windows. At the
 0.5~mm threshold, it achieved a PR-AUC of 0.6345 and a Brier score of 0.01958,
-compared with 0.0732 and 0.03436 for the climatology baseline. Recent rainfall
-history provided the largest predictive gain, while isotonic calibration and a
-final PAVA projection improved probability consistency across rainfall
-thresholds. The complete workflow was executed on a distributed Google Cloud
+compared with 0.0732 and 0.03436 for the climatology baseline. In the 2022 GBT
+ablation, adding Set B's current and historical rainfall, missingness
+indicators and rolling summaries raised mean PR-AUC from 0.0355 to 0.5221.
+Isotonic calibration reduced expected calibration error, and PAVA made
+probabilities non-increasing across thresholds. The complete workflow was
+executed on a distributed Google Cloud
 Dataproc cluster using Spark DataFrames and MLlib.
 
 \begingroup
@@ -430,8 +432,10 @@ Hourly labels refer to the recorded interval-end hour in SGT.}
 Annual coverage uses each ID's full calendar year; a station-year without
 readings has zero coverage. No ID met any of the 90\%, 95\% or 99\% cutoffs in
 all eight years, leaving no fixed-ID cohort. The annual comparisons therefore
-use each year's available network. A screen of coordinates, station names and
-device IDs found no obvious replacements or co-located IDs.
+use each year's available network. The spatial summary keeps station IDs with
+consistent coordinates. Different IDs were not matched by coordinates, names
+or device IDs, so possible station replacements and co-located IDs were not
+assessed.
 Figure~\ref{fig:coverage} shows station-year coverage.
 
 \begin{figure}[!ht]
@@ -564,8 +568,9 @@ use the assembled inputs without standardization.
 \begin{table}[htbp]
 \centering\small
 \caption{Predictor sets considered in model development. Set B contains all
-Set A variables plus same-station rainfall history. Rolling summaries include
-the current reading and prior observations in each configured window.}
+Set A variables plus current and historical same-station rainfall,
+missingness indicators and rolling summaries. Rolling summaries include the
+current reading and prior observations in each configured window.}
 \label{tab:features}
 \begin{tabularx}{\linewidth}{l l X}
 \toprule
@@ -586,7 +591,8 @@ count, observed-reading count and coverage. \\
 Numeric missing values were median-imputed within each fitted pipeline;
 explicit lag missingness and rolling coverage/count features retained
 information about gaps. Set A used the calendar, station and threshold
-signals. Set B tested whether recent rainfall history added predictive value.
+signals. Set B tested whether rainfall history and information about missing
+readings improved prediction.
 
 \begin{table}[htbp]
 \centering\small
@@ -614,23 +620,23 @@ six threshold-specific examples. The final 2017--2022 fitting pool contains
 (Table~\ref{tab:splits}).
 
 \subsection{Model selection}
-Model development had two stages. Hyperparameters were screened on a
-deterministic 10\% sample from 2017 to 2020. Up to two close configurations
-per family were then refitted on all 2017 to 2020 training windows and
-compared on 2021. The search varied logistic regression
-\texttt{regParam} over 0.001, 0.01, 0.1 and 1; random forest
-\texttt{(numTrees, maxDepth)} over (50, 6), (100, 6) and (50, 8); and
-gradient-boosted tree \texttt{maxDepth} over 3 and 4 and \texttt{maxIter}
-over 20 and 40. Within each family, mean PR-AUC across the six primary
-thresholds on 2021 selected a configuration; mean Brier score and model
-complexity resolved close results.
+Model development had two stages. We screened hyperparameters on a
+deterministic 10\% sample of 2017--2020 data. The search tested logistic
+regression \texttt{regParam} values 0.001, 0.01, 0.1 and 1; random forest
+\texttt{(numTrees, maxDepth)} pairs (50, 6), (100, 6) and (50, 8); and
+gradient-boosted trees with \texttt{maxDepth} 3 or 4 and \texttt{maxIter} 20
+or 40. For each family, up to two settings within 0.001 mean PR-AUC of the
+best screening result were refitted on all 2017--2020 training windows and
+evaluated on 2021. Mean PR-AUC across the six primary thresholds selected one
+setting per family. When candidates were within 0.001 mean PR-AUC, lower mean
+Brier score was preferred; if Brier scores were within 0.0001, model
+complexity broke the tie.
 
-For the final comparison, each candidate was fitted on the same deterministic
-10\% sample of the combined 2017 to 2021 training data and evaluated on a
-deterministic 10\% sample of 2022. The five candidates were climatology,
-LR-A, RF-B, GBT-A and GBT-B. Mean PR-AUC across the six primary thresholds
-ranked candidates, with mean Brier score and model complexity resolving close
-results (Table~\ref{tab:selection}).
+For the final comparison, LR-A, RF-B, GBT-A and GBT-B were fitted on the same
+deterministic 10\% sample of 2017--2021 training windows. Climatology rates
+were estimated from that sample. All five candidates were evaluated on the
+same deterministic 10\% sample of 2022. Mean PR-AUC across the six primary
+thresholds ranked the candidates using the same rule (Table~\ref{tab:selection}).
 
 The climatology baseline uses training examples only. For each threshold,
 it estimates an overall exceedance rate, then month-hour and
@@ -684,7 +690,7 @@ windows.}
 Variant & Added inputs over Set A & Mean PR-AUC & Mean Brier & Fit time (s) \\
 \midrule
 GBT-A & None & 0.03553 & 0.02286 & 319.7 \\
-GBT-B & Same-station rainfall history & \textbf{0.52207} &
+GBT-B & Set B features & \textbf{0.52207} &
 \textbf{0.01402} & 383.5 \\
 \bottomrule
 \end{tabular}
@@ -922,16 +928,17 @@ afternoon peak across most years. Because the monitoring network changed over
 time, these results are interpreted as patterns in the observed network
 rather than as a fixed-station climate trend.
 
-For Task 2, we constructed a temporally separated training, validation,
-calibration and test pipeline using station, time, rainfall threshold and
-recent same-station rainfall history. The selected GBT model was retrained on
-34.5 million valid 2017--2022 windows and evaluated on 6.37 million held-out
-2024 windows. At the 0.5~mm threshold, the final model achieved a PR-AUC of
-0.6345 and a Brier score of 0.01958, compared with 0.0732 and 0.03436 for the
-climatology baseline. Adding recent rainfall history was the main source of
-improvement, increasing the 2022 GBT mean PR-AUC from 0.0355 to 0.5221.
-Isotonic calibration improved probability calibration, and the final PAVA
-projection removed cross-threshold monotonicity violations.
+For Task 2, we used separate periods for training, validation, model
+selection, calibration and final evaluation. The selected GBT model used
+station, time, rainfall threshold and Set B's current and historical
+same-station rainfall, missingness indicators and rolling summaries. It was
+retrained on 34.5 million valid 2017--2022 windows and evaluated on 6.37
+million held-out 2024 windows. At the 0.5~mm threshold, the final model
+achieved a PR-AUC of 0.6345 and a Brier score of 0.01958, compared with
+0.0732 and 0.03436 for the climatology baseline. On the 2022 selection sample,
+this expanded feature set raised mean GBT PR-AUC from 0.0355 to 0.5221.
+Isotonic calibration reduced ECE on the 2023 calibration sample, and PAVA
+enforced non-increasing probabilities across the six thresholds.
 
 The full pipeline was executed on a distributed Google Cloud Dataproc cluster
 using Spark DataFrames and MLlib, from data preparation and feature
