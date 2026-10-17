@@ -262,35 +262,32 @@ Storage.}
 \centering
 \begin{tikzpicture}[x=1mm,y=1mm,
   font=\footnotesize,
-  stage/.style={draw, rounded corners=2pt, align=center, text width=25mm,
-                minimum height=40mm, inner sep=1.5mm},
+  stage/.style={draw, rounded corners=2pt, align=center, text width=26mm,
+                minimum height=25mm, inner sep=1.5mm},
   source/.style={stage, fill=orange!8},
   structured/.style={stage, fill=green!7},
   learning/.style={stage, fill=blue!7},
   flow/.style={-{Stealth[length=1.7mm]}, semithick}
 ]
-  \node[source] (input) at (14,0)
-    {\textbf{GCS input}\\2017--2024 annual NEA rainfall files};
-  \node[structured] (clean) at (46.5,0)
-    {\textbf{Spark SQL / DataFrames}\\Read and validate\\Clean rainfall\\Deduplicate rows\\Aggregate};
-  \node[structured] (features) at (79,0)
-    {\textbf{Spark SQL / DataFrames}\\Same-station history\\Six-reading target\\Temporal splits\\Threshold expansion};
-  \node[learning] (fit) at (111.5,0)
-    {\textbf{Spark MLlib}\\Preprocessing pipeline\\Candidate LR / RF / GBT\\Final GBT-B fit};
-  \node[learning] (score) at (144,0)
-    {\textbf{Spark MLlib / DataFrames}\\Isotonic model\\2023 calibration\\Score 2024\\PAVA + metrics\\GCS outputs};
+  \node[source] (input) at (10,0)
+    {\textbf{GCS input}\\Rainfall data};
+  \node[structured] (process) at (42.5,0)
+    {\textbf{Spark SQL / DataFrames}\\Clean and aggregate\\Build features and target};
+  \node[learning] (fit) at (75,0)
+    {\textbf{Spark MLlib}\\Compare candidates\\Fit final model};
+  \node[learning] (evaluate) at (107.5,0)
+    {\textbf{Calibration and evaluation}\\2023 calibration\\2024 scoring, PAVA, metrics};
+  \node[source] (output) at (140,0)
+    {\textbf{GCS outputs}\\Model and predictions};
 
-  \draw[flow] (input.east) -- (clean.west);
-  \draw[flow] (clean.east) -- (features.west);
-  \draw[flow] (features.east) -- (fit.west);
-  \draw[flow] (fit.east) -- (score.west);
+  \draw[flow] (input.east) -- (process.west);
+  \draw[flow] (process.east) -- (fit.west);
+  \draw[flow] (fit.east) -- (evaluate.west);
+  \draw[flow] (evaluate.east) -- (output.west);
 \end{tikzpicture}
-\caption{Computation pipeline. Spark SQL and DataFrames perform structured
-cleaning, feature and target construction, and threshold expansion. Spark
-MLlib trains model candidates and final GBT-B, then fits the 2023 isotonic
-calibrator. The calibrated model scores the 2024 holdout; Spark DataFrames
-apply PAVA and aggregate metrics. Model and prediction outputs are stored in
-Google Cloud Storage.}
+\caption{Spark SQL and DataFrames clean rainfall records and build features and
+targets. Spark MLlib fits the selected model; calibration and 2024 scoring
+produce metrics saved to Google Cloud Storage.}
 \label{fig:computation-pipeline}
 \end{figure}
 \FloatBarrier
