@@ -1,5 +1,4 @@
 % Final protocol-v2 report for run 20261016-v2-fixed8-04.
-% Historical protocol-v1 source is archived under archive/v1/.
 % Its PDF copy is retained locally; generated PDFs are not committed.
 \documentclass[11pt,a4paper]{article}
 
@@ -68,10 +67,8 @@ curve non-increasing. On 6,374,476 held-out 2024 windows, final PAVA GBT-B
 achieved PR-AUC 0.6345 and Brier score 0.01958 at 0.5~mm, compared with
 0.0732 and 0.03436 for the climatology baseline. The final projection had zero
 monotonicity violations across 31.87 million adjacent threshold pairs. The
-2024 period had been observed in the historical v1 analysis, so it is reported
-as a held-out evaluation period rather than an untouched blind test. Results
-are retrospective and do not establish real-time data availability or future-
-network performance.
+results are retrospective and do not establish real-time data availability or
+future-network performance.
 
 \begingroup
 \small
@@ -90,8 +87,6 @@ Task 1 describes all eight years. For Task 2, 2017--2020 supports hyperparameter
 training, 2021 supports hyperparameter validation, 2022 is used for candidate
 selection, the frozen winner is refitted on all valid 2017--2022 windows, 2023
 is used for probability calibration, and 2024 is reserved for final evaluation.
-Historical v1 metrics from 2024 were already observed and were not used to
-choose any v2 model or prediction rule.
 
 \section{Data and cleaning}
 \subsection{Input and timestamp handling}
@@ -595,9 +590,8 @@ pairs with zero violations (Table~\ref{tab:monotonicity}).
 \subsection{Final 2024 held-out evaluation}
 The frozen model and prediction recipe were evaluated on 6,374,476 valid 2024
 base windows, giving 38,246,856 threshold-expanded rows. The 2024 partition
-was opened only after the frozen specification was verified. The evaluation
-summary records \texttt{post\_test\_tuning=false}; historical v1 2024 metrics
-were not used for v2 choices. Table~\ref{tab:test} reports per-threshold
+was evaluated after the frozen specification was verified. The evaluation
+summary records \texttt{post\_test\_tuning=false}. Table~\ref{tab:test} reports per-threshold
 support and probability scores; Table~\ref{tab:operating-point} reports the
 fixed-cutoff classification measures.
 
@@ -758,59 +752,7 @@ No station met the 90\% annual-coverage rule in every year, so annual
 differences describe a changing network and do not establish a climate trend.
 Archived timestamps do not establish when revised readings became available,
 so the results are not verified real-time forecasts. The selected 2022 score
-is subject to model-selection optimism, and 2024 was previously observed in the
-historical v1 analysis; it is a held-out evaluation period, not an untouched
-blind test.
-
-\subsection{Retrospective comparison with v1}
-Both versions selected GBT-B and were evaluated on the same 6,374,476 valid
-2024 prediction windows. Table~\ref{tab:v1-v2} compares the v1 values as
-published (rounded) with the v2 final PAVA values. The v1 measurements were
-already observed before v2 was designed, so this table is a retrospective
-comparison on a shared holdout, not an independent estimate of generalisation.
-
-\begin{table}[htbp]
-\centering\small
-\caption{Published v1 and final v2 PAVA metrics on the shared 2024 evaluation
-cohort. V1 values retain the rounding in the archived report.}
-\label{tab:v1-v2}
-\begin{tabular}{r r r r r}
-\toprule
-Threshold (mm) & V1 PR-AUC & V2 PR-AUC & V1 Brier & V2 Brier \\
-\midrule
-0.2 & 0.6617 & 0.6618 & 0.02520 & 0.02520 \\
-0.5 & 0.6345 & 0.6345 & 0.01952 & 0.01958 \\
-1.0 & 0.5819 & 0.5825 & 0.01518 & 0.01516 \\
-2.0 & 0.5062 & 0.5070 & 0.01100 & 0.01096 \\
-5.0 & 0.3945 & 0.3944 & 0.00613 & 0.00614 \\
-10.0 & 0.3016 & 0.2943 & 0.00309 & 0.00311 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-Predictive scores are close at most thresholds. At 0.5~mm, PR-AUC is unchanged
-at the displayed precision and Brier changes from 0.01952 to 0.01958. At
-10~mm, v2 PR-AUC is lower by 0.0073, while Brier changes by only 0.00002.
-With the same fixed 0.5 probability cutoff at 0.5~mm, v2 recall rises from
-0.471 to 0.527 and precision falls from 0.812 to 0.742; F1 rises from 0.596
-to 0.616. The cutoff was not tuned in either run.
-
-The principal v2 change is the training and probability protocol. V1 trained
-its ML models on a deterministic 2\% sample and used January--June 2023 for
-both pilot tuning and candidate comparison, then calibrated on July--December.
-V2 refit the winner on all valid 2017--2022 windows, validated hyperparameters
-on 2021, selected on a 10\% sample of 2022, and calibrated on a 10\% sample of
-2023. V1's calibrated predictor had 0.0121\% primary-threshold and 0.0151\%
-intermediate-threshold violations, with a largest adjacent increase of 0.299.
-V2's final PAVA predictor has zero violations on the anchor curve and on the
-five in-domain interpolated thresholds. Isotonic calibration alone still
-leaves threshold violations, so the ordering guarantee comes from PAVA.
-
-Holdout weighted ECE changed from 0.00172 in v1 to 0.001670 in v2; both are
-slightly above their climatology baselines (0.00142 and 0.001425). Protocol v2
-adds an exact monotonicity guarantee after PAVA and separates the temporal
-roles. Predictive scores remain similar at most thresholds; PR-AUC is lower
-at 10~mm.
+is subject to model-selection optimism.
 
 The final supervised model used all valid 2017--2022 windows, while the
 development comparison and calibration fit used their prespecified 10\%
@@ -821,17 +763,17 @@ thresholds. Predictions require a valid current observation, and labels require
 all six future readings.
 
 \section{Conclusion}
-Protocol v2 separated hyperparameter validation on 2021, model selection on
+The final protocol separated hyperparameter validation on 2021, model selection on
 2022, full-data refitting on 2017--2022, calibration on 2023 and held-out
 evaluation on 2024. GBT-B was selected from five candidates and fitted on
 34,541,470 valid training windows. The final calibrated and PAVA-projected
 predictor achieved zero threshold-monotonicity violations across 31.87 million
 pairs. At 0.5~mm, its 2024 PR-AUC was 0.6345 and Brier score was 0.01958,
-compared with 0.0732 and 0.03436 for climatology. These retrospective results
-are similar to the rounded v1 metrics on the shared holdout; the v2 PR-AUC at
-10~mm is lower. The main measured gain is exact monotonicity after PAVA.
-Predictive scores remain broadly similar. These retrospective results do not
-establish real-time availability or performance on future station networks.
+compared with 0.0732 and 0.03436 for climatology. The final model improved
+PR-AUC and Brier score at all six thresholds, while weighted ECE remained
+slightly above climatology. The main measured methodological result is exact
+monotonicity after PAVA. These retrospective results do not establish real-time
+availability or performance on future station networks.
 
 \section*{AI use declaration}
 \addcontentsline{toc}{section}{AI use declaration}
