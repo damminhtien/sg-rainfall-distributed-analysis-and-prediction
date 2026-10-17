@@ -215,26 +215,21 @@ Final GBT-B fit & 207,248,820 threshold-expanded training examples. Eight worker
 \end{table}
 
 \begin{samepage}
-The full GBT-B Spark application ran for 12,736.5~s; model fitting took
-12,286.9~s of that time. Runtime can be considered conceptually as
-$T_{\mathrm{wall}}\approx T_{\mathrm{compute}}+T_{\mathrm{shuffle}}+
-T_{\mathrm{I/O}}+T_{\mathrm{scheduling}}$, but the event log does not separate
-these overlapping costs. It records 8.6~TiB of input and about 2~GiB each of
-shuffle reads and writes, with no task memory or disk spill. These totals do not
-identify a single CPU, GCS I/O, shuffle or scheduling bottleneck.
+The final training run used 256 shuffle partitions with Adaptive Query
+Execution enabled. Reused training and threshold-expanded DataFrames were
+persisted with \texttt{DISK\_ONLY}. Expanding each base window over six rainfall
+thresholds increased the training data from 34,541,470 base windows to
+207,248,820 rows.
 
-The run used 256 shuffle partitions with Adaptive Query Execution enabled;
-256 was the configured value, not the result of a partition-count comparison.
-Reused training and threshold-expanded frames were persisted with
-\texttt{DISK\_ONLY}. Expanding each base window over six thresholds increased
-the row count from 34,541,470 to 207,248,820; this sixfold increase is in rows,
-and no matching sixfold byte or memory increase was measured. Feature-window
-operations group by station and order by time, with no explicit repartition
-call in the code. Worker totals ranged from 2,508 to 5,200 tasks and 749.7~GiB
-to 1.4~TiB of input; aggregate task time was 6.2--6.7~h per worker. These
-application totals do not rule out skew within an individual stage. Eight
-two-core executors were used, but no worker-count comparison established this
-as an optimal configuration.
+The Spark event log recorded 8.6~TiB of input and about 2~GiB each of shuffle
+reads and writes, with no task memory or disk spill. Across the eight two-core
+executors, completed task counts ranged from 2,508 to 5,200 and recorded input
+ranged from 749.7~GiB to 1.4~TiB per worker. The feature-generation pipeline
+partitions data by station and orders observations by time, without an explicit
+repartition step. These measurements describe the executed configuration, but
+we did not perform partition-count or worker-count scaling experiments, so they
+should not be interpreted as evidence that the chosen configuration was
+optimal.
 \end{samepage}
 
 \begin{figure}[htbp]
