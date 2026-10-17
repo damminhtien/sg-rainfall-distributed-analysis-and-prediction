@@ -492,6 +492,11 @@ six threshold-specific examples. The final 2017--2022 fitting pool contains
 Hyperparameter screening used a deterministic 10\% sample from 2017--2020
 and validation on 2021. Candidate configurations were then refitted on the
 2017--2021 training pool and compared on a deterministic 10\% sample of 2022.
+The grid covered LR $\texttt{regParam}=\{0.001,0.01,0.1,1\}$, RF
+$(\texttt{numTrees},\texttt{maxDepth})=\{(50,6),(100,6),(50,8)\}$ and GBT
+$(\texttt{maxDepth},\texttt{maxIter})=\{3,4\}\times\{20,40\}$; 2021 mean
+six-threshold PR-AUC selected one setting per family, with mean Brier as the
+tie-breaker.
 The model-selection training sample contained 2,742,964 base windows and the
 2022 evaluation sample contained 711,112. The five candidates were
 climatology, LR-A, RF-B, GBT-A and GBT-B. Mean PR-AUC across the six primary
