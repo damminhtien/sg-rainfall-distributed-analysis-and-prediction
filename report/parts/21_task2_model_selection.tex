@@ -1,0 +1,72 @@
+\subsection{Model selection}
+Hyperparameter screening used a deterministic 10\% sample from 2017--2020
+and validation on 2021. Candidate configurations were then refitted on the
+2017--2021 training pool and compared on a deterministic 10\% sample of 2022.
+The grid covered LR $\texttt{regParam}=\{0.001,0.01,0.1,1\}$, RF
+$(\texttt{numTrees},\texttt{maxDepth})=\{(50,6),(100,6),(50,8)\}$ and GBT
+$(\texttt{maxDepth},\texttt{maxIter})=\{3,4\}\times\{20,40\}$; 2021 mean
+six-threshold PR-AUC selected one setting per family, with mean Brier as the
+tie-breaker.
+The model-selection training sample contained 2,742,964 base windows and the
+2022 evaluation sample contained 711,112. The five candidates were
+climatology, LR-A, RF-B, GBT-A and GBT-B. Mean PR-AUC across the six primary
+thresholds ranked candidates, with mean Brier score as the tie-breaker
+(Table~\ref{tab:selection}).
+
+The climatology baseline estimates training-data exceedance rates by station,
+month, hour and threshold, shrinking each level toward the broader rate with
+$\lambda=100$:
+\[
+  \hat p_{0,\tau}=\frac{X_{0,\tau}}{N_0},\qquad
+  \hat p_{m,h,\tau}=\frac{X_{m,h,\tau}+100\hat p_{0,\tau}}{N_{m,h}+100},\qquad
+  \hat p_{s,m,h,\tau}=\frac{X_{s,m,h,\tau}+100\hat p_{m,h,\tau}}{N_{s,m,h}+100}.
+\]
+Here $X$ and $N$ are positive and total training counts; an empty group takes
+its parent rate, so unseen station-month-hour groups fall back to month-hour
+and then overall rates.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Mean metrics across the six primary thresholds on the 2022 model-
+selection sample. Each candidate used the same 2,742,964 sampled training
+windows and 711,112 evaluation windows. Fit time is model-fitting time.}
+\label{tab:selection}
+\begin{tabular}{l r r r}
+\toprule
+Candidate & Mean PR-AUC & Mean Brier & Fit time (s) \\
+\midrule
+Climatology & 0.03847 & 0.02261 & --- \\
+LR-A & 0.03253 & 0.02265 & 46.6 \\
+RF-B & 0.50399 & 0.01466 & 255.9 \\
+GBT-A & 0.03553 & 0.02286 & 319.7 \\
+GBT-B & \textbf{0.52207} & \textbf{0.01402} & 383.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Feature set A uses station, cyclic time and threshold. Feature set B adds
+current and historical same-station rainfall, missingness and window-support
+summaries. GBT-B used depth 4 and 40 iterations. The 2022 sample was used for
+model selection; final generalisation performance is reported on the 2024
+holdout.
+
+\begin{table}[htbp]
+\centering\small
+\caption{GBT feature-set ablation on the deterministic 2022 model-selection
+sample. Both variants used 2,742,964 training and 711,112 evaluation base
+windows.}
+\label{tab:feature-ablation}
+\begin{tabular}{l l r r r}
+\toprule
+Variant & Added inputs over Set A & Mean PR-AUC & Mean Brier & Fit time (s) \\
+\midrule
+GBT-A & None & 0.03553 & 0.02286 & 319.7 \\
+GBT-B & Same-station rainfall history & \textbf{0.52207} &
+\textbf{0.01402} & 383.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+On the 2022 selection sample, GBT-B outperformed GBT-A, so Set B was retained
+for the final model.
+

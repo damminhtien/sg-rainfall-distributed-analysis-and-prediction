@@ -1,0 +1,50 @@
+\caption{Predictor sets considered in model development. Set B contains all
+Set A variables plus same-station rainfall history. Rolling summaries include
+the current reading and prior observations in each configured window.}
+\label{tab:features}
+\begin{tabularx}{\linewidth}{l l X}
+\toprule
+Set & Feature group & Variables and construction \\
+\midrule
+A, B & Station & Categorical station ID, indexed and one-hot encoded. \\
+A, B & Time & Cyclic hour-of-day and day-of-year sine/cosine terms. \\
+A, B & Threshold & Requested rainfall threshold $\tau$ in millimetres. \\
+B & Current reading & Current five-minute rainfall total. \\
+B & Lagged rainfall & Rainfall at 5, 10, 15, 30 and 60 minutes before $t$;
+each lag has a missingness indicator. \\
+B & Rolling history & At 15, 30, 60 and 180 minutes: sum, maximum, wet-reading
+count, observed-reading count and coverage. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Numeric missing values were median-imputed within each fitted pipeline;
+explicit lag missingness and rolling coverage/count features retained
+information about gaps. Set A used the calendar, station and threshold
+signals. Set B tested whether recent rainfall history added predictive value.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Roles and valid base-window counts after split purging and before
+sampling or threshold expansion.}
+\label{tab:splits}
+\begin{tabular}{l l r}
+\toprule
+Partition & Period & Valid windows \\
+\midrule
+Hyperparameter training & 2017--2020 & 20,420,495 \\
+Hyperparameter validation & 2021 & 7,013,077 \\
+Model selection & 2022 & 7,107,898 \\
+Probability calibration & 2023 & 6,719,274 \\
+Held-out evaluation & 2024 & 6,374,476 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Split assignment is based on prediction time. Samples whose 30-minute target
+reaches or crosses a partition boundary are purged, so every retained target
+window lies within its assigned period. Each valid base window expands into
+six threshold-specific examples. The final 2017--2022 fitting pool contains
+34,541,470 valid windows, or 207,248,820 expanded rows
+(Table~\ref{tab:splits}).
+

@@ -1,0 +1,55 @@
+\section{Task 2: Thirty-minute exceedance probability}
+\subsection{Target and features}
+Each candidate is an observed station-time pair with a valid current rainfall
+reading. Let $r(s,u)$ denote rainfall observed at station $s$ at time $u$.
+For threshold $\tau$, the 30-minute accumulation and exceedance label are
+\[
+  \begin{aligned}
+    F_{30}(s,t)
+    &= \sum_{j=1}^{6} r(s,t+5j\,\mathrm{min}),\\
+    y(s,t,\tau)
+    &= \mathbf{1}\left[F_{30}(s,t) > \tau\right].
+  \end{aligned}
+\]
+The sum contains exactly six future observations at $t+5$ through $t+30$
+minutes for the same station. All six must exist at their exact five-minute
+timestamps; a sample missing any future observation is excluded, and missing
+rainfall is not replaced by zero. The current reading is not part of the
+target. Equality to $\tau$ is a non-exceedance.
+
+The model estimates
+\[
+  \hat p(s,t,\tau)=\widehat{\Pr}\!\left(
+  F_{30}(s,t)>\tau\mid X(s,t),\tau\right),
+  \qquad 0.2\leq\tau\leq10\text{ mm}.
+\]
+The requested threshold is an input to the same model, rather than a separate
+classifier for each threshold. Probability theory also requires the outputs
+to respect threshold order:
+\[
+  \tau_1<\tau_2\quad\Longrightarrow\quad
+  \hat p(s,t,\tau_1)\geq\hat p(s,t,\tau_2).
+\]
+
+The selected history feature set adds current and earlier same-station rainfall
+to station identity, cyclic time and the rainfall threshold. All predictor
+information is anchored at or before $t$; future readings define only the
+outcome. Station selects the same-station history series; prediction time $t$
+anchors temporal and historical features; the rainfall threshold is a
+numerical input and defines the exceedance label. The numerical feature set
+contains 36 columns. Station ID is processed separately using StringIndexer
+and OneHotEncoder, then concatenated with the numerical predictors to form the
+full model vector~\cite{mllib}.
+
+The station encoding retains an explicit unknown category, so a new station
+can be scored using its time and rainfall history. Since that category has no
+training examples, the model has no learned station-specific effect for it;
+all stations in the 2024 evaluation period were seen during training, so
+transfer to new stations is not measured. The archive does not record when
+revised readings became available, so real-time feature availability cannot
+be verified. Coordinates and future rainfall are excluded from the
+predictors. Logistic regression uses standardized inputs; random forest and
+gradient-boosted trees use the assembled inputs without standardization.
+
+\begin{table}[htbp]
+\centering\small

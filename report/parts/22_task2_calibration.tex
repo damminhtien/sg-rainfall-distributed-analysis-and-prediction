@@ -1,0 +1,41 @@
+\subsection{Final fitting, calibration and monotone prediction}
+After selection, a new GBT-B model was fitted on all 34,541,470 valid
+2017--2022 base windows (207,248,820 threshold-expanded rows). An isotonic
+calibrator was fitted on a deterministic 10\% sample of the 2023 calibration
+partition:
+671,768 of 6,719,274 base windows, expanded to 4,030,608 threshold examples.
+On this calibration sample, ECE decreased from 0.02264 before calibration to
+0.00165 after calibration. The final GBT fit took
+12,286.9 seconds (about 3 hours 25 minutes).
+
+After calibration, equal-weight pool-adjacent-violators algorithm (PAVA) was
+applied to the six anchor probabilities
+$[0.2,0.5,1,2,5,10]$~mm. The projection minimizes squared displacement subject
+to a non-increasing probability sequence. Any requested threshold inside
+$[0.2,10]$~mm is estimated by linear interpolation between projected anchors;
+out-of-domain thresholds are rejected.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Held-out 2024 threshold monotonicity and weighted calibration error.
+Violation rates use 31,872,380 adjacent threshold pairs.}
+\label{tab:monotonicity}
+\begin{tabular}{l r r r}
+\toprule
+Prediction layer & Weighted ECE & Violation rate (\%) & Maximum increase \\
+\midrule
+Raw selected GBT & 0.022701 & 0.019603 & 0.016010 \\
+Isotonic calibrated & 0.001670 & 0.009739 & 0.035351 \\
+Final PAVA output & 0.001670 & \textbf{0.000000} & \textbf{0.000000} \\
+Climatology & 0.001425 & 0.000000 & 0.000000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Isotonic calibration alone did not enforce ordering across different rainfall
+thresholds. PAVA did: the final anchor probabilities had zero strict
+violations and zero maximum increase across all 31,872,380 adjacent pairs.
+Linear interpolation also remained non-increasing across the five requested
+intermediate thresholds, covering 25,497,904 additional adjacent threshold
+pairs with zero violations (Table~\ref{tab:monotonicity}).
+

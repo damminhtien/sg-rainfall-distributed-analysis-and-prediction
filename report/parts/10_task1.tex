@@ -1,0 +1,197 @@
+\section{Task 1: Rainfall patterns}
+\subsection{Across-year distribution}
+The annual summaries use each retained five-minute reading as one observation.
+Wet frequency is the fraction of readings greater than zero. It was lowest in
+2019 (1.94\%) and highest in 2023 (3.20\%). Conditional wet-reading mean was
+between 0.83 and 0.91~mm across the years. The maximum retained reading ranged
+from 15.4~mm in 2019 to 37.2~mm in 2022. These annual values use all valid
+records and do not adjust for changes in station coverage.
+Table~\ref{tab:annual-distribution} reports the annual values, and
+Figure~\ref{fig:distribution} shows the distribution and wet-reading tail.
+
+\begin{table}[htbp]
+\centering\scriptsize
+\caption{Annual rainfall distribution. Mean rainfall is per retained
+five-minute reading; wet mean is conditional on a positive reading.}
+\label{tab:annual-distribution}
+\begin{tabular}{r r r r r r}
+\toprule
+Year & Valid readings & Wet readings (\%) & Mean (mm) & Wet mean (mm) & Max (mm) \\
+\midrule
+2017 & 5,256,020 & 2.83 & 0.0235 & 0.829 & 18.0 \\
+2018 & 4,594,246 & 2.88 & 0.0251 & 0.870 & 15.6 \\
+2019 & 5,026,862 & 1.94 & 0.0164 & 0.847 & 15.4 \\
+2020 & 6,334,473 & 3.04 & 0.0262 & 0.860 & 20.6 \\
+2021 & 7,044,646 & 3.04 & 0.0277 & 0.910 & 26.4 \\
+2022 & 7,133,230 & 3.09 & 0.0278 & 0.899 & 37.2 \\
+2023 & 6,742,890 & 3.20 & 0.0272 & 0.849 & 17.622 \\
+2024 & 6,406,260 & 3.05 & 0.0258 & 0.846 & 15.912 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{\figpath/task1/rainfall_distribution.png}
+\caption{Wet-reading frequency and conditional wet-reading distribution by
+year. The dashed line marks the wet-reading 99th percentile estimated from
+2017--2022 training-period observations; the last histogram bin contains
+readings of at least 20~mm.}
+\label{fig:distribution}
+\end{figure}
+
+\subsection{Within-year monthly and hourly patterns}
+For eligible station-months, mean observed monthly rainfall ranged from
+31.97~mm (February 2021) to 419.07~mm (October 2022). Monthly wet frequency
+ranged from 0.37\% (August 2019) to 7.07\% (January 2024). The extrema do not
+come from a single year, so they show variation within the observed period
+rather than a stable seasonal climatology.
+
+Conditional wet intensity also varied by month. Across the eligible
+year-month summaries, it averaged 1.05~mm in March and 1.02~mm in April,
+compared with 0.69~mm in January; support ranged from six to eight years per
+calendar month. Individual summaries ranged from 0.58~mm (December 2019) to
+1.35~mm (March 2019).
+
+The equal station-month hourly summaries peaked at 15:00 SGT in 2018, 2019,
+2021, 2022 and 2023, and at 16:00 in 2017, 2020 and 2024. The peak-hour
+frequencies ranged from 3.42\% in 2019 to 7.76\% in 2023. The afternoon peak
+is consistent across years, while its exact hour and magnitude vary. The
+station-month extrema are listed in Table~\ref{tab:monthly-extrema};
+Figures~\ref{fig:monthly} and~\ref{fig:hourly} show monthly intensity,
+frequency and within-day patterns.
+
+\begin{table}[htbp]
+\centering\scriptsize
+\caption{Months with the lowest and highest station-averaged wet-reading
+frequency in each year. Each value averages eligible station-months with at
+least 95\% monthly coverage; the support column gives the station count for
+that month.}
+\label{tab:monthly-extrema}
+\begin{tabular}{r l r r l r}
+\toprule
+Year & Lowest month & Frequency (\%) & Stations & Highest month & Frequency (\%) \\
+\midrule
+2017 & Jun & 1.64 & 26 & Nov & 4.53 \\
+2018 & Jul & 1.40 & 49 & Jan & 6.17 \\
+2019 & Aug & 0.37 & 48 & Dec & 5.79 \\
+2020 & Mar & 1.24 & 45 & Sep & 4.95 \\
+2021 & Feb & 0.39 & 68 & Aug & 5.01 \\
+2022 & Jul & 1.60 & 67 & Oct & 5.17 \\
+2023 & Oct & 1.21 & 62 & Mar & 5.19 \\
+2024 & Jul & 1.16 & 58 & Jan & 7.07 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{\figpath/task1/monthly_frequency_intensity.png}
+\caption{Monthly wet-reading frequency and conditional wet intensity by year.
+Values are equal-weight averages over station-months meeting the 95\% coverage
+rule; frequency uses valid five-minute readings as its denominator.}
+\label{fig:monthly}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{\figpath/task1/monthly_hourly_patterns.png}
+\caption{Station-averaged monthly rainfall and hourly wet frequency by year.
+Only station-months and station-hours meeting the coverage rules are included.
+Hourly labels refer to the recorded interval-end hour in SGT.}
+\label{fig:hourly}
+\end{figure}
+
+\FloatBarrier
+\subsection{Network coverage and annual comparison}
+Annual coverage uses each ID's full calendar year; a station-year without
+readings has zero coverage. No ID met any of the 90\%, 95\% or 99\% cutoffs in
+all eight years, so no fixed-ID cohort could be formed. The annual results
+therefore summarize the available station network rather than a fixed
+monitoring network. A screen of coordinates, station names and device IDs
+found no obvious replacements or co-located IDs. The station-year coverage
+pattern is shown in Figure~\ref{fig:coverage}.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=0.80\linewidth]{\figpath/task1/coverage_heatmap.png}
+\caption{Annual valid-slot coverage by station from 2017 through 2024. Blank
+cells represent a station-year with no retained observations.}
+\label{fig:coverage}
+\end{figure}
+
+\clearpage
+\subsection{Additional descriptive views}
+
+These figures show complete-day rainfall and coverage, hourly wet frequency,
+rainfall tails, wet-spell duration and station-level summaries.
+Figure~\ref{fig:complete-daily} separates the monthly rainfall level from the
+completeness of the underlying observations. Monthly means on complete
+station-days vary between years without a recurring month-by-month pattern,
+and complete-day support also changes across the study period.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.96\linewidth]{\figpath/task1/complete_daily_patterns.png}
+\caption{Monthly equal-station mean rainfall on complete station-days (left)
+and the fraction of expected station-days with all 288 readings (right).}
+\label{fig:complete-daily}
+\end{figure}
+
+Figure~\ref{fig:hourly-supplement} shows higher wet-reading frequency in the
+afternoon, generally around 15:00--17:00 SGT, than overnight. The peak hour
+and its magnitude vary by year, while 2019 is lower across much of the day.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.96\linewidth]{\figpath/task1/hourly_by_year.png}
+\caption{Equal station-month wet-reading frequency by hour and year, using
+the 95\% monthly and within-hour coverage requirements.}
+\label{fig:hourly-supplement}
+\end{figure}
+
+Figure~\ref{fig:rainfall-tail} compares upper quantiles among wet readings
+with the share of all valid readings above the training-period wet-reading
+P99 threshold. P90 and P95 vary less than P99, while the exceedance share is
+lowest in 2019, highest in 2021, and then declines through 2024.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.96\linewidth]{\figpath/task1/rainfall_tail.png}
+\caption{Wet-reading rainfall quantiles (P90, P95 and P99; left) and the
+share of valid readings above the training-period wet-reading P99 threshold
+(right).}
+\label{fig:rainfall-tail}
+\end{figure}
+
+Figure~\ref{fig:wet-spells} summarizes uninterrupted sequences of positive
+readings at exact five-minute intervals. The median spell is one reading in
+every year, while the upper quantiles capture longer runs. Censoring at gaps
+or study boundaries is more common in 2017--2018; observed spell lengths can
+therefore be truncated.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.96\linewidth]{\figpath/task1/wet_spell_patterns.png}
+\caption{Consecutive wet-reading spells at individual stations. Missing
+intervals censor spells; the figure is supplementary and does not imply
+continuous rainfall between observations.}
+\label{fig:wet-spells}
+\end{figure}
+
+Figure~\ref{fig:station-spatial} maps station-year summaries with at least
+90\% annual coverage and consistent coordinates through 2023. Point colour
+shows observed annual rainfall. Totals vary across nearby locations, but
+these station observations do not estimate rainfall between stations or an
+area-weighted spatial pattern.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\linewidth]{\figpath/task1/station_spatial_patterns.png}
+\caption{Observed annual rainfall at station-years with at least 90\%
+coverage and consistent coordinates through 2023. Each point is a station-year;
+the plot is not an area-weighted map of Singapore rainfall.}
+\label{fig:station-spatial}
+\end{figure}
+\clearpage
+

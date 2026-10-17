@@ -1,0 +1,35 @@
+\subsection{Error patterns by recent rainfall}
+The final 2024 holdout contains only stations seen during training; all
+6,374,476 prediction rows have \texttt{unseen\_station=false}. It therefore
+does not measure transfer to new stations. To expose performance differences
+within the observed network, Table~\ref{tab:onset} separates samples with no
+rain in the rolling 30-minute history from those with any rain in that window.
+The flag is derived from \texttt{sum\_30}, which includes the current reading
+and the prior five readings. Metrics use final PAVA scores and the same fixed
+0.5 probability cutoff.
+
+\begin{table}[htbp]
+\centering\scriptsize
+\caption{Final PAVA classification by recent-rainfall regime in held-out
+2024. The rolling 30-minute history includes the current reading and previous
+five readings. Precision and F1 are undefined when no positive predictions
+were made.}
+\label{tab:onset}
+\begin{tabular}{r l r r r r r}
+\toprule
+Threshold (mm) & Recent history & Windows & Positives & Prevalence (\%) &
+Precision & Recall / F1 \\
+\midrule
+0.5 & No rain & 5,969,224 & 69,263 & 1.16 & --- & 0.000 / --- \\
+0.5 & Any rain & 405,252 & 161,808 & 39.93 & 0.7417 & 0.7524 / 0.7470 \\
+10.0 & No rain & 5,969,224 & 6,894 & 0.12 & --- & 0.000 / --- \\
+10.0 & Any rain & 405,252 & 17,436 & 4.30 & 0.5859 & 0.2690 / 0.3687 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At both thresholds, the model made no positive predictions after a dry
+30-minute history, giving zero recall in that subgroup. At 0.5~mm, recall was
+0.7524 when there had been recent rainfall. The fixed 0.5 cutoff therefore
+behaves very differently in dry and recently wet conditions.
+
