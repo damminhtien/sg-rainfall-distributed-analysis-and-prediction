@@ -31,6 +31,9 @@
 \setlength{\parskip}{0.45em}
 \setlength{\parindent}{0pt}
 \captionsetup{font=small,labelfont=bf}
+\makeatletter
+\setlength{\@fpsep}{12pt}
+\makeatother
 
 \newcommand{\figpath}{figures/full-20261012}
 
@@ -89,9 +92,10 @@ Dataproc cluster using Spark DataFrames and MLlib.
 \pagenumbering{arabic}
 
 \section{Introduction}
-The report uses the National Environment Agency's Historical Rainfall across
-Singapore collection, timestamped in Singapore Time. The catalog warns that
-records may be missing and have not undergone climate-record quality control~\cite{nea}.
+Rainfall observations came from the National Environment Agency's Historical
+Rainfall across Singapore collection and are timestamped in Singapore Time.
+The catalog warns that records may be missing and have not undergone
+climate-record quality control~\cite{nea}.
 
 Task 1 describes all eight years. For Task 2, 2017--2020 supports hyperparameter
 training, 2021 supports hyperparameter validation, 2022 is used for candidate
@@ -182,11 +186,11 @@ completeness and changes in station availability.
 The project ran on Google Cloud Dataproc in \texttt{asia-southeast1}. Spark
 handled station-time cleaning and aggregation, rainfall-history and target
 construction, threshold expansion, and MLlib model fitting and scoring across
-worker executors. Table~\ref{tab:cluster} summarizes the final model cluster;
-the project demonstrates distributed execution. Appendix A provides Spark
-History Server evidence for the final training application.
-Figure~\ref{fig:computation-pipeline} summarizes how Spark's structured
-processing feeds model fitting and evaluation.
+worker executors. Table~\ref{tab:cluster} summarizes the final model cluster.
+Appendix A shows Spark History Server evidence from the final training
+application. Figure~\ref{fig:computation-pipeline} summarizes the processing
+flow from rainfall records through feature construction, model fitting and
+evaluation.
 
 \begin{table}[htbp]
 \centering\small
@@ -323,9 +327,9 @@ The annual summaries use each retained five-minute reading as one observation.
 Wet frequency is the fraction of readings greater than zero. It was lowest in
 2019 (1.94\%) and highest in 2023 (3.20\%). Conditional wet-reading mean was
 between 0.83 and 0.91~mm across the years. The maximum retained reading ranged
-from 15.4~mm in 2019 to 37.2~mm in 2022. These annual values use all valid
-records and are descriptive; they are not adjusted for changes in station
-coverage. Table~\ref{tab:annual-distribution} reports the annual values, and
+from 15.4~mm in 2019 to 37.2~mm in 2022. These annual summaries use all valid
+records, while station coverage varies across years.
+Table~\ref{tab:annual-distribution} reports the annual values, and
 Figure~\ref{fig:distribution} shows the distribution and wet-reading tail.
 
 \begin{table}[htbp]
@@ -362,9 +366,7 @@ readings of at least 20~mm.}
 \subsection{Within-year monthly and hourly patterns}
 For eligible station-months, mean observed monthly rainfall ranged from
 31.97~mm (February 2021) to 419.07~mm (October 2022). Monthly wet frequency
-ranged from 0.37\% (August 2019) to 7.07\% (January 2024). The extrema do not
-come from a single year, so they show variation within the observed period
-rather than a stable seasonal climatology.
+ranged from 0.37\% (August 2019) to 7.07\% (January 2024).
 
 Conditional wet intensity also varied by month. Across the eligible
 year-month summaries, it averaged 1.05~mm in March and 1.02~mm in April,
@@ -372,11 +374,9 @@ compared with 0.69~mm in January; support ranged from six to eight years per
 calendar month. Individual summaries ranged from 0.58~mm (December 2019) to
 1.35~mm (March 2019).
 
-The equal station-month hourly summaries peaked at 15:00 SGT in 2018, 2019,
-2021, 2022 and 2023, and at 16:00 in 2017, 2020 and 2024. The peak-hour
-frequencies ranged from 3.42\% in 2019 to 7.76\% in 2023. The afternoon peak
-is consistent across years, while its exact hour and magnitude vary. The
-station-month extrema are listed in Table~\ref{tab:monthly-extrema};
+The equal-weight hourly summaries peaked at 15:00 in five years and 16:00 in
+the other three. Peak-hour frequencies ranged from 3.42\% in 2019 to 7.76\%
+in 2023. The station-month extrema are listed in Table~\ref{tab:monthly-extrema};
 Figures~\ref{fig:monthly} and~\ref{fig:hourly} show monthly intensity,
 frequency and within-day patterns.
 
@@ -425,11 +425,10 @@ Hourly labels refer to the recorded interval-end hour in SGT.}
 \subsection{Network coverage and annual comparison}
 Annual coverage uses each ID's full calendar year; a station-year without
 readings has zero coverage. No ID met any of the 90\%, 95\% or 99\% cutoffs in
-all eight years, leaving no fixed-ID cohort. The annual distributions are
-therefore descriptive of the available network and do not support a
-climate-trend claim. A screen of coordinates, station names and device IDs
-found no obvious replacements or co-located IDs. The station-year coverage
-pattern is shown in Figure~\ref{fig:coverage}.
+all eight years, leaving no fixed-ID cohort. The annual comparisons therefore
+use each year's available network. A screen of coordinates, station names and
+device IDs found no obvious replacements or co-located IDs.
+Figure~\ref{fig:coverage} shows station-year coverage.
 
 \begin{figure}[!ht]
 \centering
@@ -442,13 +441,9 @@ cells represent a station-year with no retained observations.}
 \clearpage
 \subsection{Additional descriptive views}
 
-These figures show complete-day rainfall and coverage, hourly wet frequency,
-rainfall tails, wet-spell duration and station-level summaries.
-Figure~\ref{fig:complete-daily} separates the monthly rainfall level from the
-completeness of the underlying observations. Monthly means on complete
-station-days vary between years without a recurring month-by-month pattern;
-the coverage panel shows that the available complete-day support also changes
-across the study period.
+Complete-day rainfall varied between years without a recurring month-by-month
+pattern. The share of complete station-days also changed across the study
+period (Figure~\ref{fig:complete-daily}).
 
 \begin{figure}[htbp]
 \centering
@@ -461,8 +456,7 @@ and the fraction of expected station-days with all 288 readings (right).}
 Figure~\ref{fig:hourly-supplement} shows higher wet-reading frequency in the
 afternoon, generally around 15:00--17:00 SGT, than overnight. The peak hour
 and its magnitude vary by year, while 2019 is lower across much of the day.
-Each cell summarizes eligible station-months, so the heatmap describes the
-observed network under the stated coverage rules.
+Each cell summarizes eligible station-months.
 
 \begin{figure}[htbp]
 \centering
@@ -496,26 +490,23 @@ therefore be truncated.
 \centering
 \includegraphics[width=0.96\linewidth]{\figpath/task1/wet_spell_patterns.png}
 \caption{Consecutive wet-reading spells at individual stations. Missing
-intervals censor spells; the figure is supplementary and does not imply
-continuous rainfall between observations.}
+intervals censor observed spells.}
 \label{fig:wet-spells}
 \end{figure}
 
 Figure~\ref{fig:station-spatial} maps station-year summaries with at least
 90\% annual coverage and consistent coordinates through 2023. Point colour
-shows observed annual rainfall. Totals vary across nearby locations, but
-these station observations do not estimate rainfall between stations or an
-area-weighted spatial pattern.
+shows observed annual rainfall; totals vary among nearby stations.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.82\linewidth]{\figpath/task1/station_spatial_patterns.png}
+\includegraphics[width=0.70\linewidth]{\figpath/task1/station_spatial_patterns.png}
 \caption{Observed annual rainfall at station-years with at least 90\%
 coverage and consistent coordinates through 2023. Each point is a station-year;
-the plot is not an area-weighted map of Singapore rainfall.}
+no spatial interpolation is applied.}
 \label{fig:station-spatial}
 \end{figure}
-\clearpage
+\FloatBarrier
 
 \section{Task 2: Thirty-minute exceedance probability}
 \subsection{Target and features}
@@ -542,9 +533,8 @@ The model estimates
   F_{30}(s,t)>\tau\mid X(s,t),\tau\right),
   \qquad 0.2\leq\tau\leq10\text{ mm}.
 \]
-The requested threshold is an input to the same model, rather than a separate
-classifier for each threshold. Probability theory also requires the outputs
-to respect threshold order:
+A single model takes the requested threshold as an input. Its exceedance
+probability must not increase as the threshold rises:
 \[
   \tau_1<\tau_2\quad\Longrightarrow\quad
   \hat p(s,t,\tau_1)\geq\hat p(s,t,\tau_2).
@@ -562,13 +552,10 @@ full model vector.
 
 The station encoding retains an explicit unknown category, so a new station
 can be scored using its time and rainfall history. Since that category has no
-training examples, the model has no learned station-specific effect for it;
-all stations in the 2024 holdout were seen during training, so transfer is not
-measured. The archive does not show when revised readings became available,
-making this a retrospective event-time analysis rather than a verified
-real-time forecast. Coordinates and future rainfall are excluded from the
-predictors. Logistic regression uses standardized inputs; random forest and
-gradient-boosted trees use the assembled inputs without standardization.
+training examples, the model has no learned station-specific effect for it.
+Coordinates and future rainfall are excluded from the predictors. Logistic
+regression uses standardized inputs; random forest and gradient-boosted trees
+use the assembled inputs without standardization.
 
 \begin{table}[htbp]
 \centering\small
@@ -631,11 +618,9 @@ $(\texttt{numTrees},\texttt{maxDepth})=\{(50,6),(100,6),(50,8)\}$ and GBT
 $(\texttt{maxDepth},\texttt{maxIter})=\{3,4\}\times\{20,40\}$; 2021 mean
 six-threshold PR-AUC selected one setting per family, with mean Brier as the
 tie-breaker.
-The model-selection training sample contained 2,742,964 base windows and the
-2022 evaluation sample contained 711,112. The five candidates were
-climatology, LR-A, RF-B, GBT-A and GBT-B. Mean PR-AUC across the six primary
-thresholds ranked candidates, with mean Brier score as the tie-breaker
-(Table~\ref{tab:selection}).
+The five candidates were climatology, LR-A, RF-B, GBT-A and GBT-B. Mean
+PR-AUC across the six primary thresholds ranked candidates, with mean Brier
+score as the tie-breaker (Table~\ref{tab:selection}).
 
 The climatology baseline estimates training-data exceedance rates by station,
 month, hour and threshold, shrinking each level toward the broader rate with
@@ -728,22 +713,19 @@ Climatology & 0.001425 & 0.000000 & 0.000000 \\
 \end{tabular}
 \end{table}
 
-Isotonic calibration alone did not enforce ordering across different rainfall
-thresholds. PAVA did: the final anchor probabilities had zero strict
-violations and zero maximum increase across all 31,872,380 adjacent pairs.
-Linear interpolation also remained non-increasing across the five requested
-intermediate thresholds, covering 25,497,904 additional adjacent threshold
-pairs with zero violations (Table~\ref{tab:monotonicity}).
+Isotonic calibration reduced probability error but did not enforce ordering
+across rainfall thresholds. PAVA removed the anchor violations, and
+interpolation preserved the order at the five intermediate thresholds
+(Table~\ref{tab:monotonicity}).
 
 \subsection{Feature-family importance}
 For the final GBT-B model, Spark split importances were mapped from encoded
 vector indices to feature families and normalized by total importance.
 Current rainfall contributed 45.02\%, followed by threshold at 23.40\%,
 rolling maxima at 10.27\% and rolling totals at 10.24\% (Figure~\ref{fig:feature-family}).
-Station identity had no split importance in this fitted model. GBT split
-importance measures how often features are used by the fitted trees; it should
-not be interpreted causally. Correlated rainfall-history features may share
-importance.
+Station identity had no split importance in this fitted model. Split
+importance reflects impurity reductions from the fitted trees, not causal
+effects. Correlated rainfall-history features can share importance.
 
 \begin{figure}[htbp]
 \centering
@@ -848,10 +830,8 @@ evaluator; the plotted curves use the saved scores and
 \label{fig:pr-curves}
 \end{figure}
 
-The reliability diagnostics show weighted ECE moving from 0.022701 for raw
-scores to 0.001670 after isotonic calibration and 0.0016699 after PAVA; the
-climatology value is 0.001425. These are aggregate calibration summaries and
-do not guarantee calibration for every station, month or rainfall regime.
+The aggregate ECE values can hide calibration errors at particular stations,
+months or rainfall regimes.
 
 \begin{table}[htbp]
 \centering\small
@@ -877,14 +857,12 @@ interval of $[-0.01091,-0.00669]$ from 1,000 replicates. The one-week block
 length was not estimated from the temporal dependence structure.
 
 \subsection{Error patterns by recent rainfall}
-The final 2024 holdout contains only stations seen during training; all
-6,374,476 prediction rows have \texttt{unseen\_station=false}. It therefore
-does not measure transfer to new stations. To expose performance differences
-within the observed network, Table~\ref{tab:onset} separates samples with no
-rain in the rolling 30-minute history from those with any rain in that window.
-The flag is derived from \texttt{sum\_30}, which includes the current reading
-and the prior five readings. Metrics use final PAVA scores and the same fixed
-0.5 probability cutoff.
+All 6,374,476 prediction rows in the 2024 holdout have
+\texttt{unseen\_station=false}. Table~\ref{tab:onset} compares samples with no
+rain in the rolling 30-minute history against those with any rain in that
+window. The flag comes from \texttt{sum\_30}, which includes the current and
+previous five readings. Metrics use final PAVA scores and a fixed probability
+cutoff of 0.5.
 
 \begin{table}[htbp]
 \centering\scriptsize
@@ -906,23 +884,19 @@ Precision & Recall / F1 \\
 \end{tabular}
 \end{table}
 
-At the 0.5 cutoff, the model made no positive predictions after a dry 30-minute
-history. Its classification performance therefore differs sharply between
-dry and recently wet conditions.
+At the 0.5 cutoff, the model made no positive predictions after a dry
+30-minute history. After recent rain, precision and recall were higher.
 
 \section{Discussion and limitations}
-The analysis has several limitations. First, station availability changed
-substantially across 2017--2024, so differences between years should be
-interpreted as patterns in the observed network rather than as evidence of a
-long-term rainfall trend.
+Station availability changed substantially across 2017--2024, so differences
+between years describe the observed network, not a long-term rainfall trend.
 
-For the prediction task, the model was evaluated only on stations that had
-already appeared in the training data. Its performance on a newly added
-station is therefore unknown. The dataset also does not record when revised
-observations became available, so the experiments reproduce event-time
-forecasting rather than a fully verified real-time setting.
+The model was evaluated only on stations that had appeared in the training
+data, so performance on a newly added station is unknown. The dataset does not
+record when revised observations became available; the experiments therefore
+reproduce event-time forecasting rather than a fully verified real-time
+setting.
 
-\clearpage
 \section{Conclusion}
 This project developed an end-to-end Spark workflow for analysing Singapore
 rainfall patterns and predicting 30-minute rainfall exceedance probabilities
@@ -955,7 +929,7 @@ We used GPT-6 for coding assistance, debugging and language editing. We
 reviewed the code, ran the experiments, verified the reported results and
 take responsibility for the final submission.
 
-\clearpage
+\enlargethispage{4\baselineskip}
 \addcontentsline{toc}{section}{References}
 \begin{thebibliography}{9}
 \small
