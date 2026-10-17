@@ -36,10 +36,14 @@ were previously observed. Therefore, v2 calls 2024 a **held-out
 evaluation period**, not an untouched blind test, and does not use v1 metrics
 to make v2 decisions.
 
-No completed v2 model result or frozen specification is recorded yet. The
-current `report/main.tex` and `report/main.pdf` describe v1; they are historical
-artifacts, not a report of the protocol above. See [`data/TASK.md`](data/TASK.md)
-for run status and the v2 completion checklist.
+The completed v2 run is `20261016-v2-fixed8-04`. Notebook 03 succeeded and
+selected GBT-B; the original sequential Notebook 04 run failed at PAVA, while
+recovery attempt 03 completed the final evaluation from saved 2024 predictions.
+The current report describes v2 and includes a retrospective comparison with
+v1. The two runs have similar PR-AUC/Brier at most thresholds; v2 enforces
+non-increasing probabilities with PAVA. Because v1 2024 metrics were already
+observed, this comparison is not a new independent test. See
+[`data/TASK.md`](data/TASK.md) for exact metrics, caveats and remaining work.
 
 ## Repository layout
 
@@ -125,8 +129,9 @@ persisted, delete the run's Dataproc cluster and verify that no compute
 resources remain. Review the remaining storage objects before retention or
 cleanup decisions.
 
-Do not update the report with v2 claims until `final_evaluation_summary.json`
-and its supporting artifacts exist. Replace the v1 narrative with measured
-v2 values, compile the PDF, review its layout, and then rebuild the submission
-package. The assignment requires the report, source, and trained model; verify
-the exact Canvas upload requirements before submission.
+The current report is compiled from the measured v2 summary and records the
+original Notebook 04 failure and recovery provenance. For a new run, update
+results only after its frozen spec and `final_evaluation_summary.json` exist;
+compile and visually review the PDF before rebuilding the submission package.
+The assignment requires the report, source, and trained model; verify the exact
+Canvas upload requirements before submission.

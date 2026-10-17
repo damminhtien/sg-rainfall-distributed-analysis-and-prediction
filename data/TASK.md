@@ -110,8 +110,35 @@ untouched blind test.
 - Cleaning retained 48,538,627 of 48,538,713 rows; 86 were excluded. Task 1 covered 2017–2024.
 - The v1 ML models used a deterministic 2% sample while climatology used all training rows. Model selection used Jan–Jun 2023 for both pilot tuning and candidate comparison; calibration used Jul–Dec 2023.
 - V1 selected `gbt_B`. At 0.5 mm and 6,374,476 valid 2024 prediction times, calibrated GBT had PR-AUC 0.6345 and Brier 0.01952; climatology had 0.0732 and 0.03436. These metrics were previously observed and must not influence v2 decisions.
-- V1's calibrated predictor had recorded monotonicity violation rates of 0.0121% at six primary thresholds and 0.0151% at five intermediate thresholds. V2 must report raw/calibrated/final violations and the constrained output must be strictly non-increasing.
+- V1's calibrated predictor had recorded monotonicity violation rates of 0.0121% at six primary thresholds and 0.0151% at five intermediate thresholds, with a maximum adjacent increase of 0.299. V2's raw and isotonic layers still violate ordering (0.019603% and 0.009739%); final PAVA removes all violations on anchors and interpolation.
 - The v1 model reload smoke check passed. It did not rerun the holdout. The v1 report, PDF, model files, and submission ZIP remain historical artifacts.
+
+## Retrospective v1-v2 comparison
+
+Both versions selected GBT-B and report metrics on the same 6,374,476 valid
+2024 prediction windows. The v1 numbers below are rounded values from the
+archived v1 report; v2 numbers are final PAVA values. Since the 2024 results
+were already observed in v1, this is a descriptive comparison on a shared
+holdout, not a new independent generalisation estimate.
+
+| Threshold | V1 PR-AUC / Brier | V2 PAVA PR-AUC / Brier |
+|---:|---:|---:|
+| 0.2 mm | 0.6617 / 0.02520 | 0.6618 / 0.02520 |
+| 0.5 mm | 0.6345 / 0.01952 | 0.6345 / 0.01958 |
+| 1 mm | 0.5819 / 0.01518 | 0.5825 / 0.01516 |
+| 2 mm | 0.5062 / 0.01100 | 0.5070 / 0.01096 |
+| 5 mm | 0.3945 / 0.00613 | 0.3944 / 0.00614 |
+| 10 mm | 0.3016 / 0.00309 | 0.2943 / 0.00311 |
+
+At 0.5 mm, v2 PR-AUC is unchanged at the displayed precision; Brier is higher
+by about 0.00006. At 10 mm, v2 PR-AUC is lower by about 0.0073. The fixed-cutoff
+F1 at 0.5 mm rises from 0.5961 to 0.6161 as recall rises from 0.471 to 0.5269
+and precision falls from 0.812 to 0.7417. V1's 0.0121% primary and 0.0151%
+intermediate monotonicity violation rates (maximum increase 0.299) become zero
+after v2 PAVA and in-domain interpolation. Holdout ECE changes from 0.00172
+to 0.001670, still slightly above climatology in both versions. The predictive
+metrics are therefore broadly similar; v2's clearest gain is the constrained
+probability ordering and more separated temporal protocol.
 
 ## Limitations to retain
 
@@ -120,3 +147,4 @@ untouched blind test.
 - Predictions require a valid current observation and labels require all six future readings.
 - The common annual station cohort was empty at the reported coverage cutoffs; do not interpret changing-network differences as a climate trend.
 - V1 2024 metrics have been seen. Call 2024 the **held-out evaluation period** for v2, not an untouched blind test.
+- The report includes a retrospective v1-v2 table; do not describe it as a new independent holdout comparison.
