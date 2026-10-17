@@ -42,8 +42,7 @@ recovery attempt 03 completed the final evaluation from saved 2024 predictions.
 The current report describes v2 and includes a retrospective comparison with
 v1. The two runs have similar PR-AUC/Brier at most thresholds; v2 enforces
 non-increasing probabilities with PAVA. Because v1 2024 metrics were already
-observed, this comparison is not a new independent test. See
-[`data/TASK.md`](data/TASK.md) for exact metrics, caveats and remaining work.
+observed, this comparison is not a new independent test.
 
 ## Repository layout
 
@@ -58,8 +57,7 @@ observed, this comparison is not a new independent test. See
 | `notebooks/04_final_fit_evaluate.ipynb` | Full-data refit, 2023 calibration, PAVA, and 2024 evaluation |
 | `scripts/rainfall_modeling.py` | Shared Spark ML, metrics, climatology, PAVA, and interpolation functions |
 | `scripts/build_manifest.py` | Reusable input inventory and validation functions |
-| `data/TASK.md` | Active v2 tracking and historical v1 evidence |
-| `report/OUTLINE.md` | Report status and v2 evidence required |
+| `scripts/run_notebooks_sequentially.py` | Sequential Dataproc runner for Notebooks 03 and 04 |
 
 ## Data
 
@@ -92,30 +90,42 @@ python -m ipykernel install --user \
 ```
 
 Place the eight CSVs under `$DATA_ROOT/raw/`, set `DATA_ROOT`, and run
-`00_setup_cloud.ipynb` locally. Its default run ID is
-`20261016-v2-full-01`; use a new run ID for each fresh attempt. Review the
+`00_setup_cloud.ipynb` locally. Its default target run ID is
+`20261016-v2-fixed8-04`; use a new target run ID for each fresh model run. Review the
 project, Education billing link, region, bucket, quota, and provisioning
 settings before running its cloud setup cells. The notebook uploads the
-notebooks, shared modeling helper, config, and source hashes for that run.
+notebooks, shared modeling helper, config, and source hashes for that run. It
+copies the existing base-feature partitions from the run named by
+`base_features_source_run_id` in the config, currently
+`20261016-v2-full-01`.
 
 The analysis notebooks use Dataproc image `2.2.87-debian12` with bundled
 Python 3.11 and Spark 3.5.3. Do not install or upgrade PySpark on that image.
 
 ## Run the analysis
 
-Keep the same `BUCKET` and `RUN_ID` values in setup and analysis notebooks.
-Run in order on the Dataproc Jupyter kernel:
+Keep `BUCKET` consistent. Notebook 00 creates the target run and copies the
+feature partitions named by `base_features_source_run_id` in the experiment
+config. Notebook 03 and Notebook 04 use the target run ID. The recorded
+analysis reused the partitions already present in `20261016-v2-full-01`.
 
-1. `01_clean_and_task1.ipynb` cleans the manifest-listed inputs and produces
-   Task 1 summaries and figures.
-2. `02_build_features.ipynb` builds history features, labels, and the five
-   purged v2 partitions.
-3. `03_model_development.ipynb` uses only `search_train`, `hp_validation`, and
+1. Run `00_setup_cloud.ipynb` locally to upload inputs and source files,
+   create or check the Dataproc cluster, and copy the saved feature partitions
+   into the target run.
+2. `03_model_development.ipynb` uses only `search_train`, `hp_validation`, and
    `model_selection`. It creates the frozen spec only after model selection
    and the full-data development model selection complete.
-4. `04_final_fit_evaluate.ipynb` refuses to run unless the frozen spec and
+3. `04_final_fit_evaluate.ipynb` refuses to run unless the frozen spec and
    config/input/source hashes match. It refits on all valid 2017–2022 data,
    fits the calibrator on 2023, and then evaluates the held-out 2024 period.
+
+On the Dataproc master, the same two stages can run sequentially with
+`RUN_ID=<target-run-id> python scripts/run_notebooks_sequentially.py`. Start an
+existing STOPPED cluster before launching Spark jobs.
+
+Notebooks 01 and 02 clean the raw inputs and build the saved feature
+partitions. They are needed when those partitions are regenerated; the
+recorded final run reused the feature source above.
 
 Run outputs are stored under
 `gs://<BUCKET>/runs/<RUN_ID>/`. Final scores include raw, calibrated, and
