@@ -15,7 +15,7 @@
 \usepackage{tikz}
 \usepackage{pdflscape}
 \usepackage{placeins}
-\usetikzlibrary{positioning}
+\usetikzlibrary{positioning,fit,arrows.meta}
 
 \newcommand{\projecttitle}{Singapore Rainfall Analysis and Prediction}
 
@@ -214,23 +214,45 @@ Final GBT-B fit & 207,248,820 threshold-expanded training examples. Eight worker
 
 \begin{figure}[htbp]
 \centering
-\begin{tikzpicture}[
-  node distance=9mm and 16mm,
-  component/.style={draw, rounded corners, align=center, minimum height=9mm,
-                    text width=34mm, font=\small},
-  worker/.style={component, text width=42mm},
-  link/.style={->, thick}
+\begin{tikzpicture}[x=1mm,y=1mm,
+  font=\footnotesize,
+  component/.style={draw, rounded corners=2pt, align=center, inner sep=2mm,
+                    fill=blue!4},
+  worker/.style={component, text width=17mm, minimum height=12mm,
+                 font=\scriptsize, fill=green!6},
+  flow/.style={-{Stealth[length=1.8mm]}, semithick},
+  dataflow/.style={{Stealth[length=1.8mm]}-{Stealth[length=1.8mm]}, semithick},
+  cluster/.style={draw, dashed, rounded corners=3pt, inner sep=2.5mm,
+                  fill=none}
 ]
-  \node[component] (runner) {Jupyter Notebook interface\\Sequential Spark jobs};
-  \node[component, below=of runner] (master) {Dataproc master\\Spark driver};
-  \node[worker, below left=of master] (workers) {8 Dataproc workers\\8 Spark executors};
-  \node[component, below right=of master] (gcs) {Google Cloud Storage\\features, models, outputs};
-  \draw[link] (runner) -- (master);
-  \draw[link] (master) -- (workers);
-  \draw[<->, thick] (workers) -- (gcs);
+  \node[component, text width=30mm, minimum height=18mm] (notebook) at (9,4)
+    {Dataproc Jupyter\\notebook interface\\Spark job submission};
+  \node[component, text width=34mm, minimum height=16mm] (master) at (70,4)
+    {Dataproc master\\Spark driver\\coordinates each application};
+
+  \node[worker] (w1) at (40,-20) {Worker 1\\Executor 1\\2 cores};
+  \node[worker] (w2) at (59,-20) {Worker 2\\Executor 2\\2 cores};
+  \node[worker] (w3) at (78,-20) {Worker 3\\Executor 3\\2 cores};
+  \node[worker] (w4) at (97,-20) {Worker 4\\Executor 4\\2 cores};
+  \node[worker] (w5) at (40,-36) {Worker 5\\Executor 5\\2 cores};
+  \node[worker] (w6) at (59,-36) {Worker 6\\Executor 6\\2 cores};
+  \node[worker] (w7) at (78,-36) {Worker 7\\Executor 7\\2 cores};
+  \node[worker] (w8) at (97,-36) {Worker 8\\Executor 8\\2 cores};
+
+  \node[cluster, fit=(master)(w1)(w2)(w3)(w4)(w5)(w6)(w7)(w8),
+        label={[font=\footnotesize\bfseries]above:Dataproc cluster}] (clusterbox) {};
+  \node[component, text width=31mm, minimum height=30mm, fill=orange!7] (gcs)
+    at (133,-24) {Google Cloud Storage\\annual rainfall files\\base-feature partitions\\models and predictions};
+
+  \draw[flow] (notebook.east) -- (master.west);
+  \draw[flow] (master.south) -- node[left, font=\scriptsize, align=right]
+    {task\\scheduling} (70,-14);
+  \draw[dataflow] (clusterbox.east |- gcs.west) -- (gcs.west);
 \end{tikzpicture}
-\caption{Execution path from the notebook interface through the Dataproc
-master to worker executors and Google Cloud Storage.}
+\caption{Spark applications are submitted from the Dataproc Jupyter interface
+to the master driver. The driver schedules work across eight two-core worker
+executors, which read project data from and write results to Google Cloud
+Storage.}
 \label{fig:runtime}
 \end{figure}
 
