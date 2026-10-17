@@ -189,9 +189,9 @@ processing feeds model fitting and evaluation.
 \toprule
 Platform and region & Google Cloud Dataproc, \texttt{asia-southeast1} \\
 Dataproc image & \texttt{2.2.87-debian12} \\
-Spark / Python & Spark 3.5.3 / Python 3.11~\cite{spark,dataprocimage} \\
-Master & One \texttt{e2-standard-4}: 4 vCPU, 16~GB RAM~\cite{gceE2} \\
-Workers & Eight \texttt{e2-highmem-2}: 2 vCPU and 16~GB RAM each~\cite{gceE2} \\
+Spark / Python & Spark 3.5.3 / Python 3.11 \\
+Master & One \texttt{e2-standard-4}: 4 vCPU, 16~GB RAM \\
+Workers & Eight \texttt{e2-highmem-2}: 2 vCPU and 16~GB RAM each \\
 Executors & Eight executors, two cores each; dynamic allocation disabled \\
 Worker disks & 40~GB standard persistent disk per worker \\
 Storage & Google Cloud Storage for features, models and outputs \\
@@ -536,7 +536,7 @@ anchors temporal and historical features; the rainfall threshold is a
 numerical input and defines the exceedance label. The numerical feature set
 contains 36 columns. Station ID is processed separately using StringIndexer
 and OneHotEncoder, then concatenated with the numerical predictors to form the
-full model vector~\cite{mllib}.
+full model vector.
 
 The station encoding retains an explicit unknown category, so a new station
 can be scored using its time and rainfall history. Since that category has no
@@ -925,22 +925,6 @@ take responsibility for the final submission.
 \bibitem{nea}
 National Environment Agency. \emph{Historical Rainfall across Singapore}.
 data.gov.sg. \url{https://data.gov.sg/collections/2279/view}.
-
-\bibitem{spark}
-Apache Spark. \emph{Spark 3.5.3 Release Notes}.
-\url{https://spark.apache.org/releases/spark-release-3-5-3.html}.
-
-\bibitem{mllib}
-Apache Spark. \emph{Extracting, transforming and selecting features}, Spark
-3.5.3 documentation. \url{https://spark.apache.org/docs/3.5.3/ml-features.html}.
-
-\bibitem{dataprocimage}
-Google Cloud. \emph{2.2.x release image versions}.
-\url{https://docs.cloud.google.com/managed-spark/docs/concepts/versioning/image-release-2.2}.
-
-\bibitem{gceE2}
-Google Cloud. \emph{General-purpose machine family for Compute Engine}.
-\url{https://docs.cloud.google.com/compute/docs/general-purpose-machines}.
 
 \bibitem{sklearnroc}
 Scikit-learn Developers. \emph{roc\_auc\_score}.
