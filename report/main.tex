@@ -133,7 +133,7 @@ Missing observations were kept as gaps rather than being replaced with zero.
 \centering\small
 \caption{Rainfall records retained by source year, with exclusions separated
 into validation filters and duplicate resolution. The station column counts
-distinct retained station IDs within that year.}
+distinct retained station IDs within each year; station counts are not summed.}
 \label{tab:cleaning}
 \begin{tabular}{r r r r r r}
 \toprule
@@ -148,7 +148,7 @@ Year & Raw rows & Retained rows & \shortstack{Validation\\filtered} & \shortstac
 2023 & 6,742,890 & 6,742,890 & 0 & 0 & 74 \\
 2024 & 6,406,260 & 6,406,260 & 0 & 0 & 70 \\
 \midrule
-Total & 48,538,713 & 48,538,627 & 0 & 86 & --- \\
+Total & 48,538,713 & 48,538,627 & 0 & 86 & N/A \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -536,10 +536,10 @@ The model estimates
   F_{30}(s,t)>\tau\mid X(s,t),\tau\right),
   \qquad 0.2\leq\tau\leq10\text{ mm}.
 \]
-A single model takes the requested threshold as an input. Its exceedance
-probability must not increase as the threshold rises:
+A single model takes the requested threshold as an input. We require its
+predicted exceedance probability to be non-increasing in the threshold: for
+$\tau_1<\tau_2$,
 \[
-  \tau_1<\tau_2\quad\Longrightarrow\quad
   \hat p(s,t,\tau_1)\geq\hat p(s,t,\tau_2).
 \]
 
@@ -641,13 +641,14 @@ and then overall rates.
 \centering\small
 \caption{Mean metrics across the six primary thresholds on the 2022 model-
 selection sample. Each candidate used the same 2,742,964 sampled training
-windows and 711,112 evaluation windows. Fit time is model-fitting time.}
+windows and 711,112 evaluation windows. Fit time is model-fitting time;
+climatology has no model fit.}
 \label{tab:selection}
 \begin{tabular}{l r r r}
 \toprule
 Candidate & Mean PR-AUC & Mean Brier & Fit time (s) \\
 \midrule
-Climatology & 0.03847 & 0.02261 & --- \\
+Climatology & 0.03847 & 0.02261 & N/A \\
 LR-A & 0.03253 & 0.02265 & 46.6 \\
 RF-B & 0.50399 & 0.01466 & 255.9 \\
 GBT-A & 0.03553 & 0.02286 & 319.7 \\
@@ -871,7 +872,7 @@ cutoff of 0.5.
 \centering\scriptsize
 \caption{Final PAVA classification by recent-rainfall regime in held-out
 2024. The rolling 30-minute history includes the current reading and previous
-five readings. Precision and F1 are undefined when no positive predictions
+five readings. Precision and F1 are shown as N/A when no positive predictions
 were made.}
 \label{tab:onset}
 \begin{tabular}{r l r r r r r}
@@ -879,9 +880,9 @@ were made.}
 Threshold (mm) & Recent history & Windows & Positives & Prevalence (\%) &
 Precision & Recall / F1 \\
 \midrule
-0.5 & No rain & 5,969,224 & 69,263 & 1.16 & --- & 0.000 / --- \\
+0.5 & No rain & 5,969,224 & 69,263 & 1.16 & N/A & 0.000 / N/A \\
 0.5 & Any rain & 405,252 & 161,808 & 39.93 & 0.7417 & 0.7524 / 0.7470 \\
-10.0 & No rain & 5,969,224 & 6,894 & 0.12 & --- & 0.000 / --- \\
+10.0 & No rain & 5,969,224 & 6,894 & 0.12 & N/A & 0.000 / N/A \\
 10.0 & Any rain & 405,252 & 17,436 & 4.30 & 0.5859 & 0.2690 / 0.3687 \\
 \bottomrule
 \end{tabular}
