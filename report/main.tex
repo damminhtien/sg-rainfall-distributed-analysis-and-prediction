@@ -106,9 +106,9 @@ records end at second 00. The same \texttt{:59} convention appears in the
 official 2016 dataset, which was not used here~\cite{nea}. In 2017, 3,480,779
 timestamps fell on five-minute boundaries and 1,775,327 fell one second before
 them. The early \texttt{:59} values were advanced one second for alignment, and
-the source timestamps were retained. The publisher does not document the
-convention change's meaning, so this is an alignment choice; other off-grid
-offsets were rejected.
+the source timestamps were retained. NEA does not document the reason for
+this change. We shifted only the systematic \texttt{:59} timestamps by one
+second; other off-grid timestamps were rejected.
 
 Validation covered parsing, station IDs, timestamps, nonnegative rainfall,
 date/year, reading type and unit. Duplicate station-time keys were resolved
@@ -160,9 +160,9 @@ Monthly summaries include station-months with at least 95\% coverage and give
 each eligible station-month equal weight. For hourly summaries, the same
 monthly rule applies, and each station-month-hour must also have at least 95\%
 of its expected readings (12 per day for that hour). At a given hour, eligible
-station-month-hour summaries receive equal weight. These summaries therefore
-describe the observed station network; they do not make its changing
-composition equivalent to a fixed network.
+station-month-hour summaries receive equal weight. Because station coverage
+changes across years, these summaries are not estimates for a fixed station
+network.
 
 A complete day has exactly 288 retained five-minute readings. Supplementary
 complete-day estimates first average complete daily totals within each
@@ -309,8 +309,7 @@ Conditional wet intensity also varied by month. Across the eligible
 year-month summaries, it averaged 1.05~mm in March and 1.02~mm in April,
 compared with 0.69~mm in January; support ranged from six to eight years per
 calendar month. Individual summaries ranged from 0.58~mm (December 2019) to
-1.35~mm (March 2019). These differences describe the observed period and do
-not establish a stable seasonal pattern.
+1.35~mm (March 2019).
 
 The equal station-month hourly summaries peaked at 15:00 SGT in 2018, 2019,
 2021, 2022 and 2023, and at 16:00 in 2017, 2020 and 2024. The peak-hour
@@ -388,8 +387,7 @@ Figure~\ref{fig:complete-daily} separates the monthly rainfall level from the
 completeness of the underlying observations. Monthly means on complete
 station-days vary between years without a recurring month-by-month pattern;
 the coverage panel shows that the available complete-day support also changes
-across the study period. The rainfall values therefore describe the observed
-complete days rather than a fixed network.
+across the study period.
 
 \begin{figure}[htbp]
 \centering
@@ -415,10 +413,8 @@ the 95\% monthly and within-hour coverage requirements.}
 
 Figure~\ref{fig:rainfall-tail} compares upper quantiles among wet readings
 with the share of all valid readings above the training-period wet-reading
-P99 threshold. P90 and P95 vary less than P99, while the exceedance share is
-lowest in 2019 and highest in 2021 before declining through 2024. These are
-year-specific descriptions of the observed tail, not evidence of a long-term
-trend.
+P99 threshold. P90 and P95 vary less than P99, while the exceedance rate was
+lowest in 2019, peaked in 2021, and declined afterwards.
 
 \begin{figure}[htbp]
 \centering
@@ -683,9 +679,10 @@ For the final GBT-B model, Spark split importances were mapped from encoded
 vector indices to feature families and normalized by total importance.
 Current rainfall contributed 45.02\%, followed by threshold at 23.40\%,
 rolling maxima at 10.27\% and rolling totals at 10.24\% (Figure~\ref{fig:feature-family}).
-Station identity had no split importance in this fitted model. These values
-describe predictive split usage, not causal effects; correlated lag and
-rolling features can redistribute tree importance among themselves.
+Station identity had no split importance in this fitted model. GBT split
+importance measures how often features are used by the fitted trees; it should
+not be interpreted causally. Correlated rainfall-history features may share
+importance.
 
 \begin{figure}[htbp]
 \centering
@@ -848,19 +845,17 @@ Precision & Recall / F1 \\
 \end{tabular}
 \end{table}
 
-At both thresholds, the single cutoff predicted no exceedances after a dry
-rolling window. Recall on that subgroup was therefore zero; within the
-recent-rain subgroup, performance was materially higher. This descriptive
-stratification indicates that the global cutoff does not serve all recent-
-rainfall regimes equally and warrants separate operational consideration.
+At the 0.5 cutoff, the model made no positive predictions after a dry 30-minute
+history. Its classification performance therefore differs sharply between
+dry and recently wet conditions.
 
 \section{Discussion and limitations}
 No station met the 90\% annual-coverage rule in every year, so annual
 differences describe a changing network and do not establish a climate trend.
 
-Future evaluation should test forecast-time data availability and performance
-at stations absent from training. The final model's 2024 weighted ECE was
-slightly higher than the
+Two cases remain untested: whether every input is available at forecast time,
+and whether the model transfers to stations absent from training. The final
+model's 2024 weighted ECE was slightly higher than the
 climatology baseline, while PR-AUC and Brier score improved at all six
 thresholds. Predictions require a valid current observation, and labels require
 all six future readings.
@@ -871,9 +866,10 @@ Task 1 found that wet-reading frequency ranged from 1.94\% to 3.20\% across
 At 0.5~mm on the 2024 evaluation set, final PR-AUC was 0.6345 and Brier score
 was 0.01958, compared with 0.0732 and 0.03436 for climatology. PR-AUC and
 Brier score improved at all six primary thresholds, while weighted ECE
-remained slightly higher than climatology. Recent same-station rainfall
-history was the main source of predictive improvement, and calibration and
-PAVA produced threshold-consistent probability estimates.
+remained slightly higher than climatology. Adding same-station rainfall
+history increased the 2022 GBT PR-AUC from 0.0355 to 0.5221. Isotonic
+calibration reduced aggregate calibration error, and PAVA removed
+cross-threshold monotonicity violations.
 
 \section*{AI use declaration}
 \addcontentsline{toc}{section}{AI use declaration}
