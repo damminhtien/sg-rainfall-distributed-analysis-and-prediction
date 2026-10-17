@@ -16,7 +16,8 @@ use v1 Task 2 measurements as v2 evidence. Since
    caveat.
 2. **Prediction target and features.** Define the strict target
    F_30 > tau, six future readings, observed-time queries, history features,
-   and missing-window exclusions.
+   missing-window exclusions, and the required non-increasing probability
+   relation across rainfall thresholds. Describe feature sets A and B.
 3. **Temporal design.** Report purged roles: 2017-2020 hyperparameter training,
    2021 hyperparameter validation, 2022 candidate selection, full 2017-2022
    final refit, 2023 calibration, and 2024 final evaluation. Explain that the
@@ -25,16 +26,19 @@ use v1 Task 2 measurements as v2 evidence. Since
    sample before survivor refits on all eligible 2017-2020 rows. The 2022
    comparison uses 10% samples of 2017-2021 training and 2022 evaluation.
    Report the five candidates and measured counts/metrics/fit times; LR-B was
-   removed. No training-fraction scaling study was run.
+   removed. Include the GBT-A/B history-feature comparison. No training-fraction
+   scaling study was run.
 5. **Probability pipeline.** Report GBT-B refitted on every valid 2017-2022
    row, predetermined 2023 isotonic calibration, equal-weight non-increasing
    PAVA over six anchors, and in-domain linear interpolation.
 6. **Final evaluation.** Compare raw, calibrated and PAVA outputs plus
    full-training climatology on the same 2024 cohort. Include per-threshold
-   PR-AUC/Brier/support, ECE, monotonicity/max increase, intermediate threshold
-   results and paired weekly-block uncertainty. Add a clearly labeled
-   retrospective v1-v2 comparison, preserve v1 rounding, and disclose that both
-   use the previously observed 2024 period.
+   PR-AUC/Brier/support, locally recomputed ROC-AUC, fixed-cutoff precision,
+   recall and F1, weighted ECE, reliability and PR curves, monotonicity/max
+   increase, intermediate threshold results and paired weekly-block uncertainty.
+   Add a recent-rainfall error stratification and a clearly labeled retrospective
+   v1-v2 comparison; preserve v1 rounding and disclose that both use the
+   previously observed 2024 period.
 7. **Execution provenance.** State that the sequential runner recorded
    Notebook 03 success but Notebook 04 failure at the original PAVA expression.
    The final evaluation summary came from recovery attempt 03 using saved
@@ -60,12 +64,21 @@ use v1 Task 2 measurements as v2 evidence. Since
 - The report now includes a v1-v2 metric table using the shared 2024 cohort,
   preserves the rounding of the archived v1 values, and labels the comparison
   retrospective rather than independent.
+- The final PDF includes the provided author name and student ID, the AI use
+  declaration, feature-set and ablation tables, threshold-monotonicity formula,
+  reliability and precision-recall figures, per-threshold support/metrics, and
+  recent-rainfall subgroup results. Locally recomputed ROC-AUC is labeled as a
+  supplementary metric and was not used for model selection.
+- ECE is defined as a count-weighted absolute calibration gap over ten
+  equal-width probability bins per threshold. Derived figures and CSVs are
+  accompanied by a source/method manifest under report/tables/v2/.
 - Final model/reliability artifacts, full run source, logs, Parquet predictions
   and manifests are in the local mirror at
   /Users/macbook/Data/sg-rainfall-v2-fixed8-04/; checksum-only rsync found no
   differences from GCS.
-- The report compiled to a 15-page A4 PDF. Page thumbnails and the primary
-  results/provenance tables were visually inspected.
+- The report compiled to a 19-page A4 PDF. Every page was rendered for visual
+  review; the cover, figures, results tables, references and provenance pages
+  were inspected at full size. The PDF metadata includes the author name.
 - A separate inference smoke test of the saved model with an explicit
   out-of-domain rejection is still pending, as are final package checks and
   Canvas upload receipt.
@@ -80,3 +93,4 @@ use v1 Task 2 measurements as v2 evidence. Since
   report/archive/v1/main.pdf (local copy)
 - Final metrics: results/recovery/attempt-03/final_evaluation_summary.json
 - Original sequential status: results/overnight_execution/status.json
+- V2 report evidence: report/figures/v2/ and report/tables/v2/
