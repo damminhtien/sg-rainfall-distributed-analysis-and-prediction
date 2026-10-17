@@ -55,7 +55,7 @@
   ],
   "metric_methods": {
     "pr_auc": "Spark 3.5.3 BinaryClassificationEvaluator areaUnderPR with auc_num_bins=1000, copied from final summary",
-    "roc_auc": "roc_auc_score computed from each saved held-out threshold score array; not used for model selection",
+    "roc_auc": "scikit-learn roc_auc_score using continuous held-out scores; GBT scores come from saved 2024 predictions, while climatology scores are reconstructed from training-only histograms and the same label_valid 2024 cohort.",
     "reliability": "Spark-exported held-out aggregates at 0.5 mm, grouped into ten equal-width probability bins",
     "precision_recall_curves": "threshold-swept curves from saved 2024 anchor predictions using scikit-learn; horizontal reference is 2024 prevalence",
     "recent_rainfall_strata": "streaming aggregation over all saved 2024 score Parquet files, grouped by threshold and onset flag; onset is sum_30 == 0; classification cutoff is 0.5"
