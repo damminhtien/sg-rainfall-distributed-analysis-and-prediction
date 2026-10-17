@@ -614,29 +614,38 @@ six threshold-specific examples. The final 2017--2022 fitting pool contains
 (Table~\ref{tab:splits}).
 
 \subsection{Model selection}
-Hyperparameter screening used a deterministic 10\% sample from 2017--2020
-and validation on 2021. Candidate configurations were then refitted on the
-2017--2021 training pool and compared on a deterministic 10\% sample of 2022.
-The grid covered LR $\texttt{regParam}=\{0.001,0.01,0.1,1\}$, RF
-$(\texttt{numTrees},\texttt{maxDepth})=\{(50,6),(100,6),(50,8)\}$ and GBT
-$(\texttt{maxDepth},\texttt{maxIter})=\{3,4\}\times\{20,40\}$; 2021 mean
-six-threshold PR-AUC selected one setting per family, with mean Brier as the
-tie-breaker.
-The five candidates were climatology, LR-A, RF-B, GBT-A and GBT-B. Mean
-PR-AUC across the six primary thresholds ranked candidates, with mean Brier
-score as the tie-breaker (Table~\ref{tab:selection}).
+Model development had two stages. Hyperparameters were screened on a
+deterministic 10\% sample from 2017 to 2020. Up to two close configurations
+per family were then refitted on all 2017 to 2020 training windows and
+compared on 2021. The search varied logistic regression
+\texttt{regParam} over 0.001, 0.01, 0.1 and 1; random forest
+\texttt{(numTrees, maxDepth)} over (50, 6), (100, 6) and (50, 8); and
+gradient-boosted tree \texttt{maxDepth} over 3 and 4 and \texttt{maxIter}
+over 20 and 40. Within each family, mean PR-AUC across the six primary
+thresholds on 2021 selected a configuration; mean Brier score and model
+complexity resolved close results.
 
-The climatology baseline estimates training-data exceedance rates by station,
-month, hour and threshold, shrinking each level toward the broader rate with
-$\lambda=100$:
+For the final comparison, each candidate was fitted on the same deterministic
+10\% sample of the combined 2017 to 2021 training data and evaluated on a
+deterministic 10\% sample of 2022. The five candidates were climatology,
+LR-A, RF-B, GBT-A and GBT-B. Mean PR-AUC across the six primary thresholds
+ranked candidates, with mean Brier score and model complexity resolving close
+results (Table~\ref{tab:selection}).
+
+The climatology baseline uses training examples only. For each threshold,
+it estimates an overall exceedance rate, then month-hour and
+station-month-hour rates, shrinking each more specific estimate toward its
+parent with $\lambda=100$:
 \[
   \hat p_{0,\tau}=\frac{X_{0,\tau}}{N_0},\qquad
-  \hat p_{m,h,\tau}=\frac{X_{m,h,\tau}+100\hat p_{0,\tau}}{N_{m,h}+100},\qquad
-  \hat p_{s,m,h,\tau}=\frac{X_{s,m,h,\tau}+100\hat p_{m,h,\tau}}{N_{s,m,h}+100}.
+  \hat p_{m,h,\tau}=\frac{X_{m,h,\tau}+\lambda\hat p_{0,\tau}}{N_{m,h}+\lambda},\qquad
+  \hat p_{s,m,h,\tau}=\frac{X_{s,m,h,\tau}+\lambda\hat p_{m,h,\tau}}{N_{s,m,h}+\lambda}.
 \]
-Here $X$ and $N$ are positive and total training counts; an empty group takes
-its parent rate, so unseen station-month-hour groups fall back to month-hour
-and then overall rates.
+Here $X_{g,\tau}$ is the number of training examples in group $g$ whose
+future 30-minute rainfall is greater than threshold $\tau$, and $N_g$ is the
+total number of training examples in that group. An empty station-month-hour group
+therefore uses its month-hour rate; if that group is also absent, the estimate
+falls back to the overall rate.
 
 \begin{table}[htbp]
 \centering\small
