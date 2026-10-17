@@ -1,4 +1,4 @@
-# Project Memory — DSA5208 Singapore Rainfall
+# Project Memory: DSA5208 Singapore Rainfall
 
 Updated: 12/10/2026 (Asia/Singapore). This note restores context when work resumes. The cloud/cost states below are dated snapshots and must be rechecked before running work or making claims about current state.
 
@@ -53,12 +53,12 @@ Updated: 12/10/2026 (Asia/Singapore). This note restores context when work resum
 - `report/main.tex` compiled in an earlier turn, but it is not final without cleaning reconciliation, model freeze/test results, eight-year EDA, complete Spark UI screenshots, package reload, and submission receipt.
 - The prior notebook run `RUN_ID=20261011-full-01` has many artifacts in the GCS bucket. Keep it immutable; inspect each output/metadata before reuse. A fresh retry must use a distinct run ID and output prefix.
 
-## Most recent continuation checkpoint — 12/10/2026
+## Most recent continuation checkpoint: 12/10/2026
 
 - `data/TASK.md` is the current checklist. Section A (synchronizing the billing policy and run-scoped paths) was completed in commit `9392908` (`Fix cloud billing gate and version run artifacts`). An earlier separate commit `c351f97` added the initial memory note.
 - The next planned run is `RUN_ID=20261012-full-01`, `MODEL_ATTEMPT=attempt-01`; the new runtime/source bundle prefix was verified empty at the latest check. Keep run `20261011-full-01` immutable.
 - `notebooks/00_environment.ipynb` and analysis notebooks 01–05 were updated to use the manifest/source bundle for the new run; support notebooks 07–11 were also synchronized. Static checks passed: `py_compile` for the billing helper, JSON/AST checks for notebook code cells, and a review of old cost gates.
-- Notebook 00 has not been run, no new-run cluster has been created, and there are no new results for B–F. Do not treat these static checks as evidence that the pipeline ran.
+- Notebook 00 has not been run, no new-run cluster has been created, and there are no new results for sections B through F. Do not treat these static checks as evidence that the pipeline ran.
 - Next implementation step: confirm the correct `00_environment.ipynb` window/tab in VS Code, select the local Python 3.14 kernel for the setup notebook, run cells in order, and inspect each output. Before any resource-creation cell, recheck live identity, project/account link, and inventory; run Spark workloads only on Dataproc Jupyter.
 - At the last check, the VS Code UI showed a mixture of old/new notebook tabs; confirm the tab name and kernel in the UI before running anything to avoid running the wrong notebook.
 - Git already had changes outside the scope of this note (`README.md`, `report/main.tex`, three `src/rainfall` modules, `.DS_Store`, `report/evidence/`, `report/figures/`, `report/tables/`). Do not stage/revert these items when updating memory.

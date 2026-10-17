@@ -61,7 +61,7 @@
 \hypersetup{pageanchor=true}
 \pagenumbering{roman}
 \section*{Abstract}
-This project analyses Singapore’s five-minute rainfall records from 2017 to
+This project analyses Singapore's five-minute rainfall records from 2017 to
 2024 and develops a distributed Spark pipeline for 30-minute rainfall
 exceedance prediction. After cleaning the NEA data and accounting for missing
 observations and changing station coverage, wet-reading frequency was found to
@@ -947,10 +947,7 @@ projection removed cross-threshold monotonicity violations.
 
 The full pipeline was executed on a distributed Google Cloud Dataproc cluster
 using Spark DataFrames and MLlib, from data preparation and feature
-construction through model fitting and evaluation. Together, the results
-complete both project tasks with a reproducible distributed workflow and
-provide a clear account of where the model performs well and where further
-work is still needed.
+construction through model fitting and evaluation.
 
 \section*{AI use declaration}
 \addcontentsline{toc}{section}{AI use declaration}

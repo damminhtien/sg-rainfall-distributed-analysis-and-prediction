@@ -1,4 +1,4 @@
-# Report outline — Singapore Rainfall Analysis and Prediction
+# Report outline: Singapore Rainfall Analysis and Prediction
 
 The report presents eight years of Singapore five-minute rainfall data and a
 30-minute threshold-exceedance prediction task.

@@ -5,11 +5,11 @@
 > The restriction to use only the Education account and credit 3LU63BPGY77JFDQQ remains in effect.
 > Cloud states in the log are historical snapshots, not live checks.
 
-# DSA5208 Project 2 — Singapore Rainfall Analysis and Prediction
+# DSA5208 Project 2: Singapore Rainfall Analysis and Prediction
 
 Plan reviewed on 11/10/2026. This is an execution plan, not evidence that the data has been validated or that a cluster/model has run. Each phase has outputs and acceptance criteria. Statistical/modeling choices must be recorded before the final test.
 
-## Active protocol v2 — 16/10/2026
+## Active protocol v2: 16/10/2026
 
 Protocol v2 supersedes the v1 Task 2 sampling, split, calibration, and prediction rules below. The v1 run and its 2024 metrics are historical evidence; they are not v2 results and must not be used to make v2 choices. Because v1 2024 metrics were already observed, describe the v2 period as a **held-out 2024 evaluation period**, not an untouched blind test. Do not report v2 results until their run artifacts exist.
 
@@ -40,9 +40,9 @@ Assignment source: `data/project_description.txt`. Data source: [Historical Rain
 | Deliverables | Source + README; trained model; PDF listing every member's name and student ID |
 | Group/deadline | Up to 3 people; 18/10/2026, 23:59 according to the Canvas description; confirm timezone/upload limit in Canvas |
 
-**Individual implementation (1 person):** Mac + gcloud → GCS → Dataproc + Jupyter + Spark/MLlib → GCS outputs → source/model/PDF. Do not create a local cluster. The assignment allows local/GCP/Databricks; Google Cloud is the implementation choice, not an assignment requirement.
+**Individual implementation (1 person):** The workflow starts on the Mac with gcloud, uploads inputs to GCS, runs Spark/MLlib on Dataproc with Jupyter, and writes outputs to GCS for packaging with the source, model, and PDF. Do not create a local cluster. The assignment allows local/GCP/Databricks; Google Cloud is the implementation choice, not an assignment requirement.
 
-Old citation placeholders (`Lec6`, `Project-2-Singapore-Rainfall-An…`) have been removed. If citing lecture material in the report, check the source and record the exact slide title/page number.
+Old citation placeholders (`Lec6` and an incomplete Project-2-Singapore-Rainfall filename) have been removed. If citing lecture material in the report, check the source and record the exact slide title/page number.
 
 ## 2. Review findings
 
@@ -62,7 +62,7 @@ Old citation placeholders (`Lec6`, `Project-2-Singapore-Rainfall-An…`) have be
 
 **Gates still requiring evidence:** whether timestamps mark the start or end of an interval; the meaning of update fields; timestamp-alignment rules; billing/project/IAM; compatible image/runtime; and the Project 1 LaTeX source. The academic-writing skill at `data/academic-writing-SKILL.md` was available and read while preparing the report outline. Do not assume these gates have passed.
 
-## 3. Phase 0 — Repository and provenance
+## 3. Phase 0: Repository and provenance
 
 Local paths from `data/pwd`:
 
@@ -79,34 +79,34 @@ Keep raw data immutable and outside the repo. Select only the eight files `Histo
 
 ```text
 sg-rainfall-distributed-analysis-and-prediction/
-├── README.md
-├── requirements-local.txt
-├── requirements-cluster.txt
-├── config/
-│   ├── cloud.env.example
-│   └── experiment.json
-├── data/TASK.md
-├── notebooks/
-│   ├── 00_environment.ipynb
-│   ├── 01_data_quality.ipynb
-│   ├── 02_task1_weather_patterns.ipynb
-│   ├── 03_task2_features.ipynb
-│   ├── 04_task2_models.ipynb
-│   └── 05_final_evaluation.ipynb
-├── src/rainfall/             # config, cleaning, features, models, metrics, predict, plotting
-├── scripts/
-├── tests/
-├── figures/
-├── results/
-├── models/
-└── report/                  # main.tex, references.bib
+|-- README.md
+|-- requirements-local.txt
+|-- requirements-cluster.txt
+|-- config/
+|   |-- cloud.env.example
+|   \-- experiment.json
+|-- data/TASK.md
+|-- notebooks/
+|   |-- 00_environment.ipynb
+|   |-- 01_data_quality.ipynb
+|   |-- 02_task1_weather_patterns.ipynb
+|   |-- 03_task2_features.ipynb
+|   |-- 04_task2_models.ipynb
+|   \-- 05_final_evaluation.ipynb
+|-- src/rainfall/             # config, cleaning, features, models, metrics, predict, plotting
+|-- scripts/
+|-- tests/
+|-- figures/
+|-- results/
+|-- models/
+\-- report/                   # main.tex, references.bib
 ```
 
 **Jupyter Notebooks are the only entry point for running project code and viewing outputs.** Reusable functions live in `scripts/` or `src/` and are imported/called from notebooks; do not run analysis from a terminal, `spark-submit`, or batch script. Required Cloud SDK commands are also invoked from Python notebook cells using `subprocess`, with status/results printed to cell output. Save notebooks with the necessary outputs; do not write credentials or sensitive content into notebooks. Each run has a `RUN_ID`, Git commit, input manifest hash, and config hash; write output under a distinct run prefix and do not overwrite final results. Do not commit `skills/`, `.codex/`, `.vscode/`, `AGENTS.md`, `config/cloud.env`, credentials, or large raw/cache files. Sample plans/configs and small result tables may be committed.
 
 **Acceptance:** manifest covers all eight years; paths are portable; entry point and execution order are clear; repo contains no credentials/raw data.
 
-## 4. Phase 1 — Cloud preflight and budget
+## 4. Phase 1: Cloud preflight and budget
 
 ### 4.1. The only credit and billing account authorized for use
 
@@ -148,7 +148,7 @@ The cluster must have both an idle timeout **and** a maximum lifetime, and must 
 
 **Acceptance:** `BILLING_ACCOUNT_ID` is locked to credit `3LU63BPGY77JFDQQ`; no other account/credit is used; linkage and balance/scope are reconciled; the budget covers pending/storage/cleanup; quota/IAM/network are correct. If not met, perform no billable operations.
 
-## 5. Phase 2 — GCS, Dataproc, and Jupyter
+## 5. Phase 2: GCS, Dataproc, and Jupyter
 
 The bucket is private, uses uniform access, and is in the same region as compute. Create the bucket and upload the exact manifest and eight CSVs (2017–2024) using separate cells in `00_environment.ipynb`; each cell prints status and the object list to its output. Do not upload 2016 or data outside the manifest.
 
@@ -166,7 +166,7 @@ Create the Dataproc cluster in a dedicated cell in `00_environment.ipynb` after 
 
 An internal-IP cluster requires Private Google Access and correctly configured internal networking. Public PyPI/Maven downloads may fail without internet egress; prefer preinstalled dependencies or compatible wheels on GCS, and account for additional cost if using NAT ([network configuration](https://docs.cloud.google.com/dataproc/docs/concepts/configuring-clusters/network)). Pin and import-check SciencePlots/Matplotlib against cloud Python before a full run.
 
-Open Console → cluster → Web Interfaces → Jupyter/JupyterLab through Component Gateway. Save the notebook on GCS and export it to the repo after the session; do not keep artifacts only on the cluster's local disk ([Jupyter component](https://docs.cloud.google.com/dataproc/docs/concepts/components/jupyter)).
+In Console, open the cluster, then select Web Interfaces and Jupyter/JupyterLab through Component Gateway. Save the notebook on GCS and export it to the repo after the session; do not keep artifacts only on the cluster's local disk ([Jupyter component](https://docs.cloud.google.com/dataproc/docs/concepts/components/jupyter)).
 
 In the Dataproc notebook, record image, Spark/Python/Java/OS, region, machine types/disks, service account, application ID/master, actual executors, and Spark config. Set `spark.sql.session.timeZone=Asia/Singapore`. The notebook smoke run reads one CSV with an explicit schema, creates/reads a small Parquet dataset, and checks MLlib/imports/GCS. Spark master must be YARN, with executors running on workers. Display all stdout, tables, and figures needed for analysis in the notebook; save the executed notebook to GCS and export it to the repo after the session.
 
@@ -194,7 +194,7 @@ do not present them as successes. Local cells that do not create a Spark applica
 are outside this requirement. See [Spark Web UI](https://spark.apache.org/docs/latest/web-ui.html)
 and [Dataproc Component Gateway](https://docs.cloud.google.com/managed-spark/docs/concepts/accessing/gateways).
 
-## 6. Phase 3 — Data contract and cleaning
+## 6. Phase 3: Data contract and cleaning
 
 NEA states that timestamps are SGT, records may be missing, and the data has not undergone climate quality control; do not treat the raw data as climate-quality data ([NEA collection](https://data.gov.sg/collections/2279/view)). Confirm each file's schema; sample header:
 
@@ -234,9 +234,9 @@ Open and run `notebooks/01_data_quality.ipynb` in Dataproc Jupyter after preflig
 
 **Execution status on 11/10/2026:** notebook 00 created project `sg-rainfall-dsa5208-261011`, verified its link to the correct Education account, and created a private bucket and private Dataproc cluster. Notebook 01 attempt 2 ran Spark 3.5.3/YARN; its cell verified that actual byte-level SHA-256 hashes matched the manifest for all eight CSVs. The audit reported 48,538,713 rows; all `reading_type`/`reading_unit` values were `TB1 Rainfall 5 Minute Total F`/`mm`, and the manifest scan found 0 rows with an incorrect field count. Action `raw_quality_audit` completed in 858.697 seconds in application `application_1791706788393_0001`, with Job IDs 0–20 SUCCEEDED. The subsequent `deterministic_cleaning` action failed due to a YARN ApplicationMaster timeout and Spark listener OOM. However, Parquet `cleaned/` had already written `_SUCCESS` and all 2017–2024 partitions before the failure. Outputs `rejected/`, `quality_by_year/`, `exclusion_counts/`, `alignment_distribution/`, and `coverage_and_gaps` were not created; therefore, retained/excluded reconciliation and eight-year coverage checks in Notebook 01 remain incomplete. Do not mark Phase 3 complete based only on the Parquet marker. Spark UI screenshots were not captured; the Mac was locked during review, and API metadata is not a substitute for real screenshots. The corrupt-record flag covers parser errors only; a separate manifest scan is needed to detect too few/many tokens.
 
-## 7. Phase 4 — Task 1: Weather patterns
+## 7. Phase 4: Task 1 weather patterns
 
-For each analysis, record its purpose, cohort/denominator, statistic, observation, interpretation, and limitation. Do not create a separate set of research questions; follow Task 1 directly. Do not sum all stations and call it “total Singapore rainfall.”
+For each analysis, record its purpose, cohort/denominator, statistic, observation, interpretation, and limitation. Do not create a separate set of research questions; follow Task 1 directly. Do not sum all stations and call the result total Singapore rainfall.
 
 | Analysis | Output/method |
 |---|---|
@@ -276,11 +276,11 @@ EDA directly supports Task 1; do not add research questions. Prioritize coverage
 
 `findings.json` must include actual peaks/troughs, units, support, and common-cohort availability calculated from aggregates; do not fill it with illustrative findings before a run. After each action, review the **Spark Web UI / History Server Jobs summary and every Job detail**, then capture real screenshots showing application/job IDs, status, duration, and stages/tasks. Event metadata is only a cross-reference index, not a replacement for screenshots.
 
-**EDA acceptance:** at least one within-year finding, one annual comparison with sensitivity (or an explanation for the lack of a common cohort), and one coverage/distribution finding, all with real measurements. Report peak–trough in mm or percentage points, comparison sample, support, and limitations; do not draw conclusions from plot colors alone. If months/hours are missing, list the months/hours represented; do not treat them as zero or claim a complete comparison.
+**EDA acceptance:** at least one within-year finding, one annual comparison with sensitivity (or an explanation for the lack of a common cohort), and one coverage/distribution finding, all with real measurements. Report the peak-to-trough difference in mm or percentage points, comparison sample, support, and limitations; do not draw conclusions from plot colors alone. If months/hours are missing, list the months/hours represented; do not treat them as zero or claim a complete comparison.
 
 **Execution status on 11/10/2026:** Notebook 02 attempt 1 stopped before the EDA action because SciencePlots was not in `sys.path`; application `application_1791706788393_0002` created no Spark job. A wheel was installed in the project vendor directory, and Notebook 02 attempt 2 reran on Parquet `cleaned/`: action `task1_pretest_eda` in application `application_1791706788393_0003` completed in 498.084 seconds, with all 241 Spark jobs SUCCEEDED. The notebook has outputs; CSV/JSON and PDF/PNG are saved in `report/tables/pretest/` and `report/figures/pretest/`. Results for 2017–2023: 84 station IDs in the fixed network; mean network coverage per year was 39.4%–80.8%; there was no common station cohort even at a 90% cutoff; the peak month differed by year, and 15:00 SGT had the highest wet frequency in 6 of 7 years. `report/main.tex` was updated with results, denominators, and interpretation limits. The full eight-year comparison must run after Task 2 is frozen. Spark History UI screenshots of the Jobs summary and 241 Job details were not saved to files because the Mac was locked; this acceptance item remains open, and the History API is not a substitute. Notebook 03 completed: app `application_1791706788393_0004`; the fixture action took 47.949 seconds, with 18 successful jobs and all 7 leakage/target fixtures passing; action `base_features_and_labels` took 754.368 seconds, with Job IDs 18–26 all SUCCEEDED. Parquet `base_features/` and `sample_attrition/` contain `_SUCCESS`. Eligible base station/time keys: train 32,798,917; selection 3,325,499; calibration 3,393,373; 2024 test 6,374,476. Invalid windows due to missing future readings in each split: 814,899; 11,350; 11,884; 31,408, respectively. These are window-completeness counts, not positive prevalence. The notebook materialized six future sums for the 2024 partition before freeze, but displayed only `label_valid` counts; it did not inspect/use 2024 prevalence, model scores, or metrics. This process limitation must remain transparent; do not call the test fully blind. Do not read the 2024 partition for scoring until the frozen manifest is recorded. App4's Jobs summary was opened directly in Spark History Server and showed 27 completed jobs; Job 20 detail showed SUCCEEDED, 9.6 minutes, and a completed stage with 29/29 tasks. Two screenshots were captured and displayed in the interaction but not exported to files under `report/evidence/`. The summary file and all 27 Job detail files are still pending.
 
-## 8. Phase 5 — Target and inference contract
+## 8. Phase 5: Target and inference contract
 
 Once semantics are verified, `r(s,u)` is the rainfall total for interval `(u−5min,u]`; `t` is the decision time on the 5-minute SGT grid:
 
@@ -303,7 +303,7 @@ Compute base features/label once per `(station,t)`, then expand across the grid.
 
 **Acceptance:** correct horizon/strict inequality/completeness/domain; fixtures for dry/wet/gap/duplicate/equality/off-grid cases; inference returns a probability.
 
-## 9. Phase 6 — Features and availability leakage
+## 9. Phase 6: Features and availability leakage
 
 Feature readings must satisfy **both** `interval_end ≤ t` and `available_time ≤ t`. An older observation may not have been published at `t`; the local sample contains delays, so do not assume `rain_t` is available.
 
@@ -326,7 +326,7 @@ Leakage fixtures: changing rainfall/update/metadata after `t` must not change fe
 
 **Acceptance:** feature dictionary records source/window/availability/missing rules; fixtures demonstrate the time constraints.
 
-## 10. Phase 7 — Temporal split, tuning, and calibration
+## 10. Phase 7: Temporal split, tuning, and calibration
 
 | Subset | Prediction times | Role |
 |---|---|---|
@@ -350,11 +350,11 @@ Freeze before testing: input/config/source hashes, cleaning/alignment/availabili
 
 **Acceptance:** no horizon crossing; learned transforms fit on the correct training data; separate calibration holdout; frozen manifest before testing.
 
-## 11. Phase 8 — Models and distributed execution
+## 11. Phase 8: Models and distributed execution
 
 Primary candidates: climatology, Spark MLlib LogisticRegression, RandomForestClassifier, and GBTClassifier. Climatology is the empirical training survival distribution by station/month/hour, with smoothing/support policy and fallback to broader/global groups for sparse/unseen cases; fit the lookup on the designated training partition and save it.
 
-LR: StringIndexer (`handleInvalid=keep`) → station OneHotEncoder → imputation/assembly → appropriate scaling → LogisticRegression. Keep sparse vectors; do not center one-hot features and cause densification. GBT does not need scaling; indexed categorical stations must retain metadata and use `maxBins ≥ categories`, accounting for the unseen bucket; one-hot is an alternative ([GBT API](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.classification.GBTClassifier.html)).
+LR uses StringIndexer (`handleInvalid=keep`), station OneHotEncoder, imputation and assembly, appropriate scaling, and LogisticRegression. Keep sparse vectors; do not center one-hot features and cause densification. GBT does not need scaling; indexed categorical stations must retain metadata and use `maxBins ≥ categories`, accounting for the unseen bucket; one-hot is an alternative ([GBT API](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.classification.GBTClassifier.html)).
 
 Save the **PipelineModel** with learned preprocessing. Unseen `keep` avoids encoding errors but does not prove generalization; report counts/fallback. Fix label mapping at 0=no exceedance, 1=exceedance; export `probability[1]`, not the predicted class as a probability.
 
@@ -366,7 +366,7 @@ Record rows/bytes/partitions, stage runtime, and executor evidence; inspect wind
 
 **Acceptance:** climatology and ML candidates use the same eligible cohorts; MLlib pipelines run; probabilities are finite and in [0,1]; final fit uses all designated training rows; distributed/runtime evidence is saved.
 
-## 12. Phase 9 — Metrics, calibration, and scientific comparisons
+## 12. Phase 9: Metrics, calibration, and scientific comparisons
 
 Predeclare the selection objective: mean PR-AUC over supported configured thresholds on 2021 for hyperparameters and on 2022 for candidate models. For scores within the configured tolerance, prefer lower mean Brier, then the simpler model. If a metric is undefined, report it and use the fixed fallback rule. The selected 2022 score is subject to selection optimism and is not an unbiased generalization estimate. Good ranking does not guarantee good probabilities.
 
@@ -386,7 +386,7 @@ Report results per threshold, frozen macro weighting, and station/month strata; 
 
 Always apply the predeclared Spark IsotonicRegression calibrator fitted on 2023. Do not use calibration ECE to decide whether to enable it. Save raw and calibrated scores plus the calibrator artifact. Do not fit or modify the calibrator on the test set.
 
-For each station/time, score the fixed anchor grid, calibrate each probability, and apply equal-weight PAVA to project onto `p(tau_1) ≥ … ≥ p(tau_6)`. The prediction output uses this projected curve. Interpolate linearly for thresholds inside the inclusive domain and reject values outside it. Report raw, calibrated, and final strict violation rate/max increase. The final rate and maximum increase must both equal zero; verify after projection and interpolation. Store this rule in the frozen spec and inference package.
+For each station/time, score the fixed anchor grid, calibrate each probability, and use equal-weight PAVA to make the six probabilities non-increasing as the threshold increases. The prediction output uses this projected curve. Interpolate linearly for thresholds inside the inclusive domain and reject values outside it. Report raw, calibrated, and final strict violation rate/max increase. The final rate and maximum increase must both equal zero; verify after projection and interpolation. Store this rule in the frozen spec and inference package.
 
 Ablation A=station+time+threshold; B=A+history+missingness. Use identical training rows/grid and the 2021-frozen family parameters. Report A/B ablation on 2022. Evaluate the frozen winner and climatology once on 2024 using the same eligible cohort. Analyze errors by month/station/threshold/unseen, with onset/continuation defined from history available at `t`.
 
@@ -394,7 +394,7 @@ Observation horizons overlap and storms are temporally dependent. Use paired day
 
 **Acceptance:** comparison/threshold tables, calibration, monotonicity, A/B ablation/error analysis; support, excluded samples, and uncertainty are clear.
 
-## 13. Phase 10 — Artifacts, LaTeX, and submission
+## 13. Phase 10: Artifacts, LaTeX, and submission
 
 The model package includes the PipelineModel, calibrator, climatology lookup/fallback, feature schema/config, threshold domain, availability assumptions, training manifest, versions/Git commit, and prediction entry point. Download the entire Spark model directory tree; it is not a single pickle. Include sample queries/expected probabilities/status for unseen/missing/out-of-domain cases.
 
@@ -431,9 +431,9 @@ Keep it concise, but state the decisions that affect the conclusions so readers 
 - Explain why missing values are not replaced with zero, how gaps/revisions and station metadata are handled, and how this affects Task 1 and the number of samples with sufficient history/future readings for Task 2.
 - **Actual run** configuration: region, master/workers, machine type, vCPU/RAM, disks, Dataproc image, Spark/Python/Java versions, important executor settings. Include processing/training time and evidence of Spark jobs running on workers; do not report planned configuration as a result.
 - For **each Spark command or notebook action**, inspect the application in Spark Web UI after its jobs finish; use the live UI if the application remains open, or History Server if it has ended. Save Jobs summary and each Job detail screenshot, Application ID/Job ID, final status, duration, and stages/tasks in the evidence index. State clearly if an application/job failed or if no event log is available to restore the UI.
-- Describe the flow raw CSV → cleaned Parquet → aggregates/features → MLlib → metrics/artifacts. Put long logs, Spark plans, and full configuration in the appendix or repo.
+- Describe how raw CSV files are cleaned into Parquet, aggregated into features, processed by MLlib, and saved as metrics and model artifacts. Put long logs, Spark plans, and full configuration in the appendix or repo.
 
-### 13.3. Task 1 — Detailed patterns and interpretation
+### 13.3. Task 1: Detailed patterns and interpretation
 
 This section must separately cover both **within-year** and **across-year** patterns, as defined in Phase 4. Present them in this order:
 
@@ -445,9 +445,9 @@ This section must separately cover both **within-year** and **across-year** patt
 
 Add a **distribution** paragraph before monthly patterns: separate valid dry/wet proportions and conditional wet intensity/quantiles, and state pooled weighting. Use complete-day and wet-spell outputs to explain sensitivity or short-term persistence when evidence is available; keep spatial/tail detail in the appendix if it is not needed for the main findings. See Section 7.1 for statistical details and artifacts.
 
-Each results paragraph should include: **measured observation → calculation/cohort → interpretation → relevant limitation**. Refer to figures/tables by name; do not merely describe colors or repeat captions. If comparing rainy seasons/monsoons, cite an official meteorological source and distinguish background context from results calculated from this dataset. Do not assign causal explanations without supporting data.
+Each results paragraph should state the **measured observation, calculation/cohort, interpretation, and relevant limitation**. Refer to figures/tables by name; do not merely describe colors or repeat captions. If comparing rainy seasons/monsoons, cite an official meteorological source and distinguish background context from results calculated from this dataset. Do not assign causal explanations without supporting data.
 
-### 13.4. Task 2 — Detailed write-up from target to probability results
+### 13.4. Task 2: Detailed write-up from target to probability results
 
 **Problem and target.** State the station/time/threshold inputs and the probability output for cumulative rainfall over the next 30 minutes being **greater than** the threshold. Include the formula `P(R30 > tau | available history)` and a short timeline explaining the six future intervals. State units, boundary convention, label/history eligibility, threshold domain, and handling of missing/unseen/out-of-domain cases. Declare the availability assumption if the work is retrospective prediction only.
 
@@ -496,7 +496,7 @@ produced results, leave it clearly marked as not run; do not create illustrative
 
 ### 13.6. Discussion, reproducibility, and finalization workflow
 
-The discussion synthesizes both tasks: how patterns inform rainfall understanding and feature choices; how well the model uses history; and how results are limited by rainfall-only inputs, missing data/revisions, a short record, rare heavy rainfall, availability assumptions, threshold domain, and unseen stations. Include only limitations that actually apply. Do not use terms such as “best,” “robust,” “real-time,” or “significant” beyond what has been verified.
+The discussion synthesizes both tasks: how patterns inform rainfall understanding and feature choices; how well the model uses history; and how results are limited by rainfall-only inputs, missing data/revisions, a short record, rare heavy rainfall, availability assumptions, threshold domain, and unseen stations. Include only limitations that apply. Use terms such as `best`, `robust`, `real-time`, and `significant` only when supported by evidence.
 
 For reproducibility, refer to the README, exact runtime/config/commit, manifest, model package, and load/predict command. The conclusion summarizes one or two main findings from each task and usage limitations; do not introduce new results. References include the data source and materials/methods used; every citation must point to a real source, with no placeholders.
 
@@ -515,23 +515,23 @@ README: prerequisites/sample config, data source/manifest/upload, notebook order
 
 ```text
 DSA5208_Project2_StudentID/
-├── README.md
-├── requirements-local.txt
-├── requirements-cluster.txt
-├── config/                 # examples + experiment config, no credentials
-├── notebooks/
-├── src/
-├── scripts/
-├── tests/
-├── models/                 # pipeline/calibrator/lookup + metadata
-└── report.pdf
+|-- README.md
+|-- requirements-local.txt
+|-- requirements-cluster.txt
+|-- config/                 # examples + experiment config, no credentials
+|-- notebooks/
+|-- src/
+|-- scripts/
+|-- tests/
+|-- models/                 # pipeline/calibrator/lookup + metadata
+\-- report.pdf
 ```
 
 Keep LaTeX source, figures, and aggregate tables in the repo to reproduce the report. Do not package raw/cache/temp outputs/credentials. Check the Canvas size limit and extract/load the model from the submission archive itself.
 
 **Acceptance:** PDF meets all requirements; README runs; archive contains the required model/code/config/fixtures; reload and inference succeed in a fresh session.
 
-## 14. Phase 11 — Shutdown, final QA, and timeline
+## 14. Phase 11: Shutdown, final QA, and timeline
 
 Before shutdown: export notebooks, persist processed/features/model/results/run manifest on GCS, and reconcile artifacts. Then use the shutdown cell in `00_environment.ipynb` to delete the cluster created by this run and query the project/region cluster list again; retain confirmation output in the notebook.
 
@@ -575,7 +575,7 @@ Historical timeline above describes v1. For v2, track completion in `data/TASK.m
 
 **Acceptance:** final checklist has evidence; cluster/supporting resources are checked after shutdown; package is submitted by the deadline and the receipt is saved.
 
-## Execution update — 11/10/2026
+## Execution update: 11/10/2026
 
 - Active project: `sg-rainfall-dsa5208-261011`, linked to the correct Education account.
 - All 8 CSVs and the manifest were uploaded; SHA256 custom metadata matched. Notebook 01 independently checked cloud byte-level hashes.
