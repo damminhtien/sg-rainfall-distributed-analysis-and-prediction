@@ -238,6 +238,7 @@ report/*.fls
 report/*.fdb_latexmk
 report/*.synctex.gz
 report/main.pdf
+report/archive/v1/main.pdf
 
 # Streamlit
 .streamlit/secrets.toml

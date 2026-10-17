@@ -1,5 +1,6 @@
 {
-  "version": 1,
+  "version": 2,
+  "protocol_version": 2,
   "years": [
     2017,
     2018,
@@ -38,6 +39,46 @@
     0.2,
     10.0
   ],
+  "compute_profile": {
+    "name": "fixed-8-worker-e2-highmem-2-20vcpu-pd-standard-40gb",
+    "dataproc_image_version": "2.2.87-debian12",
+    "region": "asia-southeast1",
+    "master": {
+      "machine_type": "e2-standard-4",
+      "boot_disk_type": "pd-standard",
+      "boot_disk_size_gb": 40
+    },
+    "workers": {
+      "count": 8,
+      "machine_type": "e2-highmem-2",
+      "boot_disk_type": "pd-standard",
+      "boot_disk_size_gb": 40
+    },
+    "disk_sizing_basis": {
+      "measured_on_run_id": "20261016-v2-full-01",
+      "worker_filesystem_used_high_water_gb": 20.24,
+      "worker_yarn_local_high_water_gb": 3.49,
+      "current_expanded_training_cache_gb": 1.499,
+      "projected_final_expanded_cache_gb": 1.888,
+      "projected_final_cache_per_worker_gb": 0.236,
+      "spark_disk_bytes_spilled": 0,
+      "target_free_headroom_gb": 15,
+      "expanded_training_pool_persisted": true
+    },
+    "spark": {
+      "dynamic_allocation_enabled": false,
+      "executor_instances": 8,
+      "executor_cores": 2,
+      "gpu_enabled": false,
+      "show_console_progress": false
+    },
+    "lifecycle": {
+      "delete_max_idle": "2h",
+      "delete_max_age": "24h"
+    },
+    "same_cluster_for_model_development_and_final_fit": true
+  },
+  "base_features_source_run_id": "20261016-v2-full-01",
   "primary_threshold_min_positives": 100,
   "coverage_cutoffs": [
     0.9,
@@ -61,19 +102,26 @@
   ],
   "split_boundaries": [
     "2017-01-01T00:00:00+08:00",
+    "2021-01-01T00:00:00+08:00",
+    "2022-01-01T00:00:00+08:00",
     "2023-01-01T00:00:00+08:00",
-    "2023-07-01T00:00:00+08:00",
     "2024-01-01T00:00:00+08:00",
     "2025-01-01T00:00:00+08:00"
   ],
   "split_names": [
-    "train",
-    "selection",
+    "search_train",
+    "hp_validation",
+    "model_selection",
     "calibration",
     "test"
   ],
-  "pilot_fraction": 0.005,
-  "final_train_fraction": 0.02,
+  "tuning_sample_fraction": 0.1,
+  "model_selection_sample_fraction": 0.1,
+  "calibration_sample_fraction": 0.1,
+  "final_training_fraction": 1.0,
+  "calibration_method": "isotonic",
+  "monotonic_projection": "pava",
+  "threshold_interpolation": "linear",
   "sampling_seed": 5208,
   "climatology_smoothing": 100.0,
   "lr_reg_params": [
@@ -125,7 +173,6 @@
   "monotonicity_tolerance": 1e-08,
   "bootstrap_block": "week",
   "bootstrap_replicates": 1000,
-  "shuffle_partitions": 64,
-  "interval_end_assumption_accepted": true,
-  "calibration_ece_trigger": 0.01
+  "shuffle_partitions": 256,
+  "interval_end_assumption_accepted": true
 }

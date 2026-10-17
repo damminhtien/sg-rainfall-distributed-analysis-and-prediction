@@ -9,6 +9,23 @@
 
 Plan reviewed on 11/10/2026. This is an execution plan, not evidence that the data has been validated or that a cluster/model has run. Each phase has outputs and acceptance criteria. Statistical/modeling choices must be recorded before the final test.
 
+## Active protocol v2 — 16/10/2026
+
+Protocol v2 supersedes the v1 Task 2 sampling, split, calibration, and prediction rules below. The v1 run and its 2024 metrics are historical evidence; they are not v2 results and must not be used to make v2 choices. Because v1 2024 metrics were already observed, describe the v2 period as a **held-out 2024 evaluation period**, not an untouched blind test. Do not report v2 results until their run artifacts exist.
+
+| Period | Role in v2 |
+|---|---|
+| 2017–2020 | Hyperparameter training; deterministic 10% screening, then full-fit survivor comparison on 2021 |
+| 2021 | Hyperparameter validation |
+| 2022 | Feature/model selection on a deterministic 10% sample |
+| 2017–2022 | Refit the frozen winner on every valid row (100%) |
+| 2023 | Fit the predetermined isotonic probability calibrator |
+| 2024 | Final held-out evaluation after freeze |
+
+Notebook 03 may read only the `search_train`, `hp_validation`, and `model_selection` partitions. It selects model family/features on 2022 and writes `artifacts/frozen_spec.json` with the chosen recipe and config/input/source hashes. Notebook 04 must verify those hashes before fitting the selected model on full 2017–2022. It always fits isotonic calibration on 2023, projects the six calibrated anchor probabilities onto the equal-weight non-increasing cone with PAVA, and linearly interpolates only within the declared threshold domain. It rejects out-of-domain thresholds. Notebook 04 opens 2024 only after the frozen model and calibrator exist.
+
+No training-fraction scaling experiment is run. Report raw, calibrated, and constrained monotonicity, with strict violation rate and maximum increase for each. The constrained predictor must have zero strict violations by construction.
+
 ## 1. Official requirements and implementation choices
 
 Assignment source: `data/project_description.txt`. Data source: [Historical Rainfall across Singapore, NEA](https://data.gov.sg/collections/2279/view).
@@ -313,28 +330,29 @@ Leakage fixtures: changing rainfall/update/metadata after `t` must not change fe
 
 | Subset | Prediction times | Role |
 |---|---|---|
-| Train | 2017–2022 | Fit preprocessing/models; threshold design/sampling |
-| Model-selection set | Jan–Jun 2023 | Select features/hyperparameters/model, cutoff, and calibration recipe |
-| Calibration holdout | Jul–Dec 2023 | Fit calibrator after the base model is frozen |
-| Final test | 2024 | Evaluate the frozen system |
+| `search_train` | 2017–2020 | Deterministic 10% hyperparameter screening; refit survivors on all valid rows |
+| `hp_validation` | 2021 | Freeze LR/RF/GBT hyperparameters |
+| `model_selection` | 2022 | Select the strongest feature/model candidate on a deterministic 10% sample |
+| `calibration` | 2023 | Fit the predetermined isotonic calibrator on a deterministic 10% sample |
+| `test` | 2024 | Final held-out evaluation only |
 
-The two 2023 halves separate calibrator fitting from performance reporting on the same samples; state seasonal limitations. If temporal folds are used to select the calibration recipe, preserve order/purging. Do not retune the base model using the calibration holdout.
+After model selection, refit the selected family/variant from scratch on all valid 2017–2022 rows. Hyperparameter screening uses a deterministic 10% sample before survivor refits; the 2022 model/feature comparison and 2023 calibration each use a deterministic 10% sample of their designated partitions. No training-fraction scaling study is run.
 
-For split `[start,end)`, retain `t ≥ start` and `t+30min < end` because endpoint `end` belongs to the next split. Purge incomplete horizons at the end of 2022, mid-2023, end of 2023, and end of 2024; audit prediction/label endpoints. History before `start` is valid past information. To claim simulation at an actual training cutoff, training labels must also have been available before fitting; historical final revisions do not establish this by themselves.
+For split `[start,end)`, retain `t ≥ start` and `t+30min < end` because endpoint `end` belongs to the next split. Purge incomplete horizons at every calendar-year boundary; audit prediction/label endpoints. History before `start` is valid past information. To claim simulation at an actual training cutoff, training labels must also have been available before fitting; historical final revisions do not establish this by themselves.
 
-Do not use random CrossValidator/TrainValidationSplit by default. Optional temporal folds: 2017–2020→2021, 2017–2021→2022, then early-2023 selection. Keep threshold copies/stations in the same time block in the same fold.
+Do not use random CrossValidator/TrainValidationSplit. Keep threshold copies/stations in the same time block in each fold. For hyperparameter screening, sample base station-time keys deterministically before threshold expansion; use the same seed across candidates. Keep up to two configurations per family within the predeclared PR-AUC tolerance, refit those configurations on all 2017–2020 search rows, then choose hyperparameters on 2021. Use the predeclared 10% deterministic sample for model/feature selection and calibration.
 
-Set tuning caps before running: at most 4 LR regularization configs and 4 GBT depth/iteration configs on the deterministic training pilot for variant B. Select hyperparameters using the selection period, then fit both A and B on the same training set with the same settings for a matched ablation comparison. Record candidate count/runtime/cost; if the budget requires subsampling, record years/cohort/seed/fraction/actual coverage and do not call it full-data training.
+Use the configured LR/RF/GBT grids for hyperparameter screening, using feature variant A for LR and B for RF/GBT so each tuned recipe matches a compared candidate. After hyperparameters are frozen, compare climatology, LR-A, RF-B, GBT-A, and GBT-B on the deterministic 10% 2022 sample. Fit those candidates on the same deterministic 10% sample of 2017–2021 rows with the same family parameters. Record candidate count, sampled row counts, and measured fit time.
 
-By default, fit the base model on 2017–2022, select it using early 2023, and fit the calibrator on late 2023. Do not refit the base model on all of 2023 while keeping the old calibrator; refitting requires separate temporal out-of-fold calibration.
+After 2022 candidate selection, freeze the winning candidate and its exact algorithm, feature variant, and parameters. Notebook 04 must use that frozen winner and fit it on 100% of valid 2017–2022 rows; fit no final-model transforms on 2023 or 2024.
 
-Freeze before testing: manifests, cleaning/alignment/availability, domain/grid, features, split cutoffs, sampling/seed, pipeline/hyperparameters/calibrator/cutoff, selection objective/metric settings, and Git commit. Declare changes made after viewing 2024 as post-test exploration.
+Freeze before testing: input/config/source hashes, cleaning/alignment/availability, domain/grid, features, split cutoffs, sampling fractions and seed, selected pipeline/hyperparameters, calibration method, PAVA/interpolation rule, selection objective, metric settings, and Git commit. Prior v1 2024 metrics are not part of v2 model decisions; disclose that the calendar period was previously observed.
 
 **Acceptance:** no horizon crossing; learned transforms fit on the correct training data; separate calibration holdout; frozen manifest before testing.
 
 ## 11. Phase 8 — Models and distributed execution
 
-Three primary models: climatology, Spark MLlib LogisticRegression, and Spark MLlib GBTClassifier. Climatology is the empirical training survival distribution by station/month/hour, with smoothing/support policy and fallback to broader/global groups for sparse/unseen cases; select support/smoothing on the model-selection set and save the lookup.
+Primary candidates: climatology, Spark MLlib LogisticRegression, RandomForestClassifier, and GBTClassifier. Climatology is the empirical training survival distribution by station/month/hour, with smoothing/support policy and fallback to broader/global groups for sparse/unseen cases; fit the lookup on the designated training partition and save it.
 
 LR: StringIndexer (`handleInvalid=keep`) → station OneHotEncoder → imputation/assembly → appropriate scaling → LogisticRegression. Keep sparse vectors; do not center one-hot features and cause densification. GBT does not need scaling; indexed categorical stations must retain metadata and use `maxBins ≥ categories`, accounting for the unseen bucket; one-hot is an alternative ([GBT API](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.classification.GBTClassifier.html)).
 
@@ -346,11 +364,11 @@ Use Spark SQL/DataFrame for features/windows/metrics and `spark.ml` for training
 
 Record rows/bytes/partitions, stage runtime, and executor evidence; inspect window/join plans and skew. Station-only windows may group multiple years into one large task. If chunking by time, add a 180-minute history halo/30-minute future halo, then trim to owned rows; do not compute windows on chunks missing context. Choose file/shuffle sizes by profiling; do not assume one setting is optimal.
 
-**Acceptance:** all three models use the same held-out cohort; MLlib pipelines run; probabilities are finite and in [0,1]; distributed/runtime/cost evidence is saved.
+**Acceptance:** climatology and ML candidates use the same eligible cohorts; MLlib pipelines run; probabilities are finite and in [0,1]; final fit uses all designated training rows; distributed/runtime evidence is saved.
 
 ## 12. Phase 9 — Metrics, calibration, and scientific comparisons
 
-Predeclare the selection objective: mean PR-AUC over primary thresholds with both classes represented on the model-selection set; choose thresholds based on training support, not because the test is difficult. For scores within a prespecified tolerance, prefer lower Brier, then the simpler/less expensive model. If a metric is undefined on the model-selection set, report it and use a fallback rule fixed before testing. The selected candidate's score tends to be optimistic after selection and is not an unbiased validation estimate. Good ranking does not guarantee good probabilities.
+Predeclare the selection objective: mean PR-AUC over supported configured thresholds on 2021 for hyperparameters and on 2022 for candidate models. For scores within the configured tolerance, prefer lower mean Brier, then the simpler model. If a metric is undefined, report it and use the fixed fallback rule. The selected 2022 score is subject to selection optimism and is not an unbiased generalization estimate. Good ranking does not guarantee good probabilities.
 
 | Output | Rule |
 |---|---|
@@ -359,18 +377,18 @@ Predeclare the selection objective: mean PR-AUC over primary thresholds with bot
 | Brier | Spark mean `(p-y)^2`; baseline/Brier skill if denominator > 0 |
 | Log loss | Clip using a frozen epsilon; Spark aggregation |
 | Calibration | Frozen validation bins; mean p, observed frequency, count per bin |
-| Precision/Recall/F1 | Probability cutoff selected on the model-selection set, separate from rainfall threshold tau |
+| Precision/Recall/F1 | Fixed 0.5 probability cutoff for description; it is not tuned on the final evaluation period |
 | Support | Base/expanded counts, positives/negatives/prevalence/station-time coverage |
 
 Do not call Spark PR-AUC Average Precision unless it has been calculated according to that definition. Record the version and curve approximation; `numBins=0` disables downsampling when cost permits. Mark AUC as N/A for single-class groups; retain rare groups in the table with support/uncertainty ([evaluator API](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.ml.evaluation.BinaryClassificationEvaluator.html)).
 
 Report results per threshold, frozen macro weighting, and station/month strata; pooled thresholds are secondary because they can hide per-threshold performance. Include a prevalence reference on the PR curve; do not claim that Spark's area for a constant predictor always equals prevalence.
 
-Calibration assessment is required; apply correction when validation indicates it is needed. Choose the recipe using temporal predictions from train/selection and fit it on the calibration holdout; use Spark IsotonicRegression or a sigmoid mapping if support is adequate. Per-threshold mapping needs support/fallback and handling for unseen thresholds. Save raw/calibrated outputs, mapping/domain/fallback; do not choose bins/cutoffs or fit the mapping on the test set.
+Always apply the predeclared Spark IsotonicRegression calibrator fitted on 2023. Do not use calibration ECE to decide whether to enable it. Save raw and calibrated scores plus the calibrator artifact. Do not fit or modify the calibrator on the test set.
 
-Monotonicity assessment is required: for the same station/time/history, `tau1 < tau2` ⇒ probability must not increase. Record violation rate/max excess using a frozen numeric tolerance before/after calibration. A violation means the probabilities do not form a consistent survival function. Projection/interpolation correction is an extension that must be frozen, tested, and saved in the inference pipeline, not just applied to a plot.
+For each station/time, score the fixed anchor grid, calibrate each probability, and apply equal-weight PAVA to project onto `p(tau_1) ≥ … ≥ p(tau_6)`. The prediction output uses this projected curve. Interpolate linearly for thresholds inside the inclusive domain and reject values outside it. Report raw, calibrated, and final strict violation rate/max increase. The final rate and maximum increase must both equal zero; verify after projection and interpolation. Store this rule in the frozen spec and inference package.
 
-Ablation A=station+time+threshold; B=A+history+missingness is primary; C=B+neighbours is optional. Use the same samples/folds/grid/tuning budget; if C loses samples, compare on the intersection and report coverage separately. Report A/B ablation on the model-selection set; evaluate climatology, LR-B, and GBT-B once on the final holdout using the same eligible cohort. Analyze errors by month/station/threshold/unseen, with onset/continuation defined from history available at `t`.
+Ablation A=station+time+threshold; B=A+history+missingness. Use identical training rows/grid and the 2021-frozen family parameters. Report A/B ablation on 2022. Evaluate the frozen winner and climatology once on 2024 using the same eligible cohort. Analyze errors by month/station/threshold/unseen, with onset/continuation defined from history available at `t`.
 
 Observation horizons overlap and storms are temporally dependent. Use paired day/week block bootstrap confidence intervals, resampling all stations/thresholds within the same block; choose block length from train/validation before testing. Do not bootstrap expanded rows independently. If budget is limited, prioritize uncertainty for Brier differences and state which metrics have only point estimates.
 
@@ -433,17 +451,17 @@ Each results paragraph should include: **measured observation → calculation/co
 
 **Problem and target.** State the station/time/threshold inputs and the probability output for cumulative rainfall over the next 30 minutes being **greater than** the threshold. Include the formula `P(R30 > tau | available history)` and a short timeline explaining the six future intervals. State units, boundary convention, label/history eligibility, threshold domain, and handling of missing/unseen/out-of-domain cases. Declare the availability assumption if the work is retrospective prediction only.
 
-**Features and split.** List only features actually used in the feature table: time/station/threshold groups, rainfall history, and missingness; give each group's window, meaning, and rationale. Briefly explain how future information is excluded. The split table lists train 2017–2022, model-selection set Jan–Jun 2023, calibration Jul–Dec 2023, and final test 2024, with base samples, threshold-expanded samples, positives/prevalence, and purge policy. Do not use the test set to select models/features/calibration.
+**Features and split.** List only features actually used in the feature table: time/station/threshold groups, rainfall history, and missingness; give each group's window, meaning, and rationale. Briefly explain how future information is excluded. The split table lists search training 2017–2020, hyperparameter validation 2021, model selection 2022, full final fit 2017–2022, calibration 2023, and held-out evaluation 2024, with base samples, threshold-expanded samples, positives/prevalence, and purge policy. Do not use the 2024 period to select models/features/calibration.
 
-**Models and training.** Explain the climatology baseline, MLlib LR, and GBT in a few sentences each; state preprocessing, tuning budget, actual selected hyperparameters, selection criterion, and calibration recipe. Put full config in the appendix/repo. Distinguish rainfall threshold `tau` from the probability cutoff used for precision/recall. Explain how class 1 probability is exported and how the full pipeline is saved.
+**Models and training.** Explain climatology, MLlib LR, RF, and GBT; state preprocessing, deterministic 10% hyperparameter screening, full refits of survivors, selected hyperparameters, selection criterion, and the 100% final refit. No training-fraction scaling experiment is run. Put full config in the appendix/repo. Distinguish rainfall threshold `tau` from the fixed descriptive probability cutoff. Explain how class 1 probability is exported and how the full pipeline is saved.
 
-**Main results.** Compare the three models on the same final-test cohort. The main table includes PR-AUC, ROC-AUC, and Brier; add log loss/cutoff metrics when they help interpretation. The per-threshold table includes sample count, positives, prevalence, and metrics for the baseline/selected model. State macro/pooled aggregation clearly; mark AUC as N/A for single-class groups and report low support. If there are too many thresholds for a readable table, keep primary thresholds in the main text and put the full table in the appendix.
+**Main results.** Compare raw winner, isotonic-calibrated winner, PAVA-constrained predictor, and full-training climatology on the same held-out 2024 cohort. Include PR-AUC, ROC-AUC, Brier, support, calibration, and threshold-wise results. State macro/pooled aggregation clearly; mark AUC as N/A for single-class groups and report low support. If there are too many thresholds for a readable table, keep anchor thresholds in the main text and put the full table in the appendix.
 
 **Probability quality.** Include a reliability diagram with predicted probability, observed frequency, and counts per bin; compare raw/calibrated values when correction was applied. Explain ranking and calibration using actual results: a model that discriminates rainfall well does not automatically produce trustworthy probabilities. PR curves use a few primary thresholds frozen before testing, with clear prevalence/support and model labels.
 
-**Features and errors.** Summarize the A/B ablation to show the contribution of history/missingness. Briefly analyze major errors by threshold, station/month, onset/continuation, and unseen cases when samples are available; choose a few meaningful findings instead of putting every stratum in the main text. Report monotonicity violations and limitations when inferring probabilities for unseen thresholds. Calculate uncertainty as defined in Phase 9; do not call small differences statistically significant without suitable evidence.
+**Features and errors.** Summarize the A/B ablation on 2022 to show the contribution of history/missingness. Briefly analyze major errors by threshold, station/month, onset/continuation, and unseen cases when samples are available. Report raw, calibrated, and constrained monotonicity; the final violation rate and maximum increase must be zero. Explain linear interpolation for unseen in-domain thresholds and rejection outside the domain. Calculate uncertainty as defined in Phase 9; do not call small differences statistically significant without suitable evidence.
 
-**Task 2 conclusion.** State directly which model was selected on the model-selection set, how it performed on the final test, under what conditions its probabilities are trustworthy, and where it fails. Do not call model-selection scores unbiased validation estimates. If ML does not outperform climatology or calibration does not improve results, report that outcome and explain it within the limits of the evidence; do not change the scope/cohort to make the model win.
+**Task 2 conclusion.** State directly which model was selected on 2022, how the fixed final predictor performed on the held-out 2024 evaluation period, under what conditions its probabilities are trustworthy, and where it fails. Disclose that 2024 metrics were observed in v1 and that v1 values were excluded from v2 choices. Do not call 2022 selection scores unbiased validation estimates. If ML does not outperform climatology or calibration does not improve results, report that outcome without changing the scope/cohort to make the model win.
 
 ### 13.5. Figures, tables, and report evidence
 
@@ -553,7 +571,7 @@ Final checklist:
 | 17/10 | LaTeX/README/package/model reload validation |
 | 18/10 | Error/repackaging buffer; submit before 23:59 |
 
-Adjust the timeline based on gates/runtime/credit. Prioritize correct data/target/split/availability, both tasks and three models, evaluation/model reload/report. Neighbours, expanded rolling validation, runtime scaling, and monotonicity correction come after the core work; **calibration assessment, monotonicity assessment, and A/B ablation remain core requirements**. If the training cohort is reduced because of budget, record the actual scope and evaluate on the full held-out cohort when feasible; do not claim full-data training.
+Historical timeline above describes v1. For v2, track completion in `data/TASK.md`; do not claim a full-data fit unless the saved run evidence confirms the actual 2017–2022 row count and 100% path. Calibration, monotonicity projection, and A/B ablation are part of the active protocol.
 
 **Acceptance:** final checklist has evidence; cluster/supporting resources are checked after shutdown; package is submitted by the deadline and the receipt is saved.
 
