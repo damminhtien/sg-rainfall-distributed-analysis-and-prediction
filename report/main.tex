@@ -106,27 +106,28 @@ from 2017--2022.
 
 \section{Data and cleaning}
 \subsection{Input and timestamp handling}
-The eight annual source files contain 48,538,713 rows and 12 columns. The
-rainfall field
-is NEA reading type \texttt{TB1 Rainfall 5 Minute Total F}, in millimetres. The
-download time was not recorded. The project's
-interval-end convention treats a reading at time $t$ as rainfall accumulated
-over $(t-5\text{ min},t]$; this is an analysis assumption, not an NEA-confirmed
-timestamp definition.
+The eight annual files contain 48,538,713 rows and 12 columns. Rainfall is
+recorded using NEA reading type \texttt{TB1 Rainfall 5 Minute Total F}, in
+millimetres. We treat each reading at time $t$ as the rainfall accumulated over
+the preceding five minutes, $(t-5\text{ min},t]$. This is an analysis
+convention because NEA does not explicitly define the timestamp semantics in
+the dataset documentation.
 
-Early 2017 records systematically end at second 59; later 2017 and 2018--2024
-records end at second 00. The same \texttt{:59} convention appears in the
-official 2016 dataset, which was not used here~\cite{nea}. In 2017, 3,480,779
-timestamps fell on five-minute boundaries and 1,775,327 fell one second before
-them. The early \texttt{:59} values were advanced one second for alignment, and
-the source timestamps were retained. NEA does not document the reason for
-this change. We shifted only the systematic \texttt{:59} timestamps by one
-second; other off-grid timestamps were rejected.
+A timestamp inconsistency appears in the earlier records. Many observations
+from early 2017 end at second 59, while later 2017 records and those from
+2018--2024 end at second 00. The same \texttt{:59} pattern also appears in the
+official 2016 dataset~\cite{nea}. In 2017, 3,480,779 timestamps fell exactly on
+five-minute boundaries and 1,775,327 were one second earlier. We therefore
+shifted only this systematic \texttt{:59} pattern forward by one second to
+align the timestamps, while preserving the original timestamps for audit
+purposes. Other off-grid timestamps were rejected. The reason for the change
+is not documented by NEA.
 
-Validation covered parsing, station IDs, timestamps, nonnegative rainfall,
-date/year, reading type and unit. Duplicate station-time keys were resolved
-deterministically. Coordinates were used only for the supplementary spatial
-summary. Missing readings remain gaps and were not filled with zero.
+We then validated parsing, station identifiers, timestamps, rainfall values,
+source year, reading type and unit. Rainfall values were required to be
+nonnegative. Duplicate station-time records were resolved deterministically,
+and coordinates were used only for the supplementary spatial analysis.
+Missing observations were kept as gaps rather than being replaced with zero.
 
 \begin{table}[htbp]
 \centering\small
