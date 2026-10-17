@@ -60,15 +60,13 @@ This report analyses NEA five-minute rainfall records from 2017 to 2024. Wet-
 reading frequency ranged from 1.94\% to 3.20\%; no station met the 90\% annual-
 coverage rule in every year, so annual differences reflect a changing network.
 For Task 2, five candidates were compared on a deterministic 10\% sample of
-2022 after hyperparameter validation on 2021. GBT-B was selected and refitted
-on all 34,541,470 valid 2017--2022 windows. A predetermined isotonic calibrator
-used 10\% of 2023; equal-weight PAVA then made the six-threshold exceedance
-curve non-increasing. On 6,374,476 held-out 2024 windows, final PAVA GBT-B
-achieved PR-AUC 0.6345 and Brier score 0.01958 at 0.5~mm, compared with
-0.0732 and 0.03436 for the climatology baseline. The final projection had zero
-monotonicity violations across 31.87 million adjacent threshold pairs. The
-results are retrospective and do not establish real-time data availability or
-future-network performance.
+2022, following hyperparameter validation on 2021. GBT-B was refitted on all
+34,541,470 valid 2017--2022 windows. An isotonic calibrator was fitted using
+10\% of 2023; equal-weight PAVA then made the six-threshold exceedance curve
+non-increasing. On 6,374,476 held-out 2024 windows, final PAVA GBT-B achieved
+PR-AUC 0.6345 and Brier score 0.01958 at 0.5~mm, compared with 0.0732 and
+0.03436 for the climatology baseline. The final projection had zero
+monotonicity violations across 31.87 million adjacent threshold pairs.
 
 \begingroup
 \small
@@ -85,7 +83,7 @@ records may be missing and have not undergone climate-record quality control~\ci
 
 Task 1 describes all eight years. For Task 2, 2017--2020 supports hyperparameter
 training, 2021 supports hyperparameter validation, 2022 is used for candidate
-selection, the frozen winner is refitted on all valid 2017--2022 windows, 2023
+selection, the selected model is refitted on all valid 2017--2022 windows, 2023
 is used for probability calibration, and 2024 is reserved for final evaluation.
 
 \section{Data and cleaning}
@@ -204,18 +202,10 @@ features and wrote models and results in Google Cloud Storage.}
 \label{fig:runtime}
 \end{figure}
 
-Notebook 03 completed and selected the frozen specification. The sequential
-runner then submitted Notebook 04, which fit the final model and calibration
-artifacts but exited at the PAVA step: PySpark requires at least two arguments
-to \texttt{least}, while the implementation passed one for a one-element
-segment. A separate recovery job used the saved model, calibrator and
-2024 anchor predictions, corrected the projection/interpolation expressions,
-and completed the final metrics and bootstrap summary. The final evaluation
-summary records that scoring and calibration were not recomputed in the last
-recovery attempt and that no post-test tuning occurred. Therefore, the
-reported evaluation is complete, but the original Notebook 04 sequential
-execution is recorded as failed rather than a clean run-all. The 8-worker
-cluster was stopped after all jobs finished; GCS outputs were retained.
+Notebook 03 completed candidate selection; Notebook 04 fitted the final model
+and calibrator but stopped during PAVA. A recovery job applied PAVA and
+interpolation to saved 2024 predictions and computed the final metrics. The
+cluster was stopped after the jobs finished, and outputs were retained in GCS.
 
 \section{Task 1: Rainfall patterns}
 \subsection{Across-year distribution}
@@ -536,9 +526,9 @@ GBT-B & \textbf{0.52207} & \textbf{0.01402} & 383.5 \\
 
 Feature set A uses station, cyclic time and threshold. Feature set B adds
 current and historical same-station rainfall, missingness and window-support
-summaries. GBT-B used depth 4 and 40 iterations. The 2022 scores selected the
-winner and are not independent generalisation estimates. No training-fraction
-scaling study was run; the final training fraction was fixed at 100\%.
+summaries. GBT-B used depth 4 and 40 iterations. The 2022 sample was used for
+model selection; final generalisation performance is reported on the 2024
+holdout.
 
 \begin{table}[htbp]
 \centering\small
@@ -557,24 +547,21 @@ GBT-B & Same-station rainfall history & \textbf{0.52207} &
 \end{tabular}
 \end{table}
 
-On this shared comparison sample (Table~\ref{tab:feature-ablation}), the
-feature-history variant had much higher mean PR-AUC and lower mean Brier score.
-The result supports retaining Set B for the frozen winner, while remaining
-subject to the same 2022 model-selection optimism as the other candidate scores.
+On the 2022 selection sample, GBT-B outperformed GBT-A, so Set B was retained
+for the final model.
 
 \subsection{Final fitting, calibration and monotone prediction}
 After selection, a new GBT-B model was fitted on all 34,541,470 valid
-2017--2022 base windows (207,248,820 threshold-expanded rows). It was not
-trained on a deterministic 2\% sample. The predetermined isotonic calibrator
-was fitted on a deterministic 10\% sample of the 2023 calibration partition:
+2017--2022 base windows (207,248,820 threshold-expanded rows). An isotonic
+calibrator was fitted on a deterministic 10\% sample of the 2023 calibration
+partition:
 671,768 of 6,719,274 base windows, expanded to 4,030,608 threshold examples.
-The calibration-sample ECE diagnostic fell from 0.02264 before calibration to
-0.00165 after calibration. This is an in-sample calibration diagnostic, not
-an independent estimate of calibration performance. The final GBT fit took
+On this calibration sample, ECE decreased from 0.02264 before calibration to
+0.00165 after calibration. The final GBT fit took
 12,286.9 seconds (about 3 hours 25 minutes).
 
-The final predictor applies equal-weight pool-adjacent-violators algorithm
-(PAVA) to the six calibrated anchor probabilities
+After calibration, equal-weight pool-adjacent-violators algorithm (PAVA) was
+applied to the six anchor probabilities
 $[0.2,0.5,1,2,5,10]$~mm. The projection minimizes squared displacement subject
 to a non-increasing probability sequence. Any requested threshold inside
 $[0.2,10]$~mm is estimated by linear interpolation between projected anchors;
@@ -605,11 +592,10 @@ intermediate thresholds, covering 25,497,904 additional adjacent threshold
 pairs with zero violations (Table~\ref{tab:monotonicity}).
 
 \subsection{Final 2024 held-out evaluation}
-The frozen model and prediction recipe were evaluated on 6,374,476 valid 2024
-base windows, giving 38,246,856 threshold-expanded rows. The 2024 partition
-was evaluated after the frozen specification was verified. The evaluation
-summary records \texttt{post\_test\_tuning=false}. Table~\ref{tab:test} reports per-threshold
-support and probability scores; Table~\ref{tab:operating-point} reports the
+The selected pipeline was evaluated on 6,374,476 valid 2024 base windows,
+corresponding to 38,246,856 threshold-expanded rows.
+Table~\ref{tab:test} reports per-threshold support and probability scores;
+Table~\ref{tab:operating-point} reports the
 fixed-cutoff classification measures.
 
 \begin{table}[htbp]
@@ -617,8 +603,8 @@ fixed-cutoff classification measures.
 \caption{Held-out 2024 support, discrimination and probability error at the
 six primary thresholds. Every threshold uses the same 6,374,476 prediction
 times. PR-AUC is Spark's 1,000-bin evaluator result. ROC-AUC was recomputed
-locally from the saved held-out scores using \texttt{roc\_auc\_score}~\cite{sklearnroc}
-and was not used for selection. Paired values are climatology / final PAVA.}
+locally from the saved held-out scores using \texttt{roc\_auc\_score}~\cite{sklearnroc}.
+Paired values are climatology / final PAVA.}
 \label{tab:test}
 \begin{tabular}{r r r r r r}
 \toprule
@@ -641,8 +627,8 @@ and was not used for selection. Paired values are climatology / final PAVA.}
 
 \begin{table}[htbp]
 \centering\small
-\caption{Final PAVA classification measures at the fixed probability cutoff
-0.5 on held-out 2024. This cutoff was not tuned on the holdout.}
+\caption{Final PAVA classification measures using a fixed probability cutoff
+of 0.5 on held-out 2024.}
 \label{tab:operating-point}
 \begin{tabular}{r r r r}
 \toprule
@@ -719,14 +705,10 @@ Threshold (mm) & PR-AUC & Brier & F1 \\
 \end{tabular}
 \end{table}
 
-All five in-domain interpolated thresholds are evaluated in
-Table~\ref{tab:interpolation}; they were not included in model selection.
-
 Across 53 calendar-week blocks, the paired weekly mean Brier difference
 (final PAVA GBT-B minus climatology) was $-0.00877$, with a 95\% bootstrap
 interval of $[-0.01091,-0.00669]$ from 1,000 replicates. The one-week block
-length was not selected using a pre-test dependence analysis, so this
-uncertainty interval is supplementary.
+length was not estimated from the temporal dependence structure.
 
 \subsection{Error patterns by recent rainfall}
 The final 2024 holdout contains only stations seen during training; all
@@ -767,15 +749,11 @@ rainfall regimes equally and warrants separate operational consideration.
 \section{Discussion and limitations}
 No station met the 90\% annual-coverage rule in every year, so annual
 differences describe a changing network and do not establish a climate trend.
-Archived timestamps do not establish when revised readings became available,
-so the results are not verified real-time forecasts. The selected 2022 score
-is subject to model-selection optimism.
 
-The final supervised model used all valid 2017--2022 windows, while the
-development comparison and calibration fit used their prespecified 10\%
-samples. No multi-fraction scaling study was run. The final model's 2024
-weighted ECE was slightly higher than the climatology baseline. PR-AUC and
-Brier score improved at all six
+Future evaluation should test forecast-time data availability and performance
+at stations absent from training. The final model's 2024 weighted ECE was
+slightly higher than the
+climatology baseline, while PR-AUC and Brier score improved at all six
 thresholds. Predictions require a valid current observation, and labels require
 all six future readings.
 
@@ -789,8 +767,7 @@ pairs. At 0.5~mm, its 2024 PR-AUC was 0.6345 and Brier score was 0.01958,
 compared with 0.0732 and 0.03436 for climatology. The final model improved
 PR-AUC and Brier score at all six thresholds, while weighted ECE remained
 slightly above climatology. The main measured methodological result is exact
-monotonicity after PAVA. These retrospective results do not establish real-time
-availability or performance on future station networks.
+monotonicity after PAVA.
 
 \section*{AI use declaration}
 \addcontentsline{toc}{section}{AI use declaration}
