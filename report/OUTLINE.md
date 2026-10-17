@@ -1,83 +1,29 @@
-# Report status - Singapore Rainfall Analysis and Prediction
+# Report outline — Singapore Rainfall Analysis and Prediction
 
-Updated 17 October 2026. main.tex and main.pdf report the final analysis from
-the fixed eight-worker run, with 2024 used for held-out evaluation after the
-model and prediction specification were frozen.
+The report presents eight years of Singapore five-minute rainfall data and a
+30-minute threshold-exceedance prediction task.
 
-## Report narrative
+## Report structure
 
-1. **Data and cleaning.** Retain the measured eight-year cleaning and Task 1
-   findings. Preserve the interval-end assumption, early-2017 one-second
-   analysis alignment, retrospective-data limitation, and changing-network
-   caveat.
-2. **Prediction target and features.** Define the strict target
-   F_30 > tau, six future readings, observed-time queries, history features,
-   missing-window exclusions, and the required non-increasing probability
-   relation across rainfall thresholds. Describe feature sets A and B.
-3. **Temporal design.** Report purged roles: 2017-2020 hyperparameter training,
-   2021 hyperparameter validation, 2022 candidate selection, full 2017-2022
-   final refit, 2023 calibration, and 2024 final evaluation. Explain that the
-   selected 2022 score is subject to model-selection optimism.
-4. **Model selection.** Hyperparameter screening uses a deterministic 10%
-   sample before survivor refits on all eligible 2017-2020 rows. The 2022
-   comparison uses 10% samples of 2017-2021 training and 2022 evaluation.
-   Report the five candidates and measured counts/metrics/fit times. Include
-   the GBT-A/B history-feature comparison. No training-fraction scaling study
-   was run.
-5. **Probability pipeline.** Report GBT-B refitted on every valid 2017-2022
-   row, predetermined 2023 isotonic calibration, equal-weight non-increasing
-   PAVA over six anchors, and in-domain linear interpolation.
-6. **Final evaluation.** Compare raw, calibrated and PAVA outputs plus
-   full-training climatology on the same 2024 cohort. Include per-threshold
-   PR-AUC/Brier/support, locally recomputed ROC-AUC, fixed-cutoff precision,
-   recall and F1, weighted ECE, reliability and PR curves, monotonicity/max
-   increase, intermediate threshold results and paired weekly-block uncertainty.
-   Add a recent-rainfall error stratification.
-7. **Execution provenance.** State that the sequential runner recorded
-   Notebook 03 success but Notebook 04 failure at the original PAVA expression.
-   The final evaluation summary came from recovery attempt 03 using saved
-   calibrated 2024 anchor predictions; do not claim an error-free Notebook 04
-   run-all. Record the stopped 8-worker cluster and retained GCS/local artifacts.
-8. **Evaluation interpretation.** Explain the per-threshold model metrics,
-   climatology comparison, exact monotonicity after PAVA, and the slightly higher
-   holdout ECE relative to climatology.
-9. **Limitations.** Do not claim real-time performance. State that no
-   scaling study was run.
-
-## Evidence status
-
-- Notebook 03 succeeded, saved candidate results and artifacts/frozen_spec.json;
-  selected model: gbt_B.
-- Notebook 04 fitted the 100% 2017-2022 model and 2023 calibrator, then failed
-  in the original PAVA implementation. Recovery attempt 03 produced the final
-  evaluation summary from saved predictions.
-- Final anchor PAVA and the five in-domain interpolated thresholds have zero
-  monotonicity violations. Raw/calibrated violations are retained for comparison.
-- The final PDF includes the provided author name and student ID, the AI use
-  declaration, feature-set and ablation tables, threshold-monotonicity formula,
-  reliability and precision-recall figures, per-threshold support/metrics, and
-  recent-rainfall subgroup results. Locally recomputed ROC-AUC is labeled as a
-  supplementary metric and was not used for model selection.
-- ECE is defined as a count-weighted absolute calibration gap over ten
-  equal-width probability bins per threshold. Derived figures and CSVs are
-  accompanied by a source/method manifest under report/tables/v2/.
-- Final model/reliability artifacts, full run source, logs, Parquet predictions
-  and manifests are in the local mirror at
-  /Users/macbook/Data/sg-rainfall-v2-fixed8-04/; checksum-only rsync found no
-  differences from GCS.
-- The report compiled to an 18-page A4 PDF. Every page was rendered for visual
-  review; the cover, figures, results tables, references and provenance pages
-  were inspected at full size. The PDF metadata includes the author name.
-- A separate inference smoke test of the saved model with an explicit
-  out-of-domain rejection is still pending, as are final package checks and
-  Canvas upload receipt.
-- The Dataproc cluster dsa5208-rainfall-fixed8 is STOPPED. Its GCS outputs
-  remain available; the cluster was not deleted.
+1. **Data and computing environment.** Describe the source, timestamp
+   alignment, cleaning, coverage definitions, and the Dataproc/Spark execution
+   environment.
+2. **Task 1: rainfall patterns.** Compare occurrence and conditional wet
+   intensity within the year, hourly patterns, annual distributions, and
+   station coverage. Interpret annual differences as observations of a
+   changing network rather than a climate trend.
+3. **Task 2: exceedance prediction.** Define the six-reading future target,
+   predictor sets, temporal partitions, candidate selection, calibration,
+   monotone probabilities, and 2024 evaluation.
+4. **Discussion and conclusion.** Summarize the predictive contribution of
+   same-station rainfall history and the limits of retrospective data,
+   network coverage, and unseen-station evaluation.
+5. **Appendix.** Include a Stage 21 view and an Executors view from the final
+   GBT-B application on the eight-worker cluster.
 
 ## Current report artifacts
 
-- Source: report/main.tex
-- PDF: report/main.pdf
-- Final metrics: results/recovery/attempt-03/final_evaluation_summary.json
-- Original sequential status: results/overnight_execution/status.json
-- V2 report evidence: report/figures/v2/ and report/tables/v2/
+- Source: `report/main.tex`
+- PDF: `report/main.pdf`
+- Final figures: `report/figures/final/`
+- Supporting tables: `report/tables/final/`

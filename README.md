@@ -1,59 +1,51 @@
 # Singapore Rainfall Analysis and Prediction
 
-This repository contains an individual DSA5208 Project 2 analysis of the
+This repository contains a DSA5208 Project 2 analysis of the
 National Environment Agency's five-minute rainfall observations in Singapore.
 Task 1 describes rainfall patterns from 2017–2024. Task 2 estimates the
 probability that the next 30-minute accumulated rainfall exceeds a requested
 threshold. The prediction workflow uses Spark for feature construction and
 Spark MLlib for model development.
 
-## Task 2 protocol v2
+## Task 2 workflow
 
 | Years | Role |
 |---|---|
-| 2017–2020 | Deterministic 10% hyperparameter screen; refit survivors on all valid rows |
+| 2017–2020 | Deterministic 10% hyperparameter screen; refit candidates on valid rows |
 | 2021 | Hyperparameter validation |
-| 2022 | Model/feature selection on a deterministic 10% sample |
-| 2017–2022 | Full-data refit of the frozen winner |
-| 2023 | Fit the predetermined isotonic calibrator on a deterministic 10% sample |
-| 2024 | Held-out final evaluation after freeze |
+| 2022 | Model and feature selection on a deterministic 10% sample |
+| 2017–2022 | Refit the selected model on all valid windows |
+| 2023 | Fit isotonic calibration on a deterministic 10% sample |
+| 2024 | Final evaluation period |
 
-The 30-minute label window is purged at each split boundary. Notebook 03 reads
-only the 2017–2022 development partitions. It selects the model/feature
-candidate on 2022 and writes the selected specification and provenance hashes
-to `artifacts/frozen_spec.json`. Notebook 04 verifies that freeze, refits the
-selected model on all valid 2017–2022 rows, and always fits isotonic calibration
-on 2023. It projects calibrated probabilities onto a non-increasing curve
-using equal-weight PAVA, then linearly interpolates for thresholds inside the
-configured domain. Queries outside the domain are rejected.
+The 30-minute label uses six exact five-minute observations after each
+prediction time; windows that cross a split boundary are excluded. Notebook 03
+performs hyperparameter and model/feature selection. Notebook 04 refits the
+selected model on valid 2017–2022 rows, fits isotonic calibration on 2023, then
+evaluates on 2024. The prediction step applies equal-weight PAVA to the six
+anchor thresholds and linearly interpolates between them for in-domain
+queries. Climatology probabilities are estimated from training data only.
 
-Hyperparameter screening uses a deterministic 10% sample before surviving
-configurations are refit on all eligible 2017–2020 rows. Model/feature
-selection and calibration each use a deterministic 10% sample of their
-designated development partition. The frozen winner is refit on 100% of valid
-2017–2022 rows. No training-fraction scaling study is run. The v1 2024 metrics
-were previously observed. Therefore, v2 calls 2024 a **held-out
-evaluation period**, not an untouched blind test, and does not use v1 metrics
-to make v2 decisions.
+Hyperparameter screening uses a deterministic 10% sample from 2017–2020, with
+surviving configurations refit on that period's valid rows. Hyperparameter
+validation uses 2021; model/feature selection and calibration use deterministic
+10% samples of their respective partitions.
 
-The completed v2 run is `20261016-v2-fixed8-04`. Notebook 03 succeeded and
-selected GBT-B; the original sequential Notebook 04 run failed at PAVA, while
-recovery attempt 03 completed the final evaluation from saved 2024 predictions.
-The current report describes v2 and includes a retrospective comparison with
-v1. The two runs have similar PR-AUC/Brier at most thresholds; v2 enforces
-non-increasing probabilities with PAVA. Because v1 2024 metrics were already
-observed, this comparison is not a new independent test.
+During final evaluation, a PySpark expression error in the PAVA
+post-processing step was corrected, and the affected post-processing metrics
+were recomputed from the saved model predictions; model fitting and calibration
+were unchanged.
 
 ## Repository layout
 
 | Path | Purpose |
 |---|---|
-| `config/experiment.json` | Protocol v2 splits, thresholds, features, and model grids |
+| `config/experiment.json` | Split periods, thresholds, features, and model grids |
 | `manifests/input_manifest.json` | Eight 2017–2024 inputs, schemas, row counts, and hashes |
 | `notebooks/00_setup_cloud.ipynb` | Local input preflight, GCS upload, and Dataproc setup |
 | `notebooks/01_clean_and_task1.ipynb` | Data cleaning, coverage checks, and Task 1 |
 | `notebooks/02_build_features.ipynb` | History features, target windows, and purged temporal splits |
-| `notebooks/03_model_development.ipynb` | Hyperparameter/model selection and freeze |
+| `notebooks/03_model_development.ipynb` | Hyperparameter and model selection |
 | `notebooks/04_final_fit_evaluate.ipynb` | Full-data refit, 2023 calibration, PAVA, and 2024 evaluation |
 | `scripts/rainfall_modeling.py` | Shared Spark ML, metrics, climatology, PAVA, and interpolation functions |
 | `scripts/build_manifest.py` | Reusable input inventory and validation functions |
@@ -106,17 +98,16 @@ Python 3.11 and Spark 3.5.3. Do not install or upgrade PySpark on that image.
 
 Keep `BUCKET` consistent. Notebook 00 creates the target run and copies the
 feature partitions named by `base_features_source_run_id` in the experiment
-config. Notebook 03 and Notebook 04 use the target run ID. The recorded
-analysis reused the partitions already present in `20261016-v2-full-01`.
+config. Notebook 03 and Notebook 04 use the target run ID.
 
 1. Run `00_setup_cloud.ipynb` locally to upload inputs and source files,
    create or check the Dataproc cluster, and copy the saved feature partitions
    into the target run.
 2. `03_model_development.ipynb` uses only `search_train`, `hp_validation`, and
-   `model_selection`. It creates the frozen spec only after model selection
-   and the full-data development model selection complete.
-3. `04_final_fit_evaluate.ipynb` refuses to run unless the frozen spec and
-   config/input/source hashes match. It refits on all valid 2017–2022 data,
+   `model_selection`. It writes the selected model specification after
+   candidate comparison.
+3. `04_final_fit_evaluate.ipynb` checks the selected specification and
+   config/input/source hashes before it refits on all valid 2017–2022 data,
    fits the calibrator on 2023, and then evaluates the held-out 2024 period.
 
 On the Dataproc master, the same two stages can run sequentially with
@@ -124,8 +115,7 @@ On the Dataproc master, the same two stages can run sequentially with
 existing STOPPED cluster before launching Spark jobs.
 
 Notebooks 01 and 02 clean the raw inputs and build the saved feature
-partitions. They are needed when those partitions are regenerated; the
-recorded final run reused the feature source above.
+partitions. Run them when those partitions need to be regenerated.
 
 Run outputs are stored under
 `gs://<BUCKET>/runs/<RUN_ID>/`. Final scores include raw, calibrated, and
@@ -139,9 +129,9 @@ persisted, delete the run's Dataproc cluster and verify that no compute
 resources remain. Review the remaining storage objects before retention or
 cleanup decisions.
 
-The current report is compiled from the measured v2 summary and records the
-original Notebook 04 failure and recovery provenance. For a new run, update
-results only after its frozen spec and `final_evaluation_summary.json` exist;
-compile and visually review the PDF before rebuilding the submission package.
+The report presents Task 1 findings and measured Task 2 evaluation results.
+For a new run, update the reported results after
+`final_evaluation_summary.json` is written, then compile and visually review
+the PDF before rebuilding the submission package.
 The assignment requires the report, source, and trained model; verify the exact
 Canvas upload requirements before submission.

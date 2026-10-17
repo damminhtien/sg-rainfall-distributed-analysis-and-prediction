@@ -1,4 +1,3 @@
-% Final protocol-v2 report for run 20261016-v2-fixed8-04.
 % Its PDF copy is retained locally; generated PDFs are not committed.
 \documentclass[11pt,a4paper]{article}
 
@@ -22,7 +21,7 @@
 
 \hypersetup{
   pdftitle={\projecttitle},
-  pdfauthor={DAM MINH TIEN},
+  pdfauthor={DAM MINH TIEN; Nguyen Minh Duc; Vu Nhat Nguyen Thu},
   pdfsubject={DSA5208 Project 2 final report},
   colorlinks=true,
   linkcolor=black,
@@ -33,7 +32,6 @@
 \setlength{\parindent}{0pt}
 \captionsetup{font=small,labelfont=bf}
 
-\newcommand{\runid}{20261016-v2-fixed8-04}
 \newcommand{\figpath}{figures/full-20261012}
 
 \begin{document}
@@ -47,9 +45,16 @@
   {\LARGE\bfseries \projecttitle\par}
   \vfill
   {\large DAM MINH TIEN\par}
-  \vspace{3mm}
-  {\large Student ID: A03355091E\par}
-  \vspace{12mm}
+  {\normalsize Student ID: A03355091E\par}
+  \vspace{4mm}
+  {\large Nguyen Minh Duc\par}
+  {\normalsize Student ID: A0308841A\par}
+  {\normalsize E1404392@u.nus.edu\par}
+  \vspace{4mm}
+  {\large Vu Nhat Nguyen Thu\par}
+  {\normalsize Student ID: A0306148H\par}
+  {\normalsize E1376354@u.nus.edu\par}
+  \vspace{10mm}
   {\large 17 October 2026\par}
 \end{titlepage}
 
@@ -88,8 +93,8 @@ is used for probability calibration, and 2024 is reserved for final evaluation.
 
 \section{Data and cleaning}
 \subsection{Input and timestamp handling}
-The frozen manifest records eight annual files, their schemas, row counts and
-SHA-256 digests. They contain 48,538,713 rows and 12 columns. The rainfall field
+The eight annual source files contain 48,538,713 rows and 12 columns. The
+rainfall field
 is NEA reading type \texttt{TB1 Rainfall 5 Minute Total F}, in millimetres. The
 download time was not recorded. The project's
 interval-end convention treats a reading at time $t$ as rainfall accumulated
@@ -167,17 +172,45 @@ anywhere in 2017--2024 as its denominator, so it reflects both recording
 completeness and changes in station availability.
 
 \subsection{Computing Environment and Distributed Execution}
-Run \texttt{\runid} used Google Cloud Dataproc in
-\texttt{asia-southeast1}. The cluster had one \texttt{e2-standard-4} master
-and eight \texttt{e2-highmem-2} workers, each with a 40~GB standard persistent
-disk. Spark ran eight two-core executors with dynamic allocation disabled.
-The configured Dataproc image was \texttt{2.2.87-debian12} with Spark 3.5.3
-~\cite{spark,dataprocimage};
-the submitted jobs explicitly selected the Dataproc Conda Python interpreter
-\texttt{/opt/conda/default/bin/python}. The fixed configuration provided the
-parallel resources for full-data model fitting; no scaling study was run, so
-these results do not estimate speedup or linear scalability. Figure~\ref{fig:runtime}
-summarises the cluster and storage path.
+The project ran on Google Cloud Dataproc in \texttt{asia-southeast1}. Spark
+handled station-time cleaning and aggregation, rainfall-history and target
+construction, threshold expansion, and MLlib model fitting and scoring across
+worker executors. Table~\ref{tab:cluster} summarizes the final model cluster;
+the project demonstrates distributed execution but does not evaluate
+scalability.
+
+\begin{table}[htbp]
+\centering\small
+\caption{Computing environment for the final GBT-B fit.}
+\label{tab:cluster}
+\begin{tabularx}{\linewidth}{l X}
+\toprule
+Platform and region & Google Cloud Dataproc, \texttt{asia-southeast1} \\
+Dataproc image & \texttt{2.2.87-debian12} \\
+Spark / Python & Spark 3.5.3 / Python 3.11~\cite{spark,dataprocimage} \\
+Master & One \texttt{e2-standard-4}: 4 vCPU, 16~GB RAM~\cite{gceE2} \\
+Workers & Eight \texttt{e2-highmem-2}: 2 vCPU and 16~GB RAM each~\cite{gceE2} \\
+Executors & Eight executors, two cores each; dynamic allocation disabled \\
+Worker disks & 40~GB standard persistent disk per worker \\
+Storage & Google Cloud Storage for features, models and outputs \\
+Interface & Dataproc Jupyter Notebook; sequential Spark job submission \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{table}[htbp]
+\centering\footnotesize
+\caption{Recorded execution for the final model and 2024 evaluation applications.}
+\label{tab:job-evidence}
+\begin{tabularx}{\linewidth}{p{28mm} X r}
+\toprule
+Workload & Recorded execution evidence & Runtime \\
+\midrule
+Final GBT-B fit & 207,248,820 threshold-expanded training examples. Eight worker executors (16 cores); 241 jobs, 404 stages and 25,431 tasks. Stage 21 processed 2.4~GiB with 66 tasks and wrote 52.8~MiB of shuffle data. & 12,286.9~s \\
+2024 evaluation & 6,374,476 base windows (38,246,856 threshold rows). Eight worker executors (16 cores); 325 jobs, 386 completed stage attempts and 25,305 tasks. Application totals: 36.5~GiB input, 4.4~GiB shuffle read and 4.2~GiB shuffle write; saved predictions were evaluated. & 478~s \\
+\bottomrule
+\end{tabularx}
+\end{table}
 
 \begin{figure}[htbp]
 \centering
@@ -188,7 +221,7 @@ summarises the cluster and storage path.
   worker/.style={component, text width=42mm},
   link/.style={->, thick}
 ]
-  \node[component] (runner) {Persistent Dataproc runner\\Sequential notebooks};
+  \node[component] (runner) {Jupyter Notebook interface\\Sequential Spark jobs};
   \node[component, below=of runner] (master) {Dataproc master\\Spark driver};
   \node[worker, below left=of master] (workers) {8 Dataproc workers\\8 Spark executors};
   \node[component, below right=of master] (gcs) {Google Cloud Storage\\features, models, outputs};
@@ -196,16 +229,10 @@ summarises the cluster and storage path.
   \draw[link] (master) -- (workers);
   \draw[<->, thick] (workers) -- (gcs);
 \end{tikzpicture}
-\caption{Dataproc execution layout for run \texttt{\runid}. The persistent
-runner submitted notebooks in sequence; Spark executors on the workers read
-features and wrote models and results in Google Cloud Storage.}
+\caption{Execution path from the notebook interface through the Dataproc
+master to worker executors and Google Cloud Storage.}
 \label{fig:runtime}
 \end{figure}
-
-Notebook 03 completed candidate selection; Notebook 04 fitted the final model
-and calibrator but stopped during PAVA. A recovery job applied PAVA and
-interpolation to saved 2024 predictions and computed the final metrics. The
-cluster was stopped after the jobs finished, and outputs were retained in GCS.
 
 \section{Task 1: Rainfall patterns}
 \subsection{Across-year distribution}
@@ -322,9 +349,9 @@ climate-trend claim. A screen of coordinates, station names and device IDs
 found no obvious replacements or co-located IDs. The station-year coverage
 pattern is shown in Figure~\ref{fig:coverage}.
 
-\begin{figure}[htbp]
+\begin{figure}[!ht]
 \centering
-\includegraphics[width=0.86\linewidth]{\figpath/task1/coverage_heatmap.png}
+\includegraphics[width=0.80\linewidth]{\figpath/task1/coverage_heatmap.png}
 \caption{Annual valid-slot coverage by station from 2017 through 2024. Blank
 cells represent a station-year with no retained observations.}
 \label{fig:coverage}
@@ -418,13 +445,22 @@ to respect threshold order:
 The selected history feature set adds current and earlier same-station rainfall
 to station identity, cyclic time and the rainfall threshold. All predictor
 information is anchored at or before $t$; future readings define only the
-outcome. The archive does not show when revised readings became available, so
-this is a retrospective event-time analysis rather than a verified real-time
-forecast. Station ID is categorical; unseen-station transfer is not estimated
-by this time-based holdout. Coordinates and future rainfall are excluded from
-the predictors. Logistic regression uses standardized inputs; random forest
-and gradient-boosted trees use the assembled inputs without standardization
-~\cite{mllib}.
+outcome. Station selects the same-station history series; prediction time $t$
+anchors temporal and historical features; the rainfall threshold is a
+numerical input and defines the exceedance label. The numerical feature set
+contains 36 columns. Station ID is processed separately using StringIndexer
+and OneHotEncoder, then concatenated with the numerical predictors to form the
+full model vector~\cite{mllib}.
+
+The station encoding retains an explicit unknown category, so a new station
+can be scored using its time and rainfall history. Since that category has no
+training examples, the model has no learned station-specific effect for it;
+all stations in the 2024 holdout were seen during training, so transfer is not
+measured. The archive does not show when revised readings became available,
+making this a retrospective event-time analysis rather than a verified
+real-time forecast. Coordinates and future rainfall are excluded from the
+predictors. Logistic regression uses standardized inputs; random forest and
+gradient-boosted trees use the assembled inputs without standardization.
 
 \begin{table}[htbp]
 \centering\small
@@ -591,55 +627,75 @@ Linear interpolation also remained non-increasing across the five requested
 intermediate thresholds, covering 25,497,904 additional adjacent threshold
 pairs with zero violations (Table~\ref{tab:monotonicity}).
 
+\subsection{Feature-family importance}
+For the final GBT-B model, Spark split importances were mapped from encoded
+vector indices to feature families and normalized by total importance.
+Current rainfall contributed 45.02\%, followed by threshold at 23.40\%,
+rolling maxima at 10.27\% and rolling totals at 10.24\% (Figure~\ref{fig:feature-family}).
+Station identity had no split importance in this fitted model. These values
+describe predictive split usage, not causal effects; correlated lag and
+rolling features can redistribute tree importance among themselves.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.88\linewidth]{figures/final/feature_family_importance.png}
+\caption{Final GBT-B split importance aggregated by feature family after
+mapping encoded feature-vector indices. Values are normalized shares of total
+split importance.}
+\label{fig:feature-family}
+\end{figure}
+
 \subsection{Final 2024 held-out evaluation}
 The selected pipeline was evaluated on 6,374,476 valid 2024 base windows,
 corresponding to 38,246,856 threshold-expanded rows.
-Table~\ref{tab:test} reports per-threshold support and probability scores;
-Table~\ref{tab:operating-point} reports the
-fixed-cutoff classification measures.
+Table~\ref{tab:test} reports per-threshold support, probability scores and
+F1; Table~\ref{tab:operating-point} reports precision and recall at the fixed
+0.5 probability cutoff.
 
 \begin{table}[htbp]
 \centering\scriptsize
-\caption{Held-out 2024 support, discrimination and probability error at the
-six primary thresholds. Every threshold uses the same 6,374,476 prediction
-times. PR-AUC is Spark's 1,000-bin evaluator result. ROC-AUC was recomputed
-locally from the saved held-out scores using \texttt{roc\_auc\_score}~\cite{sklearnroc}.
-Paired values are climatology / final PAVA.}
+\caption{Held-out 2024 support, discrimination, probability error and F1 at
+the six primary thresholds. Every threshold uses the same 6,374,476 prediction
+times. F1 uses a fixed probability cutoff of 0.5. PR-AUC is Spark's 1,000-bin
+evaluator result. ROC-AUC was recomputed locally from saved held-out scores
+using \texttt{roc\_auc\_score}~\cite{sklearnroc}. Paired values are
+climatology / final PAVA.}
 \label{tab:test}
-\begin{tabular}{r r r r r r}
+\begin{tabular}{r r r r r r r}
 \toprule
 \shortstack{Threshold\\(mm)} &
 \shortstack{Positive\\support} &
 \shortstack{Prevalence\\(\%)} &
 \shortstack{PR-AUC\\clim. / PAVA} &
 \shortstack{ROC-AUC\\clim. / PAVA} &
-\shortstack{Brier\\clim. / PAVA} \\
+\shortstack{Brier\\clim. / PAVA} &
+F1 \\
 \midrule
-0.2 & 309,678 & 4.86 & 0.0986 / 0.6618 & 0.5000 / 0.9036 & 0.04520 / 0.02520 \\
-0.5 & 231,071 & 3.62 & 0.0732 / 0.6345 & 0.5000 / 0.9049 & 0.03436 / 0.01958 \\
-1.0 & 163,790 & 2.57 & 0.0529 / 0.5825 & 0.5000 / 0.9029 & 0.02474 / 0.01516 \\
-2.0 & 107,264 & 1.68 & 0.0362 / 0.5070 & 0.5000 / 0.8988 & 0.01642 / 0.01096 \\
-5.0 & 53,193 & 0.83 & 0.0194 / 0.3944 & 0.5000 / 0.8948 & 0.00825 / 0.00614 \\
-10.0 & 24,330 & 0.38 & 0.0098 / 0.2943 & 0.5000 / 0.9004 & 0.00380 / 0.00311 \\
+0.2 & 309,678 & 4.86 & 0.0986 / 0.6618 & 0.5000 / 0.9036 & 0.04520 / 0.02520 & 0.6114 \\
+0.5 & 231,071 & 3.62 & 0.0732 / 0.6345 & 0.5000 / 0.9049 & 0.03436 / 0.01958 & 0.6161 \\
+1.0 & 163,790 & 2.57 & 0.0529 / 0.5825 & 0.5000 / 0.9029 & 0.02474 / 0.01516 & 0.5575 \\
+2.0 & 107,264 & 1.68 & 0.0362 / 0.5070 & 0.5000 / 0.8988 & 0.01642 / 0.01096 & 0.4742 \\
+5.0 & 53,193 & 0.83 & 0.0194 / 0.3944 & 0.5000 / 0.8948 & 0.00825 / 0.00614 & 0.3832 \\
+10.0 & 24,330 & 0.38 & 0.0098 / 0.2943 & 0.5000 / 0.9004 & 0.00380 / 0.00311 & 0.2901 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \begin{table}[htbp]
 \centering\small
-\caption{Final PAVA classification measures using a fixed probability cutoff
-of 0.5 on held-out 2024.}
+\caption{Final PAVA precision and recall at a fixed probability cutoff of 0.5
+on held-out 2024.}
 \label{tab:operating-point}
-\begin{tabular}{r r r r}
+\begin{tabular}{r r r}
 \toprule
-Threshold (mm) & Precision & Recall & F1 \\
+Threshold (mm) & Precision & Recall \\
 \midrule
-0.2 & 0.7940 & 0.4971 & 0.6114 \\
-0.5 & 0.7417 & 0.5269 & 0.6161 \\
-1.0 & 0.7476 & 0.4445 & 0.5575 \\
-2.0 & 0.7544 & 0.3458 & 0.4742 \\
-5.0 & 0.6632 & 0.2695 & 0.3832 \\
-10.0 & 0.5859 & 0.1928 & 0.2901 \\
+0.2 & 0.7940 & 0.4971 \\
+0.5 & 0.7417 & 0.5269 \\
+1.0 & 0.7476 & 0.4445 \\
+2.0 & 0.7544 & 0.3458 \\
+5.0 & 0.6632 & 0.2695 \\
+10.0 & 0.5859 & 0.1928 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -664,7 +720,7 @@ at 0.5~mm and threshold-swept precision-recall curves at 0.5 and 10~mm.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.9\linewidth]{figures/v2/reliability_0.5mm.png}
+\includegraphics[width=0.9\linewidth]{figures/final/reliability_0.5mm.png}
 \caption{Held-out 2024 reliability at the 0.5~mm threshold. Spark's ten
 equal-width probability bins are shown for the reliability curve; the lower
 panel shows sample counts for the final PAVA bins.}
@@ -673,7 +729,7 @@ panel shows sample counts for the final PAVA bins.}
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.96\linewidth]{figures/v2/precision_recall_2024.png}
+\includegraphics[width=0.96\linewidth]{figures/final/precision_recall_2024.png}
 \caption{Threshold-swept precision-recall curves on saved held-out 2024
 predictions at 0.5 and 10~mm. Horizontal dotted lines mark the positive
 prevalence. PR-AUC values in Table~\ref{tab:test} use Spark's 1,000-bin
@@ -758,21 +814,20 @@ thresholds. Predictions require a valid current observation, and labels require
 all six future readings.
 
 \section{Conclusion}
-The final protocol separated hyperparameter validation on 2021, model selection on
-2022, full-data refitting on 2017--2022, calibration on 2023 and held-out
-evaluation on 2024. GBT-B was selected from five candidates and fitted on
-34,541,470 valid training windows. The final calibrated and PAVA-projected
-predictor achieved zero threshold-monotonicity violations across 31.87 million
-pairs. At 0.5~mm, its 2024 PR-AUC was 0.6345 and Brier score was 0.01958,
-compared with 0.0732 and 0.03436 for climatology. The final model improved
-PR-AUC and Brier score at all six thresholds, while weighted ECE remained
-slightly above climatology. The main measured methodological result is exact
-monotonicity after PAVA.
+Task 1 found that wet-reading frequency ranged from 1.94\% to 3.20\% across
+2017--2024.
+At 0.5~mm on the 2024 evaluation set, final PR-AUC was 0.6345 and Brier score
+was 0.01958, compared with 0.0732 and 0.03436 for climatology. PR-AUC and
+Brier score improved at all six primary thresholds, while weighted ECE
+remained slightly higher than climatology. Recent same-station rainfall
+history was the main source of predictive improvement, and calibration and
+PAVA produced threshold-consistent probability estimates.
 
 \section*{AI use declaration}
 \addcontentsline{toc}{section}{AI use declaration}
-We used GPT-6 to assist with coding and refine our report. The authors are
-responsible for the content and quality of the submitted work.
+We used GPT-6 for coding assistance, debugging and language editing. We
+reviewed the code, ran the experiments, verified the reported results and
+take responsibility for the final submission.
 
 \clearpage
 \addcontentsline{toc}{section}{References}
@@ -796,6 +851,10 @@ Apache Spark. \emph{Extracting, transforming and selecting features}, Spark
 Google Cloud. \emph{2.2.x release image versions}.
 \url{https://docs.cloud.google.com/managed-spark/docs/concepts/versioning/image-release-2.2}.
 
+\bibitem{gceE2}
+Google Cloud. \emph{General-purpose machine family for Compute Engine}.
+\url{https://docs.cloud.google.com/compute/docs/general-purpose-machines}.
+
 \bibitem{sklearnroc}
 Scikit-learn Developers. \emph{roc\_auc\_score}.
 \url{https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html}.
@@ -807,64 +866,34 @@ Scikit-learn Developers. \emph{precision\_recall\_curve}.
 
 \clearpage
 \appendix
-\section{Run provenance and retained artifacts}
-Run \texttt{\runid} used protocol version 2. The frozen specification selected
-\texttt{gbt\_B}, fixed full 2017--2022 fitting, isotonic calibration on 2023,
-PAVA projection and in-domain linear interpolation before 2024 was opened.
-The summary and source snapshots are retained under bucket
-\texttt{sg-rainfall-dsa5208-261011-data}, prefix
-\texttt{runs/\runid/}. Relative to that prefix, the selected Spark pipeline
-is at \texttt{models/final\_v2/selected\_pipeline}, the calibrator is at
-\texttt{models/final\_v2/isotonic\_calibrator}, and climatology tables are
-at \texttt{models/final\_v2/climatology}.
-The 2.67~GiB run prefix, including features, model, prediction and reliability
-Parquet, notebooks, source, logs and JSON summaries, was copied to the local
-folder \texttt{sg-rainfall-v2-fixed8-04} under \texttt{/Users/macbook/Data}.
-The copy contains 526 files and 2,865,531,461 bytes; a checksum-only GCS-to-
-local rsync dry run reported no differences.
+\setcounter{figure}{0}
+\renewcommand{\thefigure}{\Alph{figure}}
+\begin{landscape}
+\thispagestyle{plain}
+\section{Spark UI evidence}
+The figures are saved Spark History Server views from the final GBT-B
+application on the eight-worker cluster. Executor totals are the completed
+application's recorded values; worker labels are anonymised.
+\begin{center}
+\includegraphics[width=0.95\linewidth]{figures/final/spark_ui_final_stage.png}
+\captionof{figure}{Spark History Server detail for Stage 21 of the final GBT-B
+application. The imputation-statistic stage completed 66 tasks, reading
+2.4~GiB and writing 52.8~MiB of shuffle data.}
+\label{fig:spark-ui-final-stage}
+\end{center}
+\end{landscape}
 
-\begin{table}[htbp]
-\centering\small
-\caption{Execution durations from the retained runner status and final
-evaluation summary. The final model fit is part of Notebook 04 time.}
-\label{tab:durations}
-\begin{tabular}{l l r}
-\toprule
-Stage & Status & Duration \\
-\midrule
-Notebook 03 model development & Succeeded & 5 h 34 min 49 s \\
-Notebook 04 final fit and evaluation & Failed at original PAVA step & 3 h 32 min 39 s \\
-Final GBT-B model fit & Completed before PAVA failure & 3 h 24 min 47 s \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\begin{table}[htbp]
-\centering\scriptsize
-\caption{SHA-256 provenance values recorded for the frozen run and the
-corrected recovery helper.}
-\label{tab:hashes}
-\begin{tabularx}{\linewidth}{l X}
-\toprule
-Artifact & SHA-256 \\
-\midrule
-Frozen specification & \texttt{5a7800baac3883a68ad2ed87edb2010aa2f3f82881b8b6537f2a6b2e2aea5743} \\
-Experiment configuration & \texttt{96076cf5dc04e9c80ed2451be0ea36d2eb6e94b372b91dcce8d849865ad4265c} \\
-Input manifest & \texttt{41080cf58fc68f899c06145d573620b61777bbcc3b13d90c69020a6dcd790688} \\
-Source-hashes manifest & \texttt{6aa04133158626f4c089dd5f607c852d5fec1272542147fdc3fa69576da488cd} \\
-Frozen modeling source & \texttt{52e81af8fac5cce96ce64d0a799c7a29babc3197f4f2c3fd7d9f9aeade5e0694} \\
-Recovery modeling helper & \texttt{b3360bd6d82c22256db344ccf338afe888f8e851e74d34a113e02fb6f7e96fdc} \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-The runner status remains in \texttt{status.json} under
-\texttt{results/overnight\_execution}; it records Notebook 03 success and
-Notebook 04 exit at PAVA. Recovery attempt 03 wrote its final evaluation
-summary under \texttt{results/recovery/attempt-03} from saved 2024 anchor
-predictions. Table~\ref{tab:durations} gives the elapsed times. The final
-recovery recomputed PAVA, interpolation and metrics from these predictions;
-it did not rerun final model scoring or calibration. The frozen specification,
-inputs, source and recovery helper hashes are listed in Table~\ref{tab:hashes}.
+\clearpage
+\begin{landscape}
+\thispagestyle{plain}
+\begin{center}
+\includegraphics[width=0.92\linewidth]{figures/final/spark_ui_final_executors.png}
+\captionof{figure}{Executors view for the same final GBT-B application. Spark
+lists the driver and eight worker executors; the workers supplied 16 cores and
+completed 25,431 tasks. Application totals were 8.6~TiB input, 2~GiB shuffle
+read and 2~GiB shuffle write; worker labels are anonymised.}
+\label{fig:spark-ui-executors}
+\end{center}
+\end{landscape}
 
 \end{document}

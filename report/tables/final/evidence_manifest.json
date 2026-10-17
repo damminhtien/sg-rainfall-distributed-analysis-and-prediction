@@ -46,12 +46,12 @@
     "bytes": 273709620
   },
   "outputs": [
-    "report/figures/v2/reliability_0.5mm.png",
-    "report/figures/v2/precision_recall_2024.png",
-    "report/tables/v2/final_evaluation_metrics.csv",
-    "report/tables/v2/gbt_feature_ablation_2022.csv",
-    "report/tables/v2/reliability_0.5mm_bins.csv",
-    "report/tables/v2/recent_rainfall_strata_2024.csv"
+    "report/figures/final/reliability_0.5mm.png",
+    "report/figures/final/precision_recall_2024.png",
+    "report/tables/final/final_evaluation_metrics.csv",
+    "report/tables/final/gbt_feature_ablation_2022.csv",
+    "report/tables/final/reliability_0.5mm_bins.csv",
+    "report/tables/final/recent_rainfall_strata_2024.csv"
   ],
   "metric_methods": {
     "pr_auc": "Spark 3.5.3 BinaryClassificationEvaluator areaUnderPR with auc_num_bins=1000, copied from final summary",
