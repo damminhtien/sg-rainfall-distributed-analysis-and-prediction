@@ -160,30 +160,31 @@ station-time key was excluded. The retained and excluded totals reconcile to
 the raw count (Table~\ref{tab:cleaning}).
 
 \subsection{Coverage definitions}
-Coverage is the count of retained five-minute readings divided by the expected
-slots (288 per calendar day) in the full calendar period, including periods
-with no records. Rainfall
-occurrence is the share of retained readings greater than zero; missing
-readings are excluded from this denominator and are not treated as dry.
-Conditional wet intensity is the mean five-minute rainfall total among
-positive readings. A
-station-month rainfall total is the sum of observed readings and is not
-adjusted for missing slots.
+Coverage was calculated as the number of retained five-minute observations
+divided by the number expected over the full calendar period, using 288 slots
+per day. Periods with no records therefore reduce coverage. Rainfall occurrence
+was defined as the proportion of retained observations with rainfall greater
+than zero; missing observations were excluded rather than treated as dry.
+Conditional wet intensity was the mean rainfall amount among positive
+observations. Monthly rainfall totals were computed from the observations
+available for each station-month and were not adjusted for missing slots.
 
-Monthly summaries include station-months with at least 95\% coverage and give
-each eligible station-month equal weight. For hourly summaries, the same
-monthly rule applies, and each station-month-hour must also have at least 95\%
-of its expected readings (12 per day for that hour). At a given hour, eligible
-station-month-hour summaries receive equal weight. Because station coverage
-changes across years, these summaries are not estimates for a fixed station
-network.
+To reduce the effect of incomplete records, monthly analyses included only
+station-months with at least 95\% coverage, with each eligible station-month
+given equal weight. Hourly analyses used the same monthly criterion and
+additionally required at least 95\% coverage for each station-month-hour, based
+on 12 expected five-minute observations per day for that hour. Eligible
+station-month-hour summaries were then averaged with equal weight. Since
+station availability changed over time, these summaries describe the observed
+monitoring network rather than a fixed set of stations.
 
-A complete day has exactly 288 retained five-minute readings. Supplementary
-complete-day estimates first average complete daily totals within each
-station-month, then give each contributing station-month equal weight. The
-complete-day fraction uses all expected station-days for the station IDs seen
-anywhere in 2017--2024 as its denominator, so it reflects both recording
-completeness and changes in station availability.
+A complete station-day was defined as one containing all 288 expected
+five-minute observations. For the supplementary complete-day analysis, daily
+rainfall totals were first averaged within each station-month, and contributing
+station-months were then weighted equally. The complete-day fraction was
+calculated against all expected station-days for station IDs observed at any
+point from 2017 to 2024, so it captures both missing observations and changes
+in station availability.
 
 \subsection{Computing Environment and Distributed Execution}
 The project ran on Google Cloud Dataproc in \texttt{asia-southeast1}. Spark
