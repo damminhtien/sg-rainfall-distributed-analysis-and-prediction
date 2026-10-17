@@ -92,15 +92,17 @@ Dataproc cluster using Spark DataFrames and MLlib.
 \pagenumbering{arabic}
 
 \section{Introduction}
-Rainfall observations came from the National Environment Agency's Historical
-Rainfall across Singapore collection and are timestamped in Singapore Time.
-The catalog warns that records may be missing and have not undergone
-climate-record quality control~\cite{nea}.
+Rainfall observations were taken from the National Environment Agency's
+Historical Rainfall across Singapore collection and use Singapore Time. The
+dataset documentation notes that some observations may be missing and that the
+records have not undergone climate-record quality control~\cite{nea}.
 
-Task 1 describes all eight years. For Task 2, 2017--2020 supports hyperparameter
-training, 2021 supports hyperparameter validation, 2022 is used for candidate
-selection, the selected model is refitted on all valid 2017--2022 windows, 2023
-is used for probability calibration, and 2024 is reserved for final evaluation.
+Task 1 uses the full 2017--2024 period. For Task 2, the data were split
+chronologically to avoid using future information during model development:
+2017--2020 for hyperparameter training, 2021 for validation, 2022 for model
+selection, 2023 for probability calibration, and 2024 for final evaluation.
+After model selection, the chosen model was refitted using all valid windows
+from 2017--2022.
 
 \section{Data and cleaning}
 \subsection{Input and timestamp handling}
