@@ -178,6 +178,8 @@ construction, threshold expansion, and MLlib model fitting and scoring across
 worker executors. Table~\ref{tab:cluster} summarizes the final model cluster;
 the project demonstrates distributed execution. Appendix A provides Spark
 History Server evidence for the final training application.
+Figure~\ref{fig:computation-pipeline} summarizes how Spark's structured
+processing feeds model fitting and evaluation.
 
 \begin{table}[htbp]
 \centering\small
@@ -255,6 +257,43 @@ executors, which read project data from and write results to Google Cloud
 Storage.}
 \label{fig:runtime}
 \end{figure}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[x=1mm,y=1mm,
+  font=\footnotesize,
+  stage/.style={draw, rounded corners=2pt, align=center, text width=25mm,
+                minimum height=40mm, inner sep=1.5mm},
+  source/.style={stage, fill=orange!8},
+  structured/.style={stage, fill=green!7},
+  learning/.style={stage, fill=blue!7},
+  flow/.style={-{Stealth[length=1.7mm]}, semithick}
+]
+  \node[source] (input) at (14,0)
+    {\textbf{GCS input}\\2017--2024 annual NEA rainfall files};
+  \node[structured] (clean) at (46.5,0)
+    {\textbf{Spark SQL / DataFrames}\\Read and validate\\Clean rainfall\\Deduplicate rows\\Aggregate};
+  \node[structured] (features) at (79,0)
+    {\textbf{Spark SQL / DataFrames}\\Same-station history\\Six-reading target\\Temporal splits\\Threshold expansion};
+  \node[learning] (fit) at (111.5,0)
+    {\textbf{Spark MLlib}\\Preprocessing pipeline\\Candidate LR / RF / GBT\\Final GBT-B fit};
+  \node[learning] (score) at (144,0)
+    {\textbf{Spark MLlib / DataFrames}\\Isotonic model\\2023 calibration\\Score 2024\\PAVA + metrics\\GCS outputs};
+
+  \draw[flow] (input.east) -- (clean.west);
+  \draw[flow] (clean.east) -- (features.west);
+  \draw[flow] (features.east) -- (fit.west);
+  \draw[flow] (fit.east) -- (score.west);
+\end{tikzpicture}
+\caption{Computation pipeline. Spark SQL and DataFrames perform structured
+cleaning, feature and target construction, and threshold expansion. Spark
+MLlib trains model candidates and final GBT-B, then fits the 2023 isotonic
+calibrator. The calibrated model scores the 2024 holdout; Spark DataFrames
+apply PAVA and aggregate metrics. Model and prediction outputs are stored in
+Google Cloud Storage.}
+\label{fig:computation-pipeline}
+\end{figure}
+\FloatBarrier
 
 \section{Task 1: Rainfall patterns}
 \subsection{Across-year distribution}
