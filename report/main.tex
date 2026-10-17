@@ -382,18 +382,28 @@ cells represent a station-year with no retained observations.}
 \clearpage
 \subsection{Additional descriptive views}
 
-Figures~\ref{fig:complete-daily}--\ref{fig:station-spatial} provide
-supplementary views of complete-day rainfall, hourly patterns, rainfall tails,
-wet spells and station-level summaries. Their coverage and censoring limits
-are stated in each caption.
+These figures show complete-day rainfall and coverage, hourly wet frequency,
+rainfall tails, wet-spell duration and station-level summaries.
+Figure~\ref{fig:complete-daily} separates the monthly rainfall level from the
+completeness of the underlying observations. Monthly means on complete
+station-days vary between years without a recurring month-by-month pattern;
+the coverage panel shows that the available complete-day support also changes
+across the study period. The rainfall values therefore describe the observed
+complete days rather than a fixed network.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.96\linewidth]{\figpath/task1/complete_daily_patterns.png}
-\caption{Equal-station mean observed rainfall on complete station-days by
-year and month. Only station-days with 288 readings contribute.}
+\caption{Monthly equal-station mean rainfall on complete station-days (left)
+and the fraction of expected station-days with all 288 readings (right).}
 \label{fig:complete-daily}
 \end{figure}
+
+Figure~\ref{fig:hourly-supplement} shows higher wet-reading frequency in the
+afternoon, generally around 15:00--17:00 SGT, than overnight. The peak hour
+and its magnitude vary by year, while 2019 is lower across much of the day.
+Each cell summarizes eligible station-months, so the heatmap describes the
+observed network under the stated coverage rules.
 
 \begin{figure}[htbp]
 \centering
@@ -403,14 +413,27 @@ the 95\% monthly and within-hour coverage requirements.}
 \label{fig:hourly-supplement}
 \end{figure}
 
+Figure~\ref{fig:rainfall-tail} compares upper quantiles among wet readings
+with the share of all valid readings above the training-period wet-reading
+P99 threshold. P90 and P95 vary less than P99, while the exceedance share is
+lowest in 2019 and highest in 2021 before declining through 2024. These are
+year-specific descriptions of the observed tail, not evidence of a long-term
+trend.
+
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.96\linewidth]{\figpath/task1/rainfall_tail.png}
-\caption{Observed wet-reading tail summaries by year. These are record-level
-descriptions and are sensitive to data coverage and the finite observation
-period.}
+\caption{Wet-reading rainfall quantiles (P90, P95 and P99; left) and the
+share of valid readings above the training-period wet-reading P99 threshold
+(right).}
 \label{fig:rainfall-tail}
 \end{figure}
+
+Figure~\ref{fig:wet-spells} summarizes uninterrupted sequences of positive
+readings at exact five-minute intervals. The median spell is one reading in
+every year, while the upper quantiles capture longer runs. Censoring at gaps
+or study boundaries is more common in 2017--2018; observed spell lengths can
+therefore be truncated.
 
 \begin{figure}[htbp]
 \centering
@@ -421,12 +444,18 @@ continuous rainfall between observations.}
 \label{fig:wet-spells}
 \end{figure}
 
+Figure~\ref{fig:station-spatial} maps station-year summaries with at least
+90\% annual coverage and consistent coordinates through 2023. Point colour
+shows observed annual rainfall. Totals vary across nearby locations, but
+these station observations do not estimate rainfall between stations or an
+area-weighted spatial pattern.
+
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.82\linewidth]{\figpath/task1/station_spatial_patterns.png}
-\caption{Supplementary station summaries for observations with usable
-coordinates. The plot is descriptive and is not an area-weighted map of
-Singapore rainfall.}
+\caption{Observed annual rainfall at station-years with at least 90\%
+coverage and consistent coordinates through 2023. Each point is a station-year;
+the plot is not an area-weighted map of Singapore rainfall.}
 \label{fig:station-spatial}
 \end{figure}
 \clearpage
