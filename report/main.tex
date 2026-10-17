@@ -498,6 +498,18 @@ climatology, LR-A, RF-B, GBT-A and GBT-B. Mean PR-AUC across the six primary
 thresholds ranked candidates, with mean Brier score as the tie-breaker
 (Table~\ref{tab:selection}).
 
+The climatology baseline estimates training-data exceedance rates by station,
+month, hour and threshold, shrinking each level toward the broader rate with
+$\lambda=100$:
+\[
+  \hat p_{0,\tau}=\frac{X_{0,\tau}}{N_0},\qquad
+  \hat p_{m,h,\tau}=\frac{X_{m,h,\tau}+100\hat p_{0,\tau}}{N_{m,h}+100},\qquad
+  \hat p_{s,m,h,\tau}=\frac{X_{s,m,h,\tau}+100\hat p_{m,h,\tau}}{N_{s,m,h}+100}.
+\]
+Here $X$ and $N$ are positive and total training counts; an empty group takes
+its parent rate, so unseen station-month-hour groups fall back to month-hour
+and then overall rates.
+
 \begin{table}[htbp]
 \centering\small
 \caption{Mean metrics across the six primary thresholds on the 2022 model-
