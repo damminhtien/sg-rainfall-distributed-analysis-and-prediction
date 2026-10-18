@@ -76,7 +76,7 @@ For prediction, we compared several MLlib models using station, time, rainfall
 threshold and recent same-station rainfall history, with separate periods for
 training, validation, model selection, calibration and final testing. The
 selected gradient-boosted tree model was retrained on 34.5 million valid
-2017--2022 windows and evaluated on 6.37 million held-out 2024 windows. At the
+2017-2022 windows and evaluated on 6.37 million held-out 2024 windows. At the
 0.5~mm threshold, it achieved a PR-AUC of 0.6345 and a Brier score of 0.01958,
 compared with 0.0732 and 0.03436 for the climatology baseline. Recent rainfall
 history provided the largest predictive gain, while isotonic calibration and a
@@ -98,12 +98,12 @@ Historical Rainfall across Singapore collection and use Singapore Time. The
 dataset documentation notes that some observations may be missing and that the
 records have not undergone climate-record quality control~\cite{nea}.
 
-Task 1 uses the full 2017--2024 period. For Task 2, the data were split
+Task 1 uses the full 2017-2024 period. For Task 2, the data were split
 chronologically to avoid using future information during model development:
-2017--2020 for hyperparameter training, 2021 for validation, 2022 for model
+2017-2020 for hyperparameter training, 2021 for validation, 2022 for model
 selection, 2023 for probability calibration, and 2024 for final evaluation.
 After model selection, the chosen model was refitted using all valid windows
-from 2017--2022.
+from 2017-2022.
 
 \section{Data and cleaning}
 \subsection{Input and timestamp handling}
@@ -116,7 +116,7 @@ the dataset documentation.
 
 A timestamp inconsistency appears in the earlier records. Many observations
 from early 2017 end at second 59, while later 2017 records and those from
-2018--2024 end at second 00. The same \texttt{:59} pattern also appears in the
+2018-2024 end at second 00. The same \texttt{:59} pattern also appears in the
 official 2016 dataset~\cite{nea}. In 2017, 3,480,779 timestamps fell exactly on
 five-minute boundaries and 1,775,327 were one second earlier. We therefore
 shifted only this systematic \texttt{:59} pattern forward by one second to
@@ -363,7 +363,7 @@ Year & Valid readings & Wet readings (\%) & Mean (mm) & Wet mean (mm) & Max (mm)
 \includegraphics[width=\linewidth]{\figpath/task1/rainfall_distribution.png}
 \caption{Wet-reading frequency and conditional wet-reading distribution by
 year. The dashed line marks the wet-reading 99th percentile estimated from
-2017--2022 training-period observations; the last histogram bin contains
+2017-2022 training-period observations; the last histogram bin contains
 readings of at least 20~mm.}
 \label{fig:distribution}
 \end{figure}
@@ -459,7 +459,7 @@ and the fraction of expected station-days with all 288 readings (right).}
 \end{figure}
 
 Figure~\ref{fig:hourly-supplement} shows higher wet-reading frequency in the
-afternoon, generally around 15:00--17:00 SGT, than overnight. The peak hour
+afternoon, generally from 15:00 to 17:00 SGT, than overnight. The peak hour
 and its magnitude vary by year, while 2019 is lower across much of the day.
 Each cell summarizes eligible station-months.
 
@@ -488,7 +488,7 @@ share of valid readings above the training-period wet-reading P99 threshold
 Figure~\ref{fig:wet-spells} summarizes uninterrupted sequences of positive
 readings at exact five-minute intervals. The median spell is one reading in
 every year, while the upper quantiles capture longer runs. Censoring at gaps
-or study boundaries is more common in 2017--2018; observed spell lengths can
+or study boundaries is more common in 2017-2018; observed spell lengths can
 therefore be truncated.
 
 \begin{figure}[htbp]
@@ -598,7 +598,7 @@ sampling or threshold expansion.}
 \toprule
 Partition & Period & Valid windows \\
 \midrule
-Hyperparameter training & 2017--2020 & 20,420,495 \\
+Hyperparameter training & 2017-2020 & 20,420,495 \\
 Hyperparameter validation & 2021 & 7,013,077 \\
 Model selection & 2022 & 7,107,898 \\
 Probability calibration & 2023 & 6,719,274 \\
@@ -610,7 +610,7 @@ Held-out evaluation & 2024 & 6,374,476 \\
 Split assignment is based on prediction time. Samples whose 30-minute target
 reaches or crosses a partition boundary are purged, so every retained target
 window lies within its assigned period. Each valid base window expands into
-six threshold-specific examples. The final 2017--2022 fitting pool contains
+six threshold-specific examples. The final 2017-2022 fitting pool contains
 34,541,470 valid windows, or 207,248,820 expanded rows
 (Table~\ref{tab:splits}).
 
@@ -698,7 +698,7 @@ for the final model.
 
 \subsection{Final fitting, calibration and monotone prediction}
 After selection, a new GBT-B model was fitted on all 34,541,470 valid
-2017--2022 base windows (207,248,820 threshold-expanded rows). An isotonic
+2017-2022 base windows (207,248,820 threshold-expanded rows). An isotonic
 calibrator was fitted on a deterministic 10\% sample of the 2023 calibration
 partition:
 671,768 of 6,719,274 base windows, expanded to 4,030,608 threshold examples.
@@ -905,7 +905,7 @@ At the 0.5 cutoff, the model made no positive predictions after a dry
 30-minute history. After recent rain, precision and recall were higher.
 
 \section{Discussion and limitations}
-Station availability changed substantially across 2017--2024, so differences
+Station availability changed substantially across 2017-2024, so differences
 between years describe the observed network, not a long-term rainfall trend.
 
 The model was evaluated only on stations that had appeared in the training
@@ -918,7 +918,7 @@ setting.
 This project developed an end-to-end Spark workflow for analysing Singapore
 rainfall patterns and predicting 30-minute rainfall exceedance probabilities
 from NEA five-minute observations. For Task 1, we cleaned and audited the
-2017--2024 records, accounted for missing observations and changing station
+2017-2024 records, accounted for missing observations and changing station
 coverage, and analysed annual, monthly and hourly rainfall patterns.
 Wet-reading frequency ranged from 1.94\% to 3.20\%, with a consistent
 afternoon peak across most years. Because the monitoring network changed over
@@ -928,7 +928,7 @@ rather than as a fixed-station climate trend.
 For Task 2, we constructed a temporally separated training, validation,
 calibration and test pipeline using station, time, rainfall threshold and
 recent same-station rainfall history. The selected GBT model was retrained on
-34.5 million valid 2017--2022 windows and evaluated on 6.37 million held-out
+34.5 million valid 2017-2022 windows and evaluated on 6.37 million held-out
 2024 windows. At the 0.5~mm threshold, the final model achieved a PR-AUC of
 0.6345 and a Brier score of 0.01958, compared with 0.0732 and 0.03436 for the
 climatology baseline. Adding recent rainfall history was the main source of

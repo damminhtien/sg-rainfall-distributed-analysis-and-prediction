@@ -2,7 +2,7 @@
 
 This repository contains a DSA5208 Project 2 analysis of the
 National Environment Agency's five-minute rainfall observations in Singapore.
-Task 1 describes rainfall patterns from 2017–2024. Task 2 estimates the
+Task 1 describes rainfall patterns from 2017-2024. Task 2 estimates the
 probability that the next 30-minute accumulated rainfall exceeds a requested
 threshold. The prediction workflow uses Spark for feature construction and
 Spark MLlib for model development.
@@ -11,22 +11,22 @@ Spark MLlib for model development.
 
 | Years | Role |
 |---|---|
-| 2017–2020 | Deterministic 10% hyperparameter screen; refit candidates on valid rows |
+| 2017-2020 | Deterministic 10% hyperparameter screen; refit candidates on valid rows |
 | 2021 | Hyperparameter validation |
 | 2022 | Model and feature selection on a deterministic 10% sample |
-| 2017–2022 | Refit the selected model on all valid windows |
+| 2017-2022 | Refit the selected model on all valid windows |
 | 2023 | Fit isotonic calibration on a deterministic 10% sample |
 | 2024 | Final evaluation period |
 
 The 30-minute label uses six exact five-minute observations after each
 prediction time; windows that cross a split boundary are excluded. Notebook 03
 performs hyperparameter and model/feature selection. Notebook 04 refits the
-selected model on valid 2017–2022 rows, fits isotonic calibration on 2023, then
+selected model on valid 2017-2022 rows, fits isotonic calibration on 2023, then
 evaluates on 2024. The prediction step applies equal-weight PAVA to the six
 anchor thresholds and linearly interpolates between them for in-domain
 queries. Climatology probabilities are estimated from training data only.
 
-Hyperparameter screening uses a deterministic 10% sample from 2017–2020, with
+Hyperparameter screening uses a deterministic 10% sample from 2017-2020, with
 surviving configurations refit on that period's valid rows. Hyperparameter
 validation uses 2021; model/feature selection and calibration use deterministic
 10% samples of their respective partitions.
@@ -41,7 +41,7 @@ were unchanged.
 | Path | Purpose |
 |---|---|
 | `config/experiment.json` | Split periods, thresholds, features, and model grids |
-| `manifests/input_manifest.json` | Eight 2017–2024 inputs, schemas, row counts, and hashes |
+| `manifests/input_manifest.json` | Eight 2017-2024 inputs, schemas, row counts, and hashes |
 | `notebooks/00_setup_cloud.ipynb` | Local input preflight, GCS upload, and Dataproc setup |
 | `notebooks/01_clean_and_task1.ipynb` | Data cleaning, coverage checks, and Task 1 |
 | `notebooks/02_build_features.ipynb` | History features, target windows, and purged temporal splits |
@@ -54,7 +54,7 @@ were unchanged.
 ## Data
 
 Download the annual **Historical Rainfall across Singapore** CSV files for
-2017–2024 from the [data.gov.sg collection](https://data.gov.sg/collections/2279/view).
+2017-2024 from the [data.gov.sg collection](https://data.gov.sg/collections/2279/view).
 Keep the raw files outside this repository. Set `DATA_ROOT` to a directory
 containing a `raw/` folder with the eight manifest-listed files. Raw CSVs are
 not tracked in Git or included in the submission package.
@@ -106,7 +106,7 @@ config. Notebook 03 and Notebook 04 use the target run ID.
    `model_selection`. It writes the selected model specification after
    candidate comparison.
 3. `04_final_fit_evaluate.ipynb` reads the selected model configuration,
-   refits on all valid 2017–2022 data, fits the calibrator on 2023, and
+   refits on all valid 2017-2022 data, fits the calibrator on 2023, and
    evaluates the 2024 period.
 
 On the Dataproc master, the same two stages can run sequentially with
