@@ -633,10 +633,12 @@ Brier score was preferred; if Brier scores were within 0.0001, model
 complexity broke the tie.
 
 For the final comparison, LR-A, RF-B, GBT-A and GBT-B were fitted on the same
-deterministic 10\% sample of 2017--2021 training windows. Climatology rates
-were estimated from that sample. All five candidates were evaluated on the
-same deterministic 10\% sample of 2022. Mean PR-AUC across the six primary
-thresholds ranked the candidates using the same rule (Table~\ref{tab:selection}).
+deterministic 10\% sample of the combined 2017 to 2021 training data.
+Climatology rates were estimated from that sample. The climatology baseline
+and four ML models were evaluated on the same deterministic 10\% sample of
+2022. Mean PR-AUC across the six primary thresholds ranked candidates, with
+mean Brier score and model complexity resolving close results
+(Table~\ref{tab:selection}).
 
 The climatology baseline uses training examples only. For each threshold,
 it estimates an overall exceedance rate, then month-hour and
@@ -656,8 +658,9 @@ falls back to the overall rate.
 \begin{table}[htbp]
 \centering\small
 \caption{Mean metrics across the six primary thresholds on the 2022 model-
-selection sample. Each candidate used the same 2,742,964 sampled training
-windows and 711,112 evaluation windows. Fit time is model-fitting time;
+selection sample. The four ML models were fitted on the same 2,742,964 sampled
+training windows; climatology rates were estimated from those windows. All
+candidates were evaluated on 711,112 windows. Fit time is model-fitting time;
 climatology has no model fit.}
 \label{tab:selection}
 \begin{tabular}{l r r r}
