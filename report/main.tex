@@ -427,7 +427,7 @@ This recurring afternoon concentration is consistent with the Meteorological
 Service Singapore's description of daytime rainfall and afternoon thunderstorms
 associated with surface heating~\cite{mss-climate}. Its long-term account also
 identifies higher rainfall from November to January and a relatively dry
-February. 
+February.
 
 
 \begin{table}[htbp]
@@ -554,7 +554,7 @@ share of valid readings above the training-period wet-reading P99 threshold
 Figure~\ref{fig:wet-spells} summarizes uninterrupted sequences of positive
 readings at the same station, exactly five minutes apart. An observed zero
 ends a spell. The median is one reading in every year, while the upper
-quantiles capture longer runs. 
+quantiles capture longer runs.
 A spell is left-censored when the preceding interval is missing or falls
 before the available record, and right-censored when the following interval
 is missing or falls after it. Its full length may then be greater than the
@@ -697,10 +697,10 @@ per family were then refitted on all 2017 to 2020 training windows and
 compared on 2021. The search varied logistic regression
 \texttt{regParam} over 0.001, 0.01, 0.1 and 1; random forest
 \texttt{(numTrees, maxDepth)} over (50, 6), (100, 6) and (50, 8); and
-gradient-boosted tree \texttt{maxDepth} over 3 and 4 and \texttt{maxIter}
-over 20 and 40. Within each family, mean PR-AUC across the six primary
-thresholds on 2021 selected a configuration; mean Brier score and model
-complexity resolved close results.
+gradient-boosted tree~\cite{friedman-gbt} with \texttt{maxDepth} over 3 and 4
+and \texttt{maxIter} over 20 and 40. Within each family, mean PR-AUC across
+the six primary thresholds on 2021 selected a configuration; mean Brier
+score and model complexity resolved close results.
 
 For the final comparison, LR-A, RF-B, GBT-A and GBT-B were fitted on the same
 deterministic 10\% sample of the combined 2017 to 2021 training data.
