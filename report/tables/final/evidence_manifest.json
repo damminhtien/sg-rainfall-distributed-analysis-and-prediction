@@ -1,0 +1,74 @@
+{
+  "run_id": "20261016-v2-fixed8-04",
+  "generated_from": "local mirror of the frozen Dataproc/GCS run; no model fitting or test-based selection was performed",
+  "software": {
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "matplotlib": "3.11.2",
+    "scikit_learn": "1.9.1"
+  },
+  "sources": {
+    "/Users/macbook/Data/sg-rainfall-v2-fixed8-04/results/recovery/attempt-03/final_evaluation_summary.json": {
+      "sha256": "11544d788f7acbc162ac6c4dad30cc452512bf5e996c5e334aa1753de7c2e81b"
+    },
+    "/Users/macbook/Data/sg-rainfall-v2-fixed8-04/results/development_summary.json": {
+      "sha256": "b10e1a4761735242a1a7c5a0703be802f3f4bfa0ff94563b67c1710a05493292"
+    },
+    "/Users/macbook/Data/sg-rainfall-v2-fixed8-04/artifacts/frozen_spec.json": {
+      "sha256": "5a7800baac3883a68ad2ed87edb2010aa2f3f82881b8b6537f2a6b2e2aea5743"
+    },
+    "/Users/macbook/Data/sg-rainfall-v2-fixed8-04/config/experiment.json": {
+      "sha256": "96076cf5dc04e9c80ed2451be0ea36d2eb6e94b372b91dcce8d849865ad4265c"
+    }
+  },
+  "reliability_sources": {
+    "raw_selected": {
+      "path": "/Users/macbook/Data/sg-rainfall-v2-fixed8-04/results/reliability/raw_selected/part-00000-bd5b7efe-5125-4939-b71a-42c3909cc790-c000.json",
+      "sha256": "e47c15e56e028b349161a2d71e52d65e0a8fb505426b44d6e1b9d0ae383318a3"
+    },
+    "isotonic_calibrated": {
+      "path": "/Users/macbook/Data/sg-rainfall-v2-fixed8-04/results/reliability/isotonic_calibrated/part-00000-8900bed3-7087-4ece-aaa1-602b5ded705e-c000.json",
+      "sha256": "db3753508ec2ea8e74e97eedd5ab8ec5217b8b8517248dc5ce30e7832d83ba02"
+    },
+    "final_pava": {
+      "path": "/Users/macbook/Data/sg-rainfall-v2-fixed8-04/results/reliability/final_pava/part-00000-71d56e9c-0c95-4087-a211-4532875483f8-c000.json",
+      "sha256": "f16aa53b9298148607bf747ff96feff4b4f3b85c22c61e24e4aceabfdabecea7"
+    },
+    "climatology": {
+      "path": "/Users/macbook/Data/sg-rainfall-v2-fixed8-04/results/reliability/climatology/part-00000-f4a13a92-a759-48ed-b55d-0e113905b4f2-c000.json",
+      "sha256": "0d9e5545112159b6359f7596f7cce948aaba339be128917e148a333e3e247317"
+    }
+  },
+  "saved_heldout_scores": {
+    "path": "/Users/macbook/Data/sg-rainfall-v2-fixed8-04/results/scores/heldout_2024_anchor_predictions",
+    "gcs_path": "gs://sg-rainfall-dsa5208-261011-data/runs/20261016-v2-fixed8-04/results/scores/heldout_2024_anchor_predictions/",
+    "parquet_files": 256,
+    "bytes": 273709620
+  },
+  "outputs": [
+    "report/figures/final/reliability_0.5mm.png",
+    "report/figures/final/precision_recall_2024.png",
+    "report/tables/final/final_evaluation_metrics.csv",
+    "report/tables/final/gbt_feature_ablation_2022.csv",
+    "report/tables/final/reliability_0.5mm_bins.csv",
+    "report/tables/final/recent_rainfall_strata_2024.csv"
+  ],
+  "metric_methods": {
+    "pr_auc": "Spark 3.5.3 BinaryClassificationEvaluator areaUnderPR with auc_num_bins=1000, copied from final summary",
+    "roc_auc": "scikit-learn roc_auc_score using continuous held-out scores; GBT scores come from saved 2024 predictions, while climatology scores are reconstructed from training-only histograms and the same label_valid 2024 cohort.",
+    "reliability": "Spark-exported held-out aggregates at 0.5 mm, grouped into ten equal-width probability bins",
+    "precision_recall_curves": "threshold-swept curves from saved 2024 anchor predictions using scikit-learn; horizontal reference is 2024 prevalence",
+    "recent_rainfall_strata": "streaming aggregation over all saved 2024 score Parquet files, grouped by threshold and onset flag; onset is sum_30 == 0; classification cutoff is 0.5"
+  },
+  "recovery_provenance": {
+    "attempt": 3,
+    "calibrator_transform_recomputed": false,
+    "mode": "resume_summary_and_interpolation_from_saved_holdout_predictions",
+    "model_scoring_recomputed": false,
+    "parent_notebook_04_state": "failed_at_pava_projection; attempt_02_failed_at_unseen_interpolation",
+    "recovery_module_sha256": "b3360bd6d82c22256db344ccf338afe888f8e851e74d34a113e02fb6f7e96fdc",
+    "reused_calibrated_anchor_predictions": true,
+    "reused_final_model_for_station_labels": true,
+    "training_stations_source": "saved_pipeline_string_indexer_labels"
+  }
+}

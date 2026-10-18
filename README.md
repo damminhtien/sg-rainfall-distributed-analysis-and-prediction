@@ -1,84 +1,77 @@
 # Singapore Rainfall Analysis and Prediction
 
-This repository contains an individual DSA5208 Project 2 analysis of the
+This repository contains a DSA5208 Project 2 analysis of the
 National Environment Agency's five-minute rainfall observations in Singapore.
-It covers the years 2017–2024 and uses Apache Spark for the data processing
-and prediction tasks.
+Task 1 describes rainfall patterns from 2017–2024. Task 2 estimates the
+probability that the next 30-minute accumulated rainfall exceeds a requested
+threshold. The prediction workflow uses Spark for feature construction and
+Spark MLlib for model development.
 
-## Project overview
+## Task 2 workflow
 
-The project addresses two tasks:
+| Years | Role |
+|---|---|
+| 2017–2020 | Deterministic 10% hyperparameter screen; refit candidates on valid rows |
+| 2021 | Hyperparameter validation |
+| 2022 | Model and feature selection on a deterministic 10% sample |
+| 2017–2022 | Refit the selected model on all valid windows |
+| 2023 | Fit isotonic calibration on a deterministic 10% sample |
+| 2024 | Final evaluation period |
 
-1. Describe rainfall patterns within each year and across 2017–2024, including
-   data completeness and station coverage.
-2. Estimate the probability that a station's total rainfall over the next
-   30 minutes exceeds a selected threshold. The target sums the next six
-   five-minute readings; incomplete future windows are excluded.
+The 30-minute label uses six exact five-minute observations after each
+prediction time; windows that cross a split boundary are excluded. Notebook 03
+performs hyperparameter and model/feature selection. Notebook 04 refits the
+selected model on valid 2017–2022 rows, fits isotonic calibration on 2023, then
+evaluates on 2024. The prediction step applies equal-weight PAVA to the six
+anchor thresholds and linearly interpolates between them for in-domain
+queries. Climatology probabilities are estimated from training data only.
 
-The prediction workflow builds features from the current reading and available
-history, compares Spark MLlib models with a climatology baseline, and evaluates
-the selected model on a final temporal holdout. Evaluation uses archived data
-and is retrospective; it does not claim real-time data availability.
+Hyperparameter screening uses a deterministic 10% sample from 2017–2020, with
+surviving configurations refit on that period's valid rows. Hyperparameter
+validation uses 2021; model/feature selection and calibration use deterministic
+10% samples of their respective partitions.
+
+During final evaluation, a PySpark expression error in the PAVA
+post-processing step was corrected, and the affected post-processing metrics
+were recomputed from the saved model predictions; model fitting and calibration
+were unchanged.
 
 ## Repository layout
 
 | Path | Purpose |
-| --- | --- |
-| `config/experiment.json` | Years, thresholds, feature settings, temporal splits, and model configuration |
-| `manifests/input_manifest.json` | Selected input files, schema, row counts, timestamps, and SHA-256 checksums |
-| `notebooks/00_setup_cloud.ipynb` | Local data preflight and Google Cloud setup |
-| `notebooks/01_clean_and_task1.ipynb` | Data cleaning, coverage checks, and Task 1 analysis |
-| `notebooks/02_build_features.ipynb` | Prediction features, labels, and temporal splits |
-| `notebooks/03_train_evaluate.ipynb` | Baseline/model comparison, calibration, and final evaluation |
+|---|---|
+| `config/experiment.json` | Split periods, thresholds, features, and model grids |
+| `manifests/input_manifest.json` | Eight 2017–2024 inputs, schemas, row counts, and hashes |
+| `notebooks/00_setup_cloud.ipynb` | Local input preflight, GCS upload, and Dataproc setup |
+| `notebooks/01_clean_and_task1.ipynb` | Data cleaning, coverage checks, and Task 1 |
+| `notebooks/02_build_features.ipynb` | History features, target windows, and purged temporal splits |
+| `notebooks/03_model_development.ipynb` | Hyperparameter and model selection |
+| `notebooks/04_final_fit_evaluate.ipynb` | Full-data refit, 2023 calibration, PAVA, and 2024 evaluation |
+| `scripts/rainfall_modeling.py` | Shared Spark ML, metrics, climatology, PAVA, and interpolation functions |
 | `scripts/build_manifest.py` | Reusable input inventory and validation functions |
-| `requirements-local.txt` | Dependencies for local setup and notebook work |
-| `requirements-cluster.txt` | Additional plotting dependency for the Dataproc image |
-| `report/` | Report source, PDF, figures, and tables |
+| `scripts/run_notebooks_sequentially.py` | Sequential Dataproc runner for Notebooks 03 and 04 |
 
 ## Data
 
 Download the annual **Historical Rainfall across Singapore** CSV files for
 2017–2024 from the [data.gov.sg collection](https://data.gov.sg/collections/2279/view).
 Keep the raw files outside this repository. Set `DATA_ROOT` to a directory
-containing a `raw/` folder with these files:
+containing a `raw/` folder with the eight manifest-listed files. Raw CSVs are
+not tracked in Git or included in the submission package.
 
-```text
-$DATA_ROOT/
-└── raw/
-    ├── HistoricalRainfallacrossSingapore2017.csv
-    ├── HistoricalRainfallacrossSingapore2018.csv
-    ├── ...
-    └── HistoricalRainfallacrossSingapore2024.csv
-```
+The manifest records file inventory, schema, timestamp ranges, row counts, and
+SHA-256 digests. It validates the input snapshot but does not certify the
+semantic quality of observations. Do not use 2016 as warm-up data.
 
-The committed manifest selects exactly those eight years and records their
-expected schemas, row counts, timestamp ranges, and checksums. The raw CSVs are
-not included in Git or uploaded with this source repository. The manifest checks
-file inventory and parseability; it does not certify the semantic quality of
-the observations.
+## Environment
 
-If you intentionally use a different download, set `REBUILD_MANIFEST = True`
-in the manifest cell of `00_setup_cloud.ipynb`, run that cell, and review the
-resulting manifest diff before continuing. This updates the tracked manifest.
-
-## Environment setup
-
-The setup notebook runs locally. The three analysis notebooks require the
-Dataproc-provided Spark environment; there is no local Spark execution path.
-
-### Local environment
-
-Install Python and the Google Cloud CLI, then authenticate an account that can
-access the project and its billing configuration:
+The setup notebook runs locally. Analysis notebooks run in Dataproc Jupyter
+with the configured Spark environment; there is no local Spark execution path.
+Install Python and the Google Cloud CLI, then authenticate an account with
+access to the configured project and bucket:
 
 ```bash
 gcloud auth login
-```
-
-From the repository root, create a local environment and install the notebook
-dependencies:
-
-```bash
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
@@ -88,65 +81,56 @@ python -m ipykernel install --user \
   --display-name "Python (DSA5208 Rainfall)"
 ```
 
-Place the eight CSVs under a directory's `raw/` folder. Set `DATA_ROOT` to that
-directory, then launch JupyterLab from the repository root so the setup
-notebook can find the project files:
+Place the eight CSVs under `$DATA_ROOT/raw/`, then set `DATA_ROOT`,
+`GOOGLE_CLOUD_PROJECT`, `BILLING_ACCOUNT_ID`, `BUCKET`, and a new `RUN_ID` in
+the local environment before running `00_setup_cloud.ipynb`. Account and
+project identifiers are read from the environment rather than stored in the
+notebook. Review the region, bucket, quota, and provisioning settings before
+running its cloud setup cells. The notebook uploads the analysis notebooks,
+shared modeling helper, and experiment configuration. It copies the saved
+feature partitions named by `base_features_source_run_id` in the config.
 
-```bash
-export DATA_ROOT="$HOME/data/sg-rainfall"
-mkdir -p "$DATA_ROOT/raw"
-jupyter lab
-```
-
-Select the `Python (DSA5208 Rainfall)` kernel for `00_setup_cloud.ipynb`.
-
-### Google Cloud and Dataproc
-
-Before running `00_setup_cloud.ipynb`, review the project, region, bucket,
-`RUN_ID`, billing configuration, and provisioning flags near the top of the
-notebook. Its setup cells can create or update Google Cloud resources, upload
-the input data and notebooks, and create a Dataproc cluster. Confirm the active
-`gcloud` identity, billing linkage, permissions, quotas, and budget before
-running those cells. Use a new, unique `RUN_ID` for each fresh run; the setup
-notebook refuses to replace a run's existing input manifest.
-
-The analysis notebooks use the Dataproc 2.2.87 Debian 12 image with its bundled
-Python 3.11 and Spark 3.5.3. Open the Dataproc Jupyter URL shown by the setup
-notebook and run notebooks 01–03 there. Do not install or upgrade PySpark on
-the Dataproc image; `requirements-cluster.txt` lists only the additional
-plotting package used by the project.
+The analysis notebooks use Dataproc image `2.2.87-debian12` with bundled
+Python 3.11 and Spark 3.5.3. Do not install or upgrade PySpark on that image.
 
 ## Run the analysis
 
-Keep the same `BUCKET` and `RUN_ID` values in the setup notebook and notebooks
-01–03. When starting a new run, update those values in each notebook before
-uploading and running it.
+Keep `BUCKET` consistent. Notebook 00 creates the target run and copies the
+feature partitions named by `base_features_source_run_id` in the experiment
+config. Notebook 03 and Notebook 04 use the target run ID.
 
-1. **Prepare the run locally.** Open `00_setup_cloud.ipynb` with the local
-   kernel. Confirm `DATA_ROOT` and the eight expected files. Leave
-   `REBUILD_MANIFEST = False` when using the committed input snapshot. Review
-   the cloud settings and provisioning flags, then run the setup notebook from
-   top to bottom.
-2. **Clean data and complete Task 1.** In Dataproc Jupyter, run
-   `01_clean_and_task1.ipynb`. It reads the manifest-listed CSVs, applies the
-   documented cleaning rules, and produces rainfall summaries and figures.
-3. **Build prediction data.** Run `02_build_features.ipynb` to construct
-   historical features, six-reading targets, validity checks, and temporal
-   splits.
-4. **Train and evaluate.** Run `03_train_evaluate.ipynb` from the first cell
-   through the last. It compares the configured baselines and candidates, uses
-   2017–2022 for training, Jan–Jun 2023 for selection, Jul–Dec 2023 for
-   calibration, and 2024 as the final holdout. The final evaluation depends on
-   the earlier selection and calibration cells.
+1. Run `00_setup_cloud.ipynb` locally to upload inputs and source files,
+   create or check the Dataproc cluster, and copy the saved feature partitions
+   into the target run.
+2. `03_model_development.ipynb` uses only `search_train`, `hp_validation`, and
+   `model_selection`. It writes the selected model specification after
+   candidate comparison.
+3. `04_final_fit_evaluate.ipynb` reads the selected model configuration,
+   refits on all valid 2017–2022 data, fits the calibrator on 2023, and
+   evaluates the 2024 period.
 
-The notebooks persist run outputs under
-`gs://<BUCKET>/runs/<RUN_ID>/`. The report source and rendered PDF are under
-`report/`.
+On the Dataproc master, the same two stages can run sequentially with
+`RUN_ID=<target-run-id> python scripts/run_notebooks_sequentially.py`. Start an
+existing STOPPED cluster before launching Spark jobs.
 
-## Clean up cloud resources
+Notebooks 01 and 02 clean the raw inputs and build the saved feature
+partitions. Run them when those partitions need to be regenerated.
 
-After confirming that outputs and notebooks have been saved, set
-`DELETE_CLUSTER = True` in the cleanup cell of `00_setup_cloud.ipynb` and run
-that cell to delete the Dataproc cluster. The cluster also has idle-time and
-maximum-age deletion settings, but the storage bucket and other supporting
-resources remain until separately removed.
+Run outputs are stored under
+`gs://<BUCKET>/runs/<RUN_ID>/`. Final scores include raw, calibrated, and
+PAVA-projected probabilities at the anchor thresholds. Unseen in-domain
+thresholds are answered by linear interpolation; out-of-domain queries fail.
+
+## Cloud cleanup and report
+
+After confirming that notebooks, metrics, model artifacts, and manifests are
+persisted, delete the run's Dataproc cluster and verify that no compute
+resources remain. Review the remaining storage objects before retention or
+cleanup decisions.
+
+The report presents Task 1 findings and measured Task 2 evaluation results.
+For a new run, update the reported results after
+`final_evaluation_summary.json` is written, then compile and visually review
+the PDF before rebuilding the submission package.
+The assignment requires the report, source, and trained model; verify the exact
+Canvas upload requirements before submission.

@@ -1,0 +1,3 @@
+run_id,split,training_sample_fraction,training_base_rows,evaluation_sample_fraction,evaluation_base_rows,candidate_id,feature_variant,mean_pr_auc,mean_brier,fit_seconds
+20261016-v2-fixed8-04,model_selection_2022,0.1,2742964,0.1,711112,gbt_A,A,0.03552966110587729,0.022857258660213677,319.73067873200125
+20261016-v2-fixed8-04,model_selection_2022,0.1,2742964,0.1,711112,gbt_B,B,0.5220668208353795,0.014016310125697873,383.4992414750013
