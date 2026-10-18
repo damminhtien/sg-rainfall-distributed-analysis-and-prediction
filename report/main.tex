@@ -571,16 +571,21 @@ intervals censor observed spells.}
 \label{fig:wet-spells}
 \end{figure}
 
-Figure~\ref{fig:station-spatial} maps station-year summaries with at least
-90\% annual coverage and consistent coordinates through 2023. Point colour
-shows observed annual rainfall; totals vary among nearby stations. It can be seen that the network is not uniformly distributed across Singapore, and that rainfall totals differ even among stations in close proximity. This spatial heterogeneity suggests that local factors may influence rainfall patterns, and that station-specific information could be valuable for predictive modeling.
+Figure~\ref{fig:station-spatial} maps station-year summaries from 2017 to
+2023 with at least 90\% annual coverage. Each point's colour represents the
+sum of observed five-minute rainfall for that station and year, not an average
+across years. The coordinate stability check covers the full 2017-2024 record.
+Because the map combines station-years from different years, it does not
+isolate spatial effects or establish that station identity improves prediction.
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.70\linewidth]{\figpath/task1/station_spatial_patterns.png}
-\caption{Observed annual rainfall at station-years with at least 90\%
-coverage and consistent coordinates through 2023. Each point is a station-year;
-no spatial interpolation is applied.}
+\caption{Observed station-year rainfall totals from 2017 to 2023 for
+station-years with at least 90\% annual coverage. Stations were retained if
+their coordinates remained stable across the full 2017-2024 record. Each point
+is one station-year, so multiple years for one station share coordinates and
+may overlap.}
 \label{fig:station-spatial}
 \end{figure}
 \FloatBarrier
