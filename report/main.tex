@@ -702,7 +702,8 @@ per family were then refitted on all 2017 to 2020 training windows and
 compared on 2021. The search varied logistic regression
 \texttt{regParam} over 0.001, 0.01, 0.1 and 1; random forest
 \texttt{(numTrees, maxDepth)} over (50, 6), (100, 6) and (50, 8); and
-gradient-boosted tree~\cite{friedman-gbt} with \texttt{maxDepth} over 3 and 4
+Spark MLlib's gradient-boosted tree classifier~\cite{spark-gbt} with
+\texttt{maxDepth} over 3 and 4
 and \texttt{maxIter} over 20 and 40. Within each family, mean PR-AUC across
 the six primary thresholds on 2021 selected a configuration; mean Brier
 score and model complexity resolved close results.
@@ -790,16 +791,18 @@ GBT-B improved mean PR-AUC over RF-B by 0.01808 and reduced mean Brier from
 \subsection{Final fitting, calibration and monotone prediction}
 After selection, a new GBT-B model was fitted on all 34,541,470 valid
 2017-2022 base windows (207,248,820 threshold-expanded rows). An isotonic
-calibrator, shared across all six thresholds, was fitted on a deterministic
-10\% sample of the 2023 calibration partition:
-671,768 of 6,719,274 base windows, expanded to 4,030,608 threshold examples.
+calibrator, shared across all six thresholds, was fitted with Spark MLlib's
+\texttt{IsotonicRegression} estimator, which uses a parallelized PAVA
+implementation~\cite{spark-isotonic}, on a deterministic 10\% sample of the
+2023 calibration partition: 671,768 of 6,719,274 base windows, expanded to
+4,030,608 threshold examples.
 On this calibration sample, ECE decreased from 0.02264 before calibration to
 0.00165 after calibration. The final GBT fit took
 12,286.9 seconds (about 3 hours 25 minutes).
 
-After calibration, the equal-weight pool-adjacent-violators algorithm
-(PAVA)~\cite{deleeuw-pava} was
-applied to the six anchor probabilities
+After calibration, a project-specific Spark DataFrame transformation applied
+an equal-weight pool-adjacent-violators algorithm (PAVA) projection to the six
+anchor probabilities
 $[0.2,0.5,1,2,5,10]$~mm. The projection minimizes squared displacement subject
 to a non-increasing probability sequence. Any requested threshold inside
 $[0.2,10]$~mm is estimated by linear interpolation between projected anchors;
@@ -1118,18 +1121,13 @@ data.gov.sg. \url{https://data.gov.sg/collections/2279/view}.
 Meteorological Service Singapore. \emph{Climate of Singapore}.
 \url{https://www.weather.gov.sg/climate-climate-of-singapore/}.
 
-\bibitem{friedman-gbt}
-Friedman, J.~H. (2001).
-Greedy function approximation: A gradient boosting machine.
-\emph{The Annals of Statistics}, 29(5), 1189-1232.
-\url{https://doi.org/10.1214/aos/1013203451}.
+\bibitem{spark-gbt}
+Apache Spark. \emph{GBTClassifier, PySpark 3.5.3 API Reference}.
+\url{https://downloads.apache.org/spark/docs/3.5.3/api/python/reference/api/pyspark.ml.classification.GBTClassifier.html}.
 
-\bibitem{deleeuw-pava}
-de Leeuw, J., Hornik, K., and Mair, P. (2009).
-Isotone optimization in R: Pool-adjacent-violators algorithm (PAVA) and
-active set methods.
-\emph{Journal of Statistical Software}, 32(5), 1-24.
-\url{https://doi.org/10.18637/jss.v032.i05}.
+\bibitem{spark-isotonic}
+Apache Spark. \emph{IsotonicRegression, PySpark 3.5.3 API Reference}.
+\url{https://downloads.apache.org/spark/docs/3.5.3/api/python/reference/api/pyspark.ml.regression.IsotonicRegression.html}.
 
 \end{thebibliography}
 
