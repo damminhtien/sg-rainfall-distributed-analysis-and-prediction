@@ -332,12 +332,9 @@ produce metrics saved to Google Cloud Storage.}
 \FloatBarrier
 
 \section{Task 1: Rainfall patterns}
-We examine rainfall through three related questions: how often a station
-records rain, how much falls when it does, and how those readings are arranged
-over time. Keeping these questions separate matters because a year can have
-frequent light rain without having the largest heavy-rainfall tail. The
-coverage checks then establish which comparisons the changing network can
-support.
+We examine how often rain is recorded, how much falls when it rains, and how
+these patterns vary over time. Coverage checks establish which comparisons
+the changing station network can support.
 
 \subsection{Across-year distribution}
 The annual summaries use each retained five-minute reading as one observation.
@@ -361,12 +358,10 @@ than 2023 but a higher overall mean, because its wet readings were stronger
 on average.
 
 Between 96.80\% and 98.06\% of retained readings were zero in each year.
-Figure~\ref{fig:distribution} separates this dominant dry component from the
-distribution of positive amounts. Most wet readings are small, with a long
-tail of much larger values. An annual maximum therefore describes an unusual
-observation rather than typical wet conditions. In particular, the 37.2~mm
-maximum in 2022 does not by itself establish that heavy rainfall became more
-common; the tail frequencies below provide a more informative comparison.
+Among wet readings, most amounts were small, with a long upper tail
+(Figure~\ref{fig:distribution}). The 37.2~mm maximum in 2022 identifies an
+unusual reading; the tail frequencies below show how common large readings
+were.
 
 \begin{table}[htbp]
 \centering\scriptsize
@@ -410,13 +405,11 @@ compared with 0.69~mm in January; support ranged from six to eight years per
 calendar month. Individual summaries ranged from 0.58~mm (December 2019) to
 1.35~mm (March 2019).
 
-January had the highest wet frequency in some years, while March and April had larger average
-wet-reading amounts across the available years. At station-month level,
-observed rainfall totals depend on both frequency and intensity, as well as
-the number of observed slots; their network averages need not peak together.
-These differences do not establish statistical independence between frequency
-and intensity. They show why a monthly total alone cannot tell us whether
-rain occurred more often or was heavier when it occurred.
+January had the highest wet frequency in some years, while March and April
+had larger average wet-reading amounts across the available years.
+Monthly totals combine frequency, intensity and the number of observed
+slots, so a large total can result from frequent rain, heavier readings,
+or both.
 
 The equal-weight hourly summaries peaked at 15:00 in five years and 16:00 in
 the other three. Peak-hour frequencies ranged from 3.42\% in 2019 to 7.76\%
@@ -443,7 +436,7 @@ February.
 frequency in each year. Each value averages eligible station-months with at
 least 95\% monthly coverage.}
 \label{tab:monthly-extrema}
-\begin{tabular}{r l r r l r}
+\begin{tabular}{r l r l r}
 \toprule
 Year & Lowest month & Frequency (\%) & Highest month & Frequency (\%) \\
 \midrule
@@ -508,13 +501,10 @@ cells represent a station-year with no retained observations.}
 \clearpage
 \subsection{Additional descriptive views}
 
-A station-day is one station's observations for one calendar date. A complete
-station-day contains all 288 expected five-minute readings, including valid
-zeros; its rainfall total is their sum. Figure~\ref{fig:complete-daily} first
-averages these daily totals within each station-month and then gives each
-contributing station equal weight. It therefore answers how much rain fell
-on an average fully observed day, rather than how much fell during the whole
-month.
+A complete station-day contains all 288 expected five-minute readings at
+one station, including valid zeros. Figure~\ref{fig:complete-daily} averages
+their daily rainfall totals within each station-month, then gives stations
+equal weight. It measures rainfall on an average fully observed day.
 
 The monthly complete-day means vary substantially between years without a recurring month-by-month
 pattern, and the share of complete station-days also changed across the study
@@ -532,11 +522,8 @@ and the fraction of expected station-days with all 288 readings (right).}
 Figure~\ref{fig:hourly-supplement} shows higher wet-reading frequency in the
 afternoon, generally from 15:00 to 17:00 SGT, than overnight. The peak hour
 and its magnitude vary by year, while 2019 is lower across much of the day.
-Each cell summarizes eligible station-months. The afternoon concentration
-persists even in relatively dry 2019, separating the recurring timing of
-rainfall from its overall frequency. A calendar-based model could learn
-this broad daily pattern, but would still need information about current
-conditions to distinguish rainy and dry occasions at the same hour.
+The afternoon concentration persists even in relatively dry 2019,
+separating rainfall's recurring daily timing from its overall frequency.
 
 \begin{figure}[htbp]
 \centering
@@ -599,12 +586,9 @@ no spatial interpolation is applied.}
 \FloatBarrier
 
 \section{Task 2: Thirty-minute exceedance probability}
-Task 2 asks whether
-the station's current and recent readings improve on that calendar-based
-expectation. We evaluate three distinct properties: whether the model ranks
-exceedances above non-exceedances, whether its probabilities agree with
-observed frequencies, and what happens when those probabilities are converted
-to positive or negative classifications.
+Task 2 tests whether current and recent station readings improve on
+calendar-based rainfall probabilities. Evaluation covers discrimination,
+probability accuracy and classification at a fixed probability cutoff.
 
 \subsection{Target and features}
 Each candidate is an observed station-time pair with a valid current rainfall
@@ -808,7 +792,8 @@ On this calibration sample, ECE decreased from 0.02264 before calibration to
 0.00165 after calibration. The final GBT fit took
 12,286.9 seconds (about 3 hours 25 minutes).
 
-After calibration, equal-weight pool-adjacent-violators algorithm (PAVA) was
+After calibration, the equal-weight pool-adjacent-violators algorithm
+(PAVA)~\cite{deleeuw-pava} was
 applied to the six anchor probabilities
 $[0.2,0.5,1,2,5,10]$~mm. The projection minimizes squared displacement subject
 to a non-increasing probability sequence. Any requested threshold inside
@@ -832,19 +817,12 @@ Climatology & 0.001425 & 0.000000 & 0.000000 \\
 \end{tabular}
 \end{table}
 
-Calibration and PAVA address different problems. Isotonic calibration adjusts
-the relationship between a model score and an observed exceedance frequency.
-The holdout ECE also fell, from 0.022701 for raw scores to about 0.001670
-after calibration, supporting that improvement on the following year.
-
-Calibration alone does not guarantee that exceeding 10~mm is assigned a lower
-probability than exceeding 5~mm for the same station and time. The calibrated
-scores still violated this ordering in 0.009739\% of adjacent anchor pairs.
-PAVA removed these inconsistencies without using test outcomes, and
-interpolation preserved the ordering between anchors. Its ECE changed by
-less than the six-decimal precision shown in Table~\ref{tab:monotonicity}.
-The practical contribution of this step is therefore probability coherence,
-rather than a large additional gain in average calibration.
+Calibration reduced holdout ECE from 0.022701 to about 0.001670.
+It still left 0.009739\% of adjacent anchor pairs out of order, assigning
+a higher probability to a larger rainfall threshold. PAVA removed these
+violations without using test outcomes. Its ECE changed by less than the
+displayed precision, so its contribution was enforcing consistent threshold
+ordering.
 
 \subsection{Feature-family importance}
 For the final GBT-B model, Spark split importances were mapped from encoded
@@ -934,47 +912,19 @@ Threshold (mm) & Precision & Recall \\
 \end{tabular}
 \end{table}
 
-At 0.5~mm, final GBT-B had PR-AUC 0.6345, Brier score 0.01958, precision
-0.7417, recall 0.5269 and F1 0.6161. At all six primary thresholds its
-PR-AUC exceeded the climatology baseline, and its Brier score was lower.
-These measures answer different questions. PR-AUC summarizes the
-precision--recall trade-off as the probability cutoff varies; higher values
-indicate more effective concentration of exceedances among higher-scored
-windows. The Brier score is the mean squared difference between the predicted
-probability and the binary outcome, so lower values indicate more accurate
-probability predictions overall.
+Final GBT-B exceeded climatology's PR-AUC and had lower Brier error at all
+six primary thresholds. The relative Brier reduction was 43.0\% at 0.5~mm
+but only 18.1\% at 10~mm, indicating a smaller advantage for heavier
+accumulations. The lower absolute Brier scores at high thresholds partly
+reflect rare outcomes: only 0.38\% of windows exceed 10~mm.
 
-The relative Brier improvement gives the comparison a useful scale:
-\[
-  \mathrm{Brier\ skill}
-  =1-\frac{\mathrm{BS}_{\mathrm{final}}}{\mathrm{BS}_{\mathrm{climatology}}}.
-\]
-Using the unrounded saved scores, this improvement is 44.3\%, 43.0\%, 38.7\%,
-33.3\%, 25.6\% and 18.1\% at increasing thresholds from 0.2 to 10~mm.
-The model adds information at every anchor, but its advantage over the
-calendar baseline becomes smaller for heavier accumulations. The absolute
-Brier score also falls as the threshold rises. That fall alone does not
-mean that heavy rainfall is easier to predict: at 10~mm, only 0.38\% of
-windows are positive, so a low probability on nearly every window can
-already produce a small average squared error.
-
-The discrimination metrics reinforce this distinction. ROC-AUC stays near
-0.90 across the anchors, whereas PR-AUC falls from 0.6618 to 0.2943.
-ROC-AUC describes ranking against the large pool of non-exceedances;
-precision directly reflects how many selected windows really exceed the
-threshold. The falling prevalence makes this precision--recall problem
-harder, so the PR-AUC decline cannot be attributed solely to a deterioration
-in the underlying ranking. An always-negative classifier would achieve
-99.62\% accuracy at 10~mm while detecting no exceedances. This illustrates why
-accuracy would give a misleading impression of usefulness here.
-
-Figure~\ref{fig:pr-curves} places that operating point in context. Lowering
-the probability cutoff can recover more exceedances, while admitting more
-false positives in total. The appropriate choice depends on the relative
-cost of missed rainfall and unnecessary action; 0.5 is a common comparison
-point, not an established optimum for this application. A practical warning
-rule would need a cutoff chosen on validation data and then assessed on
-untouched data, including how repeated nearby predictions are combined.
+At a 0.5 probability cutoff, precision and recall were 74.2\% and 52.7\%
+for the 0.5~mm target, falling to 58.6\% and 19.3\% at 10~mm. Thus, most
+heavy exceedances were missed despite ROC-AUC remaining near 0.90.
+PR-AUC also declined as exceedances became rarer, from 0.6345 at 0.5~mm
+to 0.2943 at 10~mm. Figure~\ref{fig:pr-curves} shows the precision--recall
+trade-off when the probability cutoff changes; the reported 0.5 cutoff
+was not selected as an optimal warning rule.
 
 Weighted ECE is the count-weighted absolute gap between mean predicted
 probability and observed frequency in each probability bin, aggregated over
@@ -986,33 +936,20 @@ ten equal-width bins at each threshold:
 \]
 Here $n_{\tau b}$ is the bin count, $\bar p_{\tau b}$ the mean predicted
 probability and $\bar y_{\tau b}$ the observed exceedance frequency.
-The final weighted holdout ECE was 0.001670, slightly higher than climatology
-at 0.001425, so calibration error did not improve over the baseline on this
-period. This result is compatible with the model's better Brier score and
-PR-AUC. Probabilities close to a group's average risk can be well calibrated
-while separating high-risk and low-risk occasions poorly. At 0.5~mm, all
-saved climatology probabilities lie in the first two bins, below 0.2.
-The final model produces a much wider range of risks, but their reliability
-needs to be checked across that range.
+Final weighted ECE was 0.001670, slightly higher than climatology's
+0.001425. Climatology therefore had a smaller binned calibration error,
+despite worse discrimination and Brier error. Calibration alone does not
+measure how well a predictor separates high-risk from low-risk windows.
 
-Figure~\ref{fig:reliability} shows why the bin counts matter. At 0.5~mm,
-94.75\% of final predictions fall in the lowest probability bin, with a
-mean prediction of 1.35\% and an observed exceedance frequency of 1.24\%.
-Agreement in this very large group contributes strongly to the small
-weighted ECE. Less common probability ranges show larger discrepancies.
-For the 12,426 predictions in the 0.4--0.5 bin, the mean probability is
-43.28\% but the observed frequency is 32.71\%, an overestimate of
-10.57 percentage points. In the 0.5--0.6 bin, the corresponding values are
-52.35\% and 46.73\% across 43,433 windows. These bins are particularly
-relevant when interpreting classifications near the 0.5 cutoff.
-
-At the highest probabilities, agreement is closer: the 56,910 windows in
-the 0.9--1.0 bin have mean probability 95.53\% and observed frequency
-94.96\%. The curve therefore supports useful probability separation, with
-remaining overprediction in parts of the middle range. The threshold-specific
-ECE at 0.5~mm is about 0.00250; the 0.001670 value in
-Table~\ref{tab:monotonicity} aggregates all six thresholds and should not
-be read as the error of this single reliability curve.
+At 0.5~mm, 94.75\% of final predictions fall in the lowest probability bin,
+with mean prediction 1.35\% and observed frequency 1.24\%
+(Figure~\ref{fig:reliability}). This large group dominates weighted ECE.
+The 0.4--0.5 bin shows a larger error: mean probability 43.28\% versus
+observed frequency 32.71\% across 12,426 windows. Agreement is closer in the
+highest bin, at 95.53\% versus 94.96\%. Thus, low average calibration error
+coexists with overprediction in parts of the middle range. ECE for this
+single rainfall threshold is 0.00250; Table~\ref{tab:monotonicity} aggregates
+all six thresholds.
 
 \begin{figure}[htbp]
 \centering
@@ -1116,71 +1053,21 @@ a zero observed history.
 
 
 \section{Discussion and limitations}
-Task 1 establishes a changing background: wet readings are uncommon,
-their frequency varies across years and seasons, and an afternoon peak
-recurs across much of the record. Conditional intensity and the upper tail
-add information that occurrence alone cannot provide. A year with more wet
-readings need not have the strongest extremes, and a month with a large
-total need not owe that total to a single type of rainfall behaviour.
-The appropriate interpretation therefore depends on the question and its
-denominator: all readings, wet readings, eligible station-months, or complete
-station-days.
+Calendar patterns describe when rainfall is generally more likely, while
+recent observations provide the main improvement for individual forecasts.
+The remaining weaknesses are exceedances after no observed rain and heavy
+accumulations even when rain is already recorded.
 
-Task 2 shows why this background is useful but insufficient for a
-30-minute prediction. Calendar and station information provide an average
-expectation, while recent observations reveal the local rainfall state at
-the time of prediction. The controlled GBT feature-set comparison, the
-importance of current rainfall and the concentration of future exceedances
-after observed rain all support this explanation. They are complementary
-pieces of evidence: ablation measures the gain from adding a feature group,
-split importance describes how the fitted trees use inputs, and the
-subgroup table shows where risk and errors are concentrated.
+Task 1 comparisons remain sensitive to the changing station network.
+Task 2 was evaluated on one held-out year, using stations already seen in
+training; performance at new stations is untested. Separately, the dataset
+does not record when revised observations became available, so retrospective
+event-time evaluation does not establish real-time performance.
 
-The resulting model is especially useful for assigning higher risk to
-windows with rain already observed. Its limitations follow from the same
-story. An afternoon pattern cannot locate an individual episode, and a
-station's recent measurements do not directly observe rain developing
-elsewhere. The saved results motivate testing neighbouring-station history
-or other timely weather inputs, but they do not establish which additional
-source would improve prediction. That improvement would need a new
-experiment using information available at prediction time.
-
-Station availability changed substantially across 2017-2024, and the
-coverage audit found no station cohort meeting the chosen high annual
-coverage criteria throughout all eight years. Interannual differences
-therefore describe this observed network. A stronger assessment of changes
-over time would compare overlapping station cohorts in shorter periods,
-check sensitivity to coverage cutoffs, and report how the contributing
-locations change. Even then, eight years and observations without
-climate-record quality control would not establish a long-term climate trend.
-
-The chronological split is an important protection against using later
-outcomes during fitting, but the 2024 holdout remains one calendar year.
-All evaluated stations were seen in training, so the unknown-station
-encoding is a software capability rather than demonstrated generalisation
-to new locations. The source data also do not record when revisions became
-available. Consequently, the experiment assumes that historical readings
-available in the downloaded dataset were available at their observation
-times. A real-time assessment would need arrival timestamps and a policy
-for late, revised or unavailable readings.
-
-The next evaluation should follow the error patterns rather than rely on
-a single overall score. For each rainfall threshold, subgroup PR-AUC,
-Brier score and reliability would show whether probabilities distinguish
-risk within zero-observed histories, recent-rain histories and different
-coverage levels. Station and season breakdowns would reveal whether the
-aggregate improvement is broadly shared. Resampling temporal blocks can
-provide uncertainty estimates for these comparisons, with sensitivity
-checks for the block length.
-
-For a warning application, decision rules need their own evaluation.
-The present 0.5 probability cutoff misses most 10~mm exceedances and all
-exceedances in the zero-observed-history groups shown. A lower cutoff may
-be appropriate when misses are costly, but its false-positive burden must
-be measured on validation data. Consecutive positive windows should also
-be combined into episodes before reporting warning counts, duration or
-lead time. Those quantities cannot be inferred from the current
-window-level confusion counts.
+Useful follow-up work would evaluate station and seasonal subgroups and
+separate complete dry histories from incomplete ones. For a warning
+application, a lower probability cutoff could recover more exceedances,
+but its false-positive burden should be assessed on validation data.
 
 \section{Conclusion}
 This project developed an end-to-end Spark workflow for analysing Singapore
@@ -1226,9 +1113,18 @@ data.gov.sg. \url{https://data.gov.sg/collections/2279/view}.
 Meteorological Service Singapore. \emph{Climate of Singapore}.
 \url{https://www.weather.gov.sg/climate-climate-of-singapore/}.
 
-\bibitem{sklearn-f1}
-scikit-learn developers. \emph{F1 score documentation}.
-\url{https://scikit-learn.org/stable/modules/generated/sklearn.metrics.f1_score.html}.
+\bibitem{friedman-gbt}
+Friedman, J.~H. (2001).
+Greedy function approximation: A gradient boosting machine.
+\emph{The Annals of Statistics}, 29(5), 1189--1232.
+\url{https://doi.org/10.1214/aos/1013203451}.
+
+\bibitem{deleeuw-pava}
+de Leeuw, J., Hornik, K., and Mair, P. (2009).
+Isotone optimization in R: Pool-adjacent-violators algorithm (PAVA) and
+active set methods.
+\emph{Journal of Statistical Software}, 32(5), 1--24.
+\url{https://doi.org/10.18637/jss.v032.i05}.
 
 \end{thebibliography}
 
