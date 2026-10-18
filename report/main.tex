@@ -802,9 +802,9 @@ On this calibration sample, ECE decreased from 0.02264 before calibration to
 
 After calibration, a project-specific Spark DataFrame transformation applied
 an equal-weight pool-adjacent-violators algorithm (PAVA) projection to the six
-anchor probabilities
-$[0.2,0.5,1,2,5,10]$~mm. The projection minimizes squared displacement subject
-to a non-increasing probability sequence. Any requested threshold inside
+anchor probabilities. The anchor thresholds were 0.2, 0.5, 1, 2, 5 and 10 mm.
+The projection minimizes squared displacement subject to a non-increasing
+probability sequence. Any requested threshold inside
 $[0.2,10]$~mm is estimated by linear interpolation between projected anchors;
 out-of-domain thresholds are rejected.
 
