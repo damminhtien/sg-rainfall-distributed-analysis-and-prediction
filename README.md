@@ -81,34 +81,6 @@ flowchart LR
   </tr>
 </table>
 
-## Spark execution evidence
-
-The Spark History Server screenshots below are archived evidence from the
-final GBT-B application, not a live cloud dashboard.
-
-<table>
-  <tr>
-    <th>Stage 21 task and shuffle details</th>
-    <th>Executor utilization</th>
-  </tr>
-  <tr>
-    <td>
-      <a href="report/figures/final/spark_ui_final_stage.png">
-        <img src="report/figures/final/spark_ui_final_stage.png" alt="Spark History Server Stage 21 summary with 66 tasks and shuffle metrics" width="100%" />
-      </a>
-    </td>
-    <td>
-      <a href="report/figures/final/spark_ui_final_executors.png">
-        <img src="report/figures/final/spark_ui_final_executors.png" alt="Spark History Server executor summary for the final GBT-B application" width="100%" />
-      </a>
-    </td>
-  </tr>
-  <tr>
-    <td><sub>Stage 21 processed 2.4 GiB in 66 tasks and wrote 52.8 MiB of shuffle data across eight executors.</sub></td>
-    <td><sub>Eight two-core worker executors completed 25,431 tasks. Application totals recorded 8.6 TiB of input and about 2 GiB each of shuffle read and write.</sub></td>
-  </tr>
-</table>
-
 ## Model training on historical rainfall data
 
 | Years | Role |
