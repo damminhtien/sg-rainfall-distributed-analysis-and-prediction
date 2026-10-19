@@ -60,34 +60,54 @@ flowchart LR
     PAVA --- Outputs["Google Cloud Storage<br/>model, predictions, metrics"]
 ```
 
-## Selected report figures
+## Rainfall analysis
 
 <table>
   <tr>
-    <th>What the fitted model uses</th>
-    <th>Held-out 2024 precision-recall curves</th>
+    <th>Rainfall patterns by month and hour</th>
+    <th>Wet-reading frequency and intensity</th>
   </tr>
   <tr>
     <td>
-      <img src="report/figures/final/feature_family_importance.png" alt="Spark GBT-B normalized split importance by feature family" width="100%" />
+      <img src="report/figures/full-20261012/task1/monthly_hourly_patterns.png" alt="Station-averaged monthly rainfall and hourly wet frequency by year" width="100%" />
     </td>
     <td>
-      <img src="report/figures/final/precision_recall_2024.png" alt="Precision-recall curves at 0.5 mm and 10 mm on held-out 2024 predictions" width="100%" />
+      <img src="report/figures/full-20261012/task1/rainfall_distribution.png" alt="Wet-reading frequency and conditional rainfall distribution by year" width="100%" />
     </td>
   </tr>
   <tr>
-    <td><sub>Current rainfall contributes 45.02% of normalized split importance, followed by the requested threshold at 23.40%. Split importance describes how the fitted trees use features; it is not a causal effect.</sub></td>
-    <td><sub>At 10 mm, exceedances are rare and PR-AUC falls to 0.2943. The figure shows the saved raw, isotonic-calibrated, and final PAVA scores.</sub></td>
+    <td><sub>Monthly totals and hourly wet frequency are averaged across eligible stations. Hour labels use the interval-end time in Singapore time.</sub></td>
+    <td><sub>The dashed line is the wet-reading 99th percentile estimated from 2017-2022 training observations.</sub></td>
   </tr>
 </table>
 
-The Spark History Server screenshot below is archived evidence from the
-final training application. It shows the eight active worker executors and the
-measured task and shuffle activity.
+## Spark execution evidence
 
-<p align="center">
-  <img src="report/figures/final/spark_ui_final_executors.png" alt="Spark History Server executor summary for the final training application" width="100%" />
-</p>
+The Spark History Server screenshots below are archived evidence from the
+final GBT-B application, not a live cloud dashboard.
+
+<table>
+  <tr>
+    <th>Stage 21 task and shuffle details</th>
+    <th>Executor utilization</th>
+  </tr>
+  <tr>
+    <td>
+      <a href="report/figures/final/spark_ui_final_stage.png">
+        <img src="report/figures/final/spark_ui_final_stage.png" alt="Spark History Server Stage 21 summary with 66 tasks and shuffle metrics" width="100%" />
+      </a>
+    </td>
+    <td>
+      <a href="report/figures/final/spark_ui_final_executors.png">
+        <img src="report/figures/final/spark_ui_final_executors.png" alt="Spark History Server executor summary for the final GBT-B application" width="100%" />
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td><sub>Stage 21 processed 2.4 GiB in 66 tasks and wrote 52.8 MiB of shuffle data across eight executors.</sub></td>
+    <td><sub>Eight two-core worker executors completed 25,431 tasks. Application totals recorded 8.6 TiB of input and about 2 GiB each of shuffle read and write.</sub></td>
+  </tr>
+</table>
 
 ## Task 2 workflow
 
