@@ -7,6 +7,88 @@ probability that the next 30-minute accumulated rainfall exceeds a requested
 threshold. The prediction workflow uses Spark for feature construction and
 Spark MLlib for model development.
 
+<p align="center">
+  <strong>Apache Spark 3.5.3</strong> | <strong>Google Cloud Dataproc</strong> |
+  <strong>PySpark MLlib</strong> | <strong>Python 3.11</strong>
+</p>
+
+## Results snapshot
+
+The results below come from run `20261016-v2-fixed8-04`. Model quality is
+reported on the held-out 2024 period, which contains 6,374,476 valid base
+windows. At the 0.5 mm threshold, the final calibrated GBT-B pipeline improves
+discrimination and Brier score over the training-only climatology baseline.
+
+| Held-out 2024 metric at 0.5 mm | Final GBT-B + calibration + PAVA | Training-only climatology |
+|---|---:|---:|
+| PR-AUC (Spark, 1,000 bins) | **0.6345** | 0.0732 |
+| Brier score | **0.01958** | 0.03436 |
+| Weighted calibration ECE | 0.001670 | **0.001425** |
+
+At a fixed probability cutoff of 0.5, final precision was 74.2% and recall was
+52.7%. Climatology had slightly lower weighted ECE, so the model's gains are in
+discrimination and Brier error, not every metric. The final PAVA projection
+removed all threshold-order violations across 31,872,380 adjacent prediction
+pairs.
+
+| Distributed workload | Scale and recorded execution |
+|---|---|
+| Final GBT-B fit | 34,541,470 base training windows expanded to 207,248,820 threshold rows; 241 Spark jobs, 404 stages, 25,431 tasks; 12,286.9 seconds |
+| 2024 evaluation | 6,374,476 base windows expanded to 38,246,856 threshold rows; 325 Spark jobs, 25,305 tasks; 478 seconds |
+
+The final fit ran on Google Cloud Dataproc in `asia-southeast1` with eight
+`e2-highmem-2` workers, eight two-core Spark executors, and 16 worker cores.
+Spark event logs recorded 8.6 TiB of input, about 2 GiB each of shuffle reads
+and writes, and no task memory or disk spill. The workload used 256 shuffle
+partitions, Adaptive Query Execution, and `DISK_ONLY` persistence for reused
+DataFrames. These are saved run results, not a statement about current cloud
+resources.
+
+## Distributed architecture
+
+```mermaid
+flowchart LR
+    NEA["NEA five-minute rainfall CSVs"] --- GCS["Google Cloud Storage<br/>raw data and feature partitions"]
+    subgraph DP["Google Cloud Dataproc in asia-southeast1"]
+        Jupyter["Dataproc Jupyter<br/>job submission"] --- Driver["Spark driver<br/>e2-standard-4 master"]
+        Driver --- Executors["8 e2-highmem-2 workers<br/>8 executors, 16 worker cores"]
+        Executors --- SQL["Spark SQL and DataFrames<br/>cleaning, windows, threshold expansion"]
+        SQL --- MLlib["Spark MLlib<br/>GBT-B and isotonic calibration"]
+        MLlib --- PAVA["PAVA projection<br/>six threshold anchors"]
+    end
+    GCS --- Executors
+    PAVA --- Outputs["Google Cloud Storage<br/>model, predictions, metrics"]
+```
+
+## Selected report figures
+
+<table>
+  <tr>
+    <th>What the fitted model uses</th>
+    <th>Held-out 2024 precision-recall curves</th>
+  </tr>
+  <tr>
+    <td>
+      <img src="report/figures/final/feature_family_importance.png" alt="Spark GBT-B normalized split importance by feature family" width="100%" />
+    </td>
+    <td>
+      <img src="report/figures/final/precision_recall_2024.png" alt="Precision-recall curves at 0.5 mm and 10 mm on held-out 2024 predictions" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td><sub>Current rainfall contributes 45.02% of normalized split importance, followed by the requested threshold at 23.40%. Split importance describes how the fitted trees use features; it is not a causal effect.</sub></td>
+    <td><sub>At 10 mm, exceedances are rare and PR-AUC falls to 0.2943. The figure shows the saved raw, isotonic-calibrated, and final PAVA scores.</sub></td>
+  </tr>
+</table>
+
+The Spark History Server screenshot below is archived evidence from the
+final training application. It shows the eight active worker executors and the
+measured task and shuffle activity.
+
+<p align="center">
+  <img src="report/figures/final/spark_ui_final_executors.png" alt="Spark History Server executor summary for the final training application" width="100%" />
+</p>
+
 ## Task 2 workflow
 
 | Years | Role |
