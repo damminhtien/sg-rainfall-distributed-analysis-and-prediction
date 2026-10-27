@@ -1,5 +1,14 @@
 # Singapore Rainfall Analysis and Prediction
 
+<p align="center">
+  <img src="docs/media/rainfall-pipeline.gif" alt="Animated workflow: Singapore rainfall observations flow through eight Spark workers into 30-minute rainfall probability models. Saved 2024 PR-AUC at 0.5 mm is 0.6345 for final GBT-B and 0.0732 for climatology. Motion and sensor positions are schematic." width="100%" />
+  <br />
+  <sub>Illustrative pipeline with saved evaluation results.</sub>
+  <br />
+  <a href="docs/media/rainfall-pipeline.mp4">MP4 video</a> |
+  <a href="docs/media/rainfall-pipeline-poster.png">Still preview</a>
+</p>
+
 This project provides a reproducible distributed analytics and rainfall
 modeling pipeline for National Environment Agency five-minute observations
 across Singapore. It has two practical stages: analyzing historical rainfall
